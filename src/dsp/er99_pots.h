@@ -1,0 +1,162 @@
+/*
+ * er99_pots.h — every continuous control is a 0..127 pot, like the hardware.
+ *
+ * Nobody dials a 909 in milliseconds. The panel has pots; you turn them and
+ * listen. So the module's external parameter surface is 0..127 for everything
+ * continuous, and this table maps each pot to its real engineering range with
+ * a musically sensible curve.
+ *
+ * EXP curve: value = min * (max/min)^(pot/127). Gives fine control at the
+ * bottom of time/frequency ranges, where the ear is most sensitive, and lets
+ * one pot span e.g. 15..400 ms without the low end being a dead zone.
+ *
+ * GPL-3.0.
+ */
+
+#ifndef ER99_POTS_H
+#define ER99_POTS_H
+
+#include <math.h>
+
+typedef enum { ER99_LIN = 0, ER99_EXP = 1 } er99_curve_t;
+
+typedef struct {
+    const char  *key;    /* same key the engine's raw setter uses */
+    float        min;
+    float        max;
+    er99_curve_t curve;
+} er99_pot_t;
+
+/* Order is the storage order for pot values and for the state blob. */
+static const er99_pot_t g_er99_pots[] = {
+    /* --- Bass Drum --- */
+    { "bd_c_tune",         20.0f,  120.0f, ER99_EXP },
+    { "bd_c_decay",        15.0f,  400.0f, ER99_EXP },
+    { "bd_c_attack",        0.0f,    1.0f, ER99_LIN },
+    { "bd_c_sweep_depth",   1.0f,    6.0f, ER99_LIN },
+    { "bd_c_sweep_time",    1.0f,  120.0f, ER99_EXP },
+    { "bd_c_drive",         0.2f,    8.0f, ER99_EXP },
+    { "bd_c_level",         0.0f,    2.0f, ER99_LIN },
+    { "bd_c_click_tone",  500.0f, 8000.0f, ER99_EXP },
+    { "bd_c_sub",           0.0f,    1.0f, ER99_LIN },
+    { "bd_c_tube",          0.0f,    6.0f, ER99_LIN },
+    { "bd_c_drift",         0.0f,    1.0f, ER99_LIN },
+    { "bd_c_tune2",        20.0f,  200.0f, ER99_EXP },
+    { "bd_c_osc2_mix",      0.0f,    1.0f, ER99_LIN },
+
+    /* --- Snare --- */
+    { "sd_c_tune",        120.0f,  400.0f, ER99_EXP },
+    { "sd_c_decay",        15.0f,  300.0f, ER99_EXP },
+    { "sd_c_attack",        0.0f,    1.0f, ER99_LIN },
+    { "sd_c_sweep_depth",   1.0f,    6.0f, ER99_LIN },
+    { "sd_c_sweep_time",    1.0f,   60.0f, ER99_EXP },
+    { "sd_c_drive",         0.2f,    8.0f, ER99_EXP },
+    { "sd_c_level",         0.0f,    2.0f, ER99_LIN },
+    { "sd_c_click_tone",  500.0f, 8000.0f, ER99_EXP },
+    { "sd_c_tune2",       150.0f,  800.0f, ER99_EXP },
+    { "sd_c_osc2_mix",      0.0f,    1.0f, ER99_LIN },
+    { "sd_c_snappy",        0.0f,    1.0f, ER99_LIN },
+    { "sd_c_noise_decay",  10.0f,  400.0f, ER99_EXP },
+    { "sd_c_noise_hp",    200.0f, 6000.0f, ER99_EXP },
+
+    /* --- Toms --- */
+    { "lt_c_tune",         40.0f,  180.0f, ER99_EXP },
+    { "lt_c_decay",        30.0f,  700.0f, ER99_EXP },
+    { "lt_c_attack",        0.0f,    1.0f, ER99_LIN },
+    { "lt_c_sweep_depth",   1.0f,    6.0f, ER99_LIN },
+    { "lt_c_sweep_time",    1.0f,  250.0f, ER99_EXP },
+    { "lt_c_drive",         0.2f,    8.0f, ER99_EXP },
+    { "lt_c_level",         0.0f,    2.0f, ER99_LIN },
+    { "lt_c_tune2",        20.0f,  300.0f, ER99_EXP },
+    { "lt_c_osc2_mix",      0.0f,    1.0f, ER99_LIN },
+
+    { "mt_c_tune",         70.0f,  260.0f, ER99_EXP },
+    { "mt_c_decay",        30.0f,  600.0f, ER99_EXP },
+    { "mt_c_attack",        0.0f,    1.0f, ER99_LIN },
+    { "mt_c_sweep_depth",   1.0f,    6.0f, ER99_LIN },
+    { "mt_c_sweep_time",    1.0f,  250.0f, ER99_EXP },
+    { "mt_c_drive",         0.2f,    8.0f, ER99_EXP },
+    { "mt_c_level",         0.0f,    2.0f, ER99_LIN },
+    { "mt_c_tune2",        30.0f,  400.0f, ER99_EXP },
+    { "mt_c_osc2_mix",      0.0f,    1.0f, ER99_LIN },
+
+    { "ht_c_tune",        110.0f,  400.0f, ER99_EXP },
+    { "ht_c_decay",        30.0f,  500.0f, ER99_EXP },
+    { "ht_c_attack",        0.0f,    1.0f, ER99_LIN },
+    { "ht_c_sweep_depth",   1.0f,    6.0f, ER99_LIN },
+    { "ht_c_sweep_time",    1.0f,  250.0f, ER99_EXP },
+    { "ht_c_drive",         0.2f,    8.0f, ER99_EXP },
+    { "ht_c_level",         0.0f,    2.0f, ER99_LIN },
+    { "ht_c_tune2",        50.0f,  600.0f, ER99_EXP },
+    { "ht_c_osc2_mix",      0.0f,    1.0f, ER99_LIN },
+
+    /* --- Rim (909 model) --- */
+    { "rs_tune",          120.0f,  600.0f, ER99_EXP },
+    { "rs_tune2",         600.0f, 3000.0f, ER99_EXP },
+    { "rs_res",             2.0f,   24.0f, ER99_EXP },
+    { "rs_decay",           5.0f,  150.0f, ER99_EXP },
+    { "rs_noise",           0.0f,    1.0f, ER99_LIN },
+    { "rs_saturation",      0.2f,    8.0f, ER99_EXP },
+    { "rs_volume",          0.0f,    3.0f, ER99_LIN },
+
+    /* --- Clap (909 model) --- */
+    { "hc_tune",          400.0f, 2500.0f, ER99_EXP },
+    { "hc_spread",          2.0f,   30.0f, ER99_EXP },
+    { "hc_tone_decay",      2.0f,   40.0f, ER99_EXP },   /* burst pulse decay */
+    { "hc_decay",          40.0f,  600.0f, ER99_EXP },   /* room tail         */
+    { "hc_tail",            0.0f,    1.0f, ER99_LIN },
+    { "hc_drive",           0.2f,    8.0f, ER99_EXP },
+    { "hc_volume",          0.0f,    3.0f, ER99_LIN },
+
+    /* --- Hats / cymbals --- */
+    { "ohh_decay",         20.0f, 1200.0f, ER99_EXP },
+    { "ohh_decay_closed",  15.0f,  300.0f, ER99_EXP },
+    { "ohh_pitch",          0.25f,   4.0f, ER99_EXP },
+    { "ohh_volume",         0.0f,    2.0f, ER99_LIN },
+    { "ohh_drive",          0.2f,    8.0f, ER99_EXP },
+    { "rc_decay",         100.0f, 3000.0f, ER99_EXP },
+    { "rc_pitch",           0.25f,   4.0f, ER99_EXP },
+    { "rc_volume",          0.0f,    2.0f, ER99_LIN },
+    { "rc_drive",           0.2f,    8.0f, ER99_EXP },
+    { "cr_decay",         100.0f, 3000.0f, ER99_EXP },
+    { "cr_pitch",           0.25f,   4.0f, ER99_EXP },
+    { "cr_volume",          0.0f,    2.0f, ER99_LIN },
+    { "cr_drive",           0.2f,    8.0f, ER99_EXP },
+
+    /* --- Global --- */
+    { "master_drive",       0.5f,   10.0f, ER99_EXP },
+    { "volume",             0.0f,    1.0f, ER99_LIN },
+    { "accent",             1.0f,    4.0f, ER99_LIN },
+};
+
+#define ER99_POT_COUNT ((int)(sizeof(g_er99_pots)/sizeof(g_er99_pots[0])))
+
+/* pot (0..127) -> engineering value */
+static inline float er99_pot_to_value(const er99_pot_t *p, int pot)
+{
+    if(pot < 0)   pot = 0;
+    if(pot > 127) pot = 127;
+    const float t = (float)pot / 127.0f;
+
+    if(p->curve == ER99_EXP && p->min > 0.0001f)
+        return p->min * powf(p->max / p->min, t);
+    return p->min + (p->max - p->min) * t;
+}
+
+/* engineering value -> nearest pot, used to seed pots from engine defaults */
+static inline int er99_value_to_pot(const er99_pot_t *p, float v)
+{
+    if(v < p->min) v = p->min;
+    if(v > p->max) v = p->max;
+    float t;
+    if(p->curve == ER99_EXP && p->min > 0.0001f)
+        t = logf(v / p->min) / logf(p->max / p->min);
+    else
+        t = (p->max - p->min) > 0.0f ? (v - p->min) / (p->max - p->min) : 0.0f;
+    int pot = (int)(t * 127.0f + 0.5f);
+    if(pot < 0)   pot = 0;
+    if(pot > 127) pot = 127;
+    return pot;
+}
+
+#endif /* ER99_POTS_H */

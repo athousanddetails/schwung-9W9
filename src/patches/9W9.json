@@ -1,0 +1,12 @@
+{
+    "name": "9W9",
+    "version": 1,
+    "chain": {
+        "input": "pads",
+        "synth": { "module": "9w9", "config": {} },
+        "audio_fx": []
+    },
+    "capture": {
+        "groups": ["steps"]
+    }
+}
