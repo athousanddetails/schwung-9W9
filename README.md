@@ -4,7 +4,7 @@ A TR-909 style drum machine for [Schwung](https://github.com/charlesvestal/schwu
 on Ableton Move. Circuit-modelled kick, snare, toms, rim shot and hand clap;
 sampled hi-hats, ride and crash — the same split the real TR-909 used.
 
-![9W9 remote panel](docs/panel.png)
+![9W9 on the Move](docs/device-ui.jpg)
 
 ## Voices
 
@@ -31,10 +31,17 @@ Every continuous control is a **0–127 pot**, like the hardware — no Hz, no m
 - **Sequencing:** use Move's own sequencer — a drum track with a kit, muted
   (HiJack), track MIDI OUT on the slot's channel. Each drum is its own lane.
   Note map: drum rack (36–46, default) or General MIDI, switchable.
-- **Remote panel:** full editor in the browser at `move.local:7700/remote-ui`
-  when 9W9 is the slot's synth.
 - Works with [Movy](https://github.com/DimaDake/schwung-movy) — a
   `movy_config.json` ships with the module.
+
+## Remote panel
+
+A full 909-style editor in the browser — every drum section with draggable
+knobs, per-drum **MUTE** buttons (synced with Mute+Pad on the device),
+distortion selectors, and the Master section. Open
+`move.local:7700/remote-ui` while 9W9 is the slot's synth.
+
+![9W9 remote panel](docs/remote-ui.png)
 
 ## Install
 
@@ -80,6 +87,13 @@ round-trip, sequencer audio and mutes end to end.
 
 This project was developed with AI assistance (Claude), with human direction
 and on-hardware verification throughout.
+
+## Contributing
+
+**Contributions are open to anyone, any time — just submit a PR.** Voice
+tweaks, new distortion flavours, UI improvements, Movy templates, docs, bug
+reports: all welcome. Please note in your PR which AI tools you used, if any
+(same policy as Schwung upstream).
 
 ## License
 
