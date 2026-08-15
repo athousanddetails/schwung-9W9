@@ -119,6 +119,7 @@
     var PAD2PAGE = { 68:0, 69:1, 70:2, 71:3, 76:4, 77:6, 78:7, 79:8,
                      84:8, 85:10, 86:9, 87:11 };
 
+    var mySlot = -1;          /* slot this editor was opened for (set in init) */
     var pageIdx = 0;
     var vals = {};
     var dirty = true;
@@ -264,7 +265,15 @@
 
     /* ---------------- chain_ui hooks ---------------- */
 
+    function isFocused() {
+        /* Only act while OUR slot is the one focused in the chain UI. If the
+         * user jumps to another track/slot (Shift+Vol+Track, etc.) while this
+         * UI object is still loaded, we must not steal pads or the screen. */
+        return mySlot >= 0 && uiSlot() === mySlot;
+    }
+
     function init() {
+        mySlot = uiSlot();
         setPadBlock(true);
         loadPage();
         refreshMutes();
@@ -274,7 +283,11 @@
 
     function tick() {
         var shown = !has("shadow_get_display_mode") || shadow_get_display_mode() === 1;
-        setPadBlock(shown);
+        /* Hold the pads only while visible AND our slot is the focused one —
+         * otherwise release them and go quiet (no drawing over other views). */
+        var active = shown && isFocused();
+        setPadBlock(active);
+        if (!active) return;
         if (dirty) draw();
     }
 
@@ -282,6 +295,16 @@
         var status = data[0] & 0xF0;
         var d1 = data[1];
         var d2 = data[2];
+
+        /* Another slot is focused: never react. Pads that still reach us
+         * (pad_block not yet released by tick) pass through to Move so the
+         * surface stays alive; everything else is someone else's input. */
+        if (!isFocused()) {
+            if ((status === 0x90 || status === 0x80 || status === 0xA0) &&
+                d1 >= 68 && d1 <= 99)
+                injectToMove(data);
+            return;
+        }
 
         /* Pads: transparent pass-through to Move + page-follow for us.
          * Shift+Pad: consumed — select silently, Move never sees it. */
