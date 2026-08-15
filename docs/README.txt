@@ -1,3 +1,3 @@
 Drop screenshots here:
-  device-ui.jpg  - photo of the editor on the Move display
-  remote-ui.png  - screenshot of the browser panel
+  device-ui1.jpg  device-ui2.jpg  device-ui3.jpg  - photos of the editor on the Move
+  remote-ui.png                                   - screenshot of the browser panel
