@@ -309,6 +309,16 @@ static int get_param(void *_instance, const char *_key, char *_buf, const int _l
     if(!strcmp(_key, "ui_hierarchy"))
         return -1;
 
+    /* The same hierarchy IS published — under a key the host doesn't probe —
+     * for ui_chain.js to feed the shared param_pages controller (host 0.12.1+).
+     * Its injected getParam rewrites "ui_hierarchy" requests to "ui_pages". */
+    if(!strcmp(_key, "ui_pages"))
+    {
+        if(_len <= ER99_UI_HIERARCHY_LEN) return -1;
+        memcpy(_buf, er99_ui_hierarchy_json, ER99_UI_HIERARCHY_LEN + 1);
+        return ER99_UI_HIERARCHY_LEN;
+    }
+
     /*
      * Pad-follow. Publishes "<trigger-count>:<level-id>" so the Shadow UI can
      * jump the parameter page to the drum you just hit. The counter is what

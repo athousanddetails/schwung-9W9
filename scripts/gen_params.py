@@ -19,7 +19,17 @@ DIST = ["Diode (909)","Hard Clip","Wavefolder","Bitcrush"]
 # The DSP maps each pot to its real range with a musical curve (er99_pots.h),
 # so the UI never shows milliseconds or hertz - just a pot position.
 def POT(k,n):
-    return {"key":k,"name":n,"type":"int","min":0,"max":127}
+    d={"key":k,"name":n,"type":"int","min":0,"max":127}
+    # Honest viz declarations for the 0.12.x param-pages renderer:
+    #  - levels/volumes draw as faders
+    #  - "Attack" is the CLICK LEVEL, not an envelope time; declare viz:false
+    #    so the detector cannot pair it with Decay into a fake AD envelope.
+    kl = k.lower()
+    if kl.endswith("_level") or kl.endswith("_volume") or kl == "volume":
+        d["viz"] = {"kind": "fader"}
+    elif kl.endswith("_attack"):
+        d["viz"] = False
+    return d
 def I(k,n,mn,mx,u=None): return POT(k,n)
 def F(k,n,mn,mx,st):     return POT(k,n)
 

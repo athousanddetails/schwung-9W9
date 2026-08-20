@@ -49,6 +49,9 @@ int main(int argc, char**argv){
     printf("      chain_params = %d bytes\n", n);
     int m = api->get_param(inst, "ui_hierarchy", buf, sizeof(buf));
     CHECK(m < 0, "ui_hierarchy absent (ui_chain.js fallback engages)");
+    m = api->get_param(inst, "ui_pages", buf, sizeof(buf));
+    CHECK(m > 100 && strstr(buf, "\"levels\"") != NULL,
+          "ui_pages serves the hierarchy for the param_pages binding");
 
     /* Parameters are 0..127 pot positions now, like the hardware panel. */
     api->set_param(inst, "bd_c_tune", "77");
