@@ -51,6 +51,21 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
     var mutesMask = 0;
     var controller = null;
 
+    /* First-run gesture hint: once per shadow_ui session, dismissed by any
+     * input -- including pads, which are our layer -- or on its own after
+     * HINT_MS. A hint nobody can wave away feels stuck. The "shown" flag lives
+     * on globalThis: the host re-evaluates this file on every editor open, so
+     * module-level state would reset each time; the shadow_ui process's global
+     * object is what actually lives for the session. */
+    var HINT_MS = 4000;
+    var HINT_FLAG = "__9w9_hint_shown";
+    var hintUntil = 0;
+
+    function dismissHint() {
+        hintUntil = 0;
+        if (controller && controller.dismissHint) controller.dismissHint();
+    }
+
     function has(fn) { return typeof globalThis[fn] === "function"; }
 
     function uiSlot() {
@@ -136,14 +151,18 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
         });
         controller.load({ slot: mySlot, component: "synth", prefix: "synth" });
         controller.setLayout(LAYOUT_MOVY);
-        controller.showHint([
-            "Pad: play + select",
-            "Sh+Pad: select only",
-            "Mute+Pad: mute drum",
-            "Jog: page  Click: list",
-            "Shift: fine + values",
-            "Mute+knob: default"
-        ], "9W9");
+        if (!globalThis[HINT_FLAG]) {
+            globalThis[HINT_FLAG] = true;
+            controller.showHint([
+                "Pad: play + select",
+                "Sh+Pad: select only",
+                "Mute+Pad: mute drum",
+                "Jog: page  Click: list",
+                "Shift: fine + values",
+                "Mute+knob: default"
+            ], "9W9");
+            hintUntil = Date.now() + HINT_MS;
+        }
         announce("9W9");
     }
 
@@ -163,6 +182,7 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
         setPadBlock(active);
         if (!active || !controller) return;
 
+        if (hintUntil && Date.now() >= hintUntil) dismissHint();
         controller.setReveal(shiftHeld());
         controller.tick();
 
@@ -211,6 +231,8 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
         /* ---- Pads: 9W9's own layer ---- */
         if ((status === 0x90 || status === 0x80 || status === 0xA0) &&
             d1 >= 68 && d1 <= 99) {
+
+            if (status === 0x90 && d2 > 0) dismissHint();
 
             /* Mute + Pad: toggle that lane's 9W9 mute; press still reaches
              * Move so its native state stays in step. */

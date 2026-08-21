@@ -28,8 +28,10 @@ Every continuous control is a **0–127 pot**, like the hardware — no Hz, no m
 - **Pads (left 4×4)** play and select drums; the parameter page follows what
   you hit. **Shift+Pad** selects silently (works during playback).
   **Mute+Pad** mutes that drum (`[M]` in the title bar).
-- **Knobs 1–8** edit the visible page; **jog** cycles pages; the kick's Sub /
-  Tube / Drift live on the **BD MORE** page; pad 16 opens **Master**.
+- **Knobs 1–8** edit the visible page, drawn with Schwung's stock
+  Movy-style knob grid (host 0.12.1+): **jog** cycles pages, **Shift+Jog**
+  jumps sections, **jog click** opens the section list, **Shift** reveals
+  values / fine mode, **Mute+knob** resets a pot. Pad 16 opens **Master**.
 - **Sequencing:** use Move's own sequencer — a drum track with a kit, muted
   (HiJack), track MIDI OUT on the slot's channel. Each drum is its own lane.
   Note map: drum rack (36–46, default) or General MIDI, switchable.
@@ -47,8 +49,8 @@ distortion selectors, and the Master section. Open
 
 ## Install
 
-Via the Schwung Module Store / [schwung-manager](https://github.com/charlesvestal/schwung),
-or manually: build, then copy `dist/9w9/` to
+Requires Schwung **0.12.1 or newer**. Via the Schwung Module Store /
+[schwung-manager](https://github.com/charlesvestal/schwung), or manually: build, then copy `dist/9w9/` to
 `/data/UserData/schwung/modules/sound_generators/9w9/` on the device.
 
 ## Building
