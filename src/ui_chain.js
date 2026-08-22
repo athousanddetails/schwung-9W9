@@ -166,10 +166,12 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
         announce("9W9");
     }
 
+    /* Title-bar text. The stock grid prints the page's own name on the right
+     * of the bar, so this must NOT repeat it ("9W9 > BASS DRUM  BASS DRUM"):
+     * just the module name plus the mute flag for the drum on screen. */
     function title() {
         var t = "9W9";
         var page = controller && controller.page;
-        if (page && page.name) t += " > " + page.name;
         var lane = page ? LEVEL2LANE[page.level] : -1;
         if (lane !== undefined && lane >= 0 && (mutesMask & (1 << lane)))
             t += " [M]";
