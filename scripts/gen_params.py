@@ -115,6 +115,6 @@ static const char er99_ui_hierarchy_json[] =
 {cstr(uhj)};
 #endif
 """)
-m=json.loads((root_dir/"src/module.json").read_text()); m["version"]="0.3.0"
-(root_dir/"src/module.json").write_text(json.dumps(m,indent=4)+"\n")
+# module.json's version is owned by the release process (bump by hand, tag
+# must match); this generator must never touch it.
 print(f"chain_params {len(cpj)}B  ui_hierarchy {len(uhj)}B  levels={len(levels)}  params={len(cp)}")
