@@ -4,9 +4,9 @@ A TR-909 style drum machine for [Schwung](https://github.com/charlesvestal/schwu
 on Ableton Move. Circuit-modelled kick, snare, toms, rim shot and hand clap;
 sampled hi-hats, ride and crash — the same split the real TR-909 used.
 
-![9W9 on the Move](docs/device-ui1.jpg)
-![9W9 editor pages](docs/device-ui2.jpg)
-![9W9 on the device](docs/device-ui3.jpg)
+![9W9 on the Move](docs/device-ui1.png)
+![9W9 editor pages](docs/device-ui2.png)
+![9W9 on the device](docs/device-ui3.png)
 
 ## Voices
 
