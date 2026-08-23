@@ -47,6 +47,26 @@ int main(int argc, char**argv){
     int n = api->get_param(inst, "chain_params", buf, sizeof(buf));
     CHECK(n > 100 && buf[0]=='[', "get_param(chain_params) returns JSON array");
     printf("      chain_params = %d bytes\n", n);
+    /* Every voice's Drive and Distortion must be DECLARED, not merely
+     * implemented: an undeclared key still answers set_param (the web panel
+     * writes it by name) but has no knob on the device, no automation target
+     * and no entry for Movy. The sampled voices drifted that way once. */
+    {
+        static const char *must_declare[] = {
+            "ohh_drive", "ohh_dist_type", "rc_drive", "rc_dist_type",
+            "cr_drive", "cr_dist_type", "rs_dist_type", "hc_dist_type",
+        };
+        int declared = 1;
+        for (unsigned i = 0; i < sizeof(must_declare)/sizeof(must_declare[0]); ++i)
+        {
+            char needle[64];
+            snprintf(needle, sizeof(needle), "\"%s\"", must_declare[i]);
+            if (!strstr(buf, needle))
+            { printf("      NOT DECLARED: %s\n", must_declare[i]); declared = 0; }
+        }
+        CHECK(declared, "every voice declares Drive + Distortion in chain_params");
+    }
+
     int m = api->get_param(inst, "ui_hierarchy", buf, sizeof(buf));
     CHECK(m < 0, "ui_hierarchy absent (ui_chain.js fallback engages)");
     m = api->get_param(inst, "ui_pages", buf, sizeof(buf));

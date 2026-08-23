@@ -68,19 +68,31 @@ for vid,cfg in V.items():
         "params":[{"key":x["key"],"name":x["name"]} for x in ps]}
     root.append({"level":vid,"label":cfg["name"]})
 
+# DIST(k) — every voice has Drive and a distortion type in the engine, so every
+# voice declares them. Declared is what makes a param real to the rest of the
+# system: an undeclared key still works from the web panel (which writes it by
+# name) but has no knob on the device, no automation target and no entry for
+# Movy or any other tool reading the parameter list.
+def DIST_T(k,n="Distortion"): return {"key":k,"name":n,"type":"enum","options":DIST}
+
 rim=[I("rs_tune","Tune",0,127), I("rs_tune2","Tone",0,127), I("rs_res","Res",0,127),
      I("rs_decay","Decay",0,127), I("rs_noise","Noise",0,127),
-     I("rs_saturation","Drive",0,127), I("rs_volume","Level",0,127)]
+     I("rs_saturation","Drive",0,127), DIST_T("rs_dist_type"),
+     I("rs_volume","Level",0,127)]
 clap=[I("hc_tune","Tune",0,127), I("hc_spread","Spread",0,127),
       I("hc_tone_decay","Burst",0,127), I("hc_decay","Tail",0,127),
       I("hc_tail","Tail Mix",0,127), I("hc_drive","Drive",0,127),
-      I("hc_volume","Level",0,127)]
+      DIST_T("hc_dist_type"), I("hc_volume","Level",0,127)]
 hat=[I("ohh_decay","Open Decay",20,1200,"ms"), I("ohh_decay_closed","Closed Decay",15,300,"ms"),
-     F("ohh_pitch","Pitch",0.25,4,0.01), F("ohh_volume","Level",0,2,0.01)]
+     F("ohh_pitch","Pitch",0.25,4,0.01), F("ohh_drive","Drive",0.2,8,0.1),
+     DIST_T("ohh_dist_type"), F("ohh_volume","Level",0,2,0.01)]
+# Ordered so the 8-knob page break lands between the cymbals' own controls and
+# their distortion selectors, instead of splitting the crash across two pages.
 cym=[I("rc_decay","Ride Decay",100,3000,"ms"), F("rc_pitch","Ride Pitch",0.25,4,0.01),
-     F("rc_volume","Ride Level",0,2,0.01),
+     F("rc_drive","Ride Drive",0.2,8,0.1), F("rc_volume","Ride Level",0,2,0.01),
      I("cr_decay","Crash Decay",100,3000,"ms"), F("cr_pitch","Crash Pitch",0.25,4,0.01),
-     F("cr_volume","Crash Level",0,2,0.01)]
+     F("cr_drive","Crash Drive",0.2,8,0.1), F("cr_volume","Crash Level",0,2,0.01),
+     DIST_T("rc_dist_type","Ride Dist"), DIST_T("cr_dist_type","Crash Dist")]
 glob=[{"key":"master_dist","name":"Master Dist","type":"enum",
        "options":["Off","Diode (909)","Hard Clip","Wavefolder","Bitcrush"]},
       F("master_drive","Master Drive",0,127,1),
