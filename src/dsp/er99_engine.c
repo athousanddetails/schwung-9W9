@@ -185,7 +185,12 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
         {
         case 0: /* Bass Drum */
             b->tune = 55.0f;  b->sweep_depth = 3.2f; b->sweep_time = 22.0f;
-            b->decay = 190.0f; b->attack = 0.35f; b->click_tone = 2500.0f;
+            /* Measured on BD 909 Clean Long A: amplitude tau ~120 ms and
+             * t60 760 ms. This ramp runs to -100 dB over `decay`, so tau is
+             * decay/11.5 — 190 ms gave a 16 ms tau and a kick with no body at
+             * all (t60 120 ms against the real 760). */
+            b->decay = 1380.0f; b->amp_hold = 40.0f;
+            b->attack = 0.35f; b->click_tone = 2500.0f;
             b->drive = 2.2f;  b->level = 1.0f;
             b->sub = 0.35f; b->tube = 1.2f;
             /* Drift OFF by default. Per-hit pitch/level jitter is a real

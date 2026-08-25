@@ -418,6 +418,10 @@ int main(int argc, char**argv){
     {
         static int16_t lm[128*2];
         long muted=0, unmuted=0;
+        /* Let whatever is still ringing die first. The kick's tail is ~860 ms
+         * now that its decay matches a real 909, so without this the "muted"
+         * window is measuring the PREVIOUS hit, not silence. */
+        for(int b=0;b<400;++b) api->render_block(inst,lm,128);
         api->set_param(inst, "mutes", "1");           /* bit 0 = BD */
         { uint8_t mm[3]={0x90,36,110}; api->on_midi(inst,mm,3,0); }
         for(int b=0;b<30;++b){ api->render_block(inst,lm,128);

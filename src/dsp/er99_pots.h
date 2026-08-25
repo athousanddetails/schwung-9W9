@@ -31,7 +31,10 @@ typedef struct {
 static const er99_pot_t g_er99_pots[] = {
     /* --- Bass Drum --- */
     { "bd_c_tune",         20.0f,  120.0f, ER99_EXP },
-    { "bd_c_decay",        15.0f,  400.0f, ER99_EXP },
+    /* The old 15-400 ms could not reach a 909 kick at all: the real drum's
+     * amplitude time constant is ~120 ms (t60 760 ms), and 400 ms of this
+     * ramp is a tau of 35. Geometric centre of the new range is ~480 ms. */
+    { "bd_c_decay",        90.0f, 2600.0f, ER99_EXP },
     { "bd_c_attack",        0.0f,    1.0f, ER99_LIN },
     { "bd_c_sweep_depth",   1.0f,    6.0f, ER99_LIN },
     { "bd_c_sweep_time",    1.0f,  120.0f, ER99_EXP },

@@ -63,6 +63,13 @@ typedef struct {
      * This plateau + hard gate is the 909 snare's signature snap. */
     int         noise_hold;    /* samples of plateau left    */
     int         noise_gated;   /* env fell through the floor */
+    /* The kick's amplitude envelope holds near full before it falls: measured
+     * on BD 909 Clean Long A, the level is still 0.96 at 40 ms and only then
+     * decays with a ~120 ms time constant. A plain exponential from t=0 misses
+     * the whole front of the note. Milliseconds; 0 on voices that do not do
+     * this (the snare's shells start decaying at once). */
+    float       amp_hold;
+    int         amp_hold_left;
     uint32_t    rng;           /* per-voice drift RNG                */
     float       hit_tune;      /* this hit's (drifted) base pitch    */
     float       hit_gain;      /* this hit's (drifted) level scale   */
@@ -223,6 +230,7 @@ static inline void er99_bt_init(er99_bt_t *v, const float _sr)
     wa_biquad_reset(&v->dc_block);
     v->noise_hold = 0;
     v->noise_gated = 0;
+    v->amp_hold_left = 0;
     v->out_gain = 0.0f;
     v->impulse = 0;
     v->mute_countdown = 0.0;
@@ -273,9 +281,12 @@ static inline void er99_bt_trigger(er99_bt_t *v, const float _accent)
     wa_set_value(&v->pitch, v->hit_tune * v->sweep_depth);
     wa_exp_ramp(&v->pitch, v->hit_tune, v->sweep_time * ms);
 
-    /* Amplitude: the analog envelope is an RC discharge — exponential. */
+    /* Amplitude: the analog envelope is an RC discharge — exponential, after
+     * the hold above (see amp_hold). */
     wa_set_value(&v->amp, 1.0f);
-    wa_exp_ramp(&v->amp, 0.00001f, v->decay * ms);
+    v->amp_hold_left = (int)(v->amp_hold * ms);
+    if(v->amp_hold_left <= 0)
+        wa_exp_ramp(&v->amp, 0.00001f, v->decay * ms);
 
     /* Click: very fast decay, this is the beater transient. */
     wa_set_value(&v->click_env, 1.0f);
@@ -305,6 +316,8 @@ static inline float er99_bt_render(er99_bt_t *v, const float _noise)
 
     const float f   = wa_param_tick(&v->pitch);
 
+    if(v->amp_hold_left > 0 && --v->amp_hold_left == 0)
+        wa_exp_ramp(&v->amp, 0.00001f, v->decay * 0.001f * v->sample_rate);
     float amp = wa_param_tick(&v->amp);
     /* The shell VCAs are the same crude single-transistor stage as the noise
      * one (Q50/Q51): conduction falls to nothing as the envelope approaches
