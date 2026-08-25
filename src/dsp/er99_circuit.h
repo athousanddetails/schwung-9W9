@@ -26,7 +26,6 @@
 #define ER99_CIRCUIT_H
 
 #include "webaudio.h"
-#include "er99_reso.h"
 
 typedef struct {
     /* --- panel controls --- */
@@ -52,16 +51,7 @@ typedef struct {
     float noise_decay;  /* ms                                     */
     float noise_hp;     /* Hz, highpass on the snare noise        */
 
-    /* --- topology ---
-     * 0 = oscillator + amplitude envelope (the er-99 lineage).
-     * 1 = bridged-T: the panel controls drive a shock-excited resonator whose
-     *     own damping IS the decay, which is how the hardware works. Set per
-     *     voice, so the kick can keep one core while the shells use the other. */
-    int         bridged_t;
-
     /* --- runtime --- */
-    er99_reso_t reso, reso2;    /* shell / body networks (bridged_t)   */
-    er99_pulse_t exc;           /* trigger pulse feeding them          */
     wa_osc_t    osc, osc2, sub_osc;
     wa_param_t  pitch, amp, click_env, noise_env;
     wa_biquad_t click_lp, noise_hpf, dc_block;
@@ -143,9 +133,6 @@ static inline void er99_bt_init(er99_bt_t *v, const float _sr)
                   v->click_tone > 0.0f ? v->click_tone : 3000.0f, 0.7071f, 0.0f, _sr);
     wa_biquad_set(&v->noise_hpf, WA_HIGHPASS,
                   v->noise_hp > 0.0f ? v->noise_hp : 800.0f, 0.7071f, 0.0f, _sr);
-    er99_reso_init(&v->reso,  _sr);
-    er99_reso_init(&v->reso2, _sr);
-    v->exc.level = 0.0f; v->exc.decay = 0.0f;
     v->out_gain = 0.0f;
     v->impulse = 0;
     v->mute_countdown = 0.0;
@@ -171,50 +158,19 @@ static inline void er99_bt_trigger(er99_bt_t *v, const float _accent)
         v->hit_gain  = 1.0f + 0.10f * v->drift * r2;
     }
 
-    if(v->bridged_t)
-    {
-        /* Hit the network with the trigger pulse. Nothing is cleared: a hit
-         * that lands while the shell is still ringing adds to it, which is
-         * what makes rolls and flams behave like the hardware. The pulse is
-         * ~0.6 ms — wide enough to put its energy where the network rings
-         * rather than landing as a click. */
-        er99_pulse_fire(&v->exc, 1.6f * v->hit_gain, 0.6f, sr);
-        v->reso.sat  = v->drive * 0.12f;
-        v->reso2.sat = v->reso.sat;
-        /* Force a coefficient refresh on the next sample so the sweep starts
-         * from this hit's pitch, not the previous hit's. */
-        v->reso.countdown = v->reso2.countdown = 0;
-
-        wa_set_value(&v->pitch, v->hit_tune * v->sweep_depth);
-        wa_exp_ramp(&v->pitch, v->hit_tune, v->sweep_time * ms);
-        /* The click path is shared with the oscillator core; the beater/brush
-         * transient is separate circuitry in the 909 too. */
-        wa_set_value(&v->click_env, 1.0f);
-        wa_exp_ramp(&v->click_env, 0.00001f, 3.0f * ms);
-        if(v->snappy > 0.0f)
-        {
-            wa_set_value(&v->noise_env, 1.0f);
-            wa_exp_ramp(&v->noise_env, 0.00001f,
-                        (v->noise_decay > 0.0f ? v->noise_decay : 120.0f) * ms);
-        }
-        v->impulse = 0;                 /* the pulse IS the impulse here */
-        v->out_gain = v->level * _accent * v->hit_gain;
-        /* Damping sets the ring length, so the voice is done when the network
-         * has run down — allow for the ring plus the noise tail. */
-        {
-            const float longest = v->decay > v->noise_decay ? v->decay : v->noise_decay;
-            v->mute_countdown = (longest * 4.0f + 40.0f) * ms;
-        }
-        return;
-    }
-
-    /* Shock excitation: every hit starts at the same point in the cycle. The
-     * 909's bridged-T oscillator is kicked by the trigger pulse and always
-     * rings the same way. Free-running phase — what this did before — gave
-     * every hit a different attack, and under the pitch sweep a different
-     * perceived pitch, which is exactly the "the kick moves around" complaint.
-     * 0.25 is the triangle's rising zero crossing, so the hit starts from
-     * silence instead of stepping straight to the negative peak. */
+    /* Every hit starts at the same point in the cycle. Free-running phase —
+     * what this did before — gave every hit a different attack, and under the
+     * pitch sweep a different perceived pitch: the "the kick moves around"
+     * complaint. 0.25 is the triangle's rising zero crossing, so the hit starts
+     * from silence instead of stepping straight to the negative peak.
+     *
+     * How much of this the 909 itself does is not settled: its voices are
+     * CMOS-inverter oscillators whose frequency comes from a starved supply
+     * rail, and they stop outright when that CV is low enough — so the pitch
+     * pulse at note start does restart them from rest at low Tune settings.
+     * With the CV higher they keep running between hits and the VCA does the
+     * gating. Treat this reset as ours, for consistency, not as a claim about
+     * the circuit. (TR-909 service notes, voicing board; Whittle's SD notes.) */
     wa_osc_set_phase(&v->osc,     0.25);
     wa_osc_set_phase(&v->osc2,    0.25);
     wa_osc_set_phase(&v->sub_osc, 0.25);
@@ -257,47 +213,6 @@ static inline float er99_bt_render(er99_bt_t *v, const float _noise)
     v->mute_countdown -= 1.0;
 
     const float f   = wa_param_tick(&v->pitch);
-
-    if(v->bridged_t)
-    {
-        /* Damping = decay: no amplitude envelope multiplies this, the network
-         * runs down on its own the way the circuit does. */
-        er99_reso_track(&v->reso, f, v->decay);
-        const float x = er99_pulse_tick(&v->exc);
-        float o = er99_reso_tick(&v->reso, x);
-
-        if(v->tune2 > 0.0f && v->osc2_mix > 0.0f)
-        {
-            /* Second shell (snare) / body network (toms), tracking the same
-             * sweep ratio and struck by the same pulse. */
-            const float ratio = v->tune > 1.0f ? v->tune2 / v->tune : 1.0f;
-            er99_reso_track(&v->reso2, f * ratio, v->decay);
-            o += er99_reso_tick(&v->reso2, x) * v->osc2_mix;
-            o /= (1.0f + v->osc2_mix);
-        }
-
-        float body = er99_shape(o, v->drive, v->dist_type);
-
-        float click = 0.0f;
-        if(v->attack > 0.0f)
-        {
-            click = wa_biquad_tick(&v->click_lp, _noise)
-                  * wa_param_tick(&v->click_env) * v->attack;
-        }
-        else wa_param_tick(&v->click_env);
-
-        float snare = 0.0f;
-        if(v->snappy > 0.0f)
-            snare = wa_biquad_tick(&v->noise_hpf, _noise)
-                  * wa_param_tick(&v->noise_env) * v->snappy;
-
-        /* Stop once the network is quiet, not merely once the timer expired:
-         * cutting a still-ringing shell is a click. */
-        if(v->mute_countdown < 200.0 && er99_reso_energy(&v->reso) < 0.0002f)
-            v->mute_countdown = 0.0;
-
-        return (body + click + snare) * v->out_gain;
-    }
 
     const float amp = wa_param_tick(&v->amp);
 
