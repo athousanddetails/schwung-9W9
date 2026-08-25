@@ -143,13 +143,14 @@ typedef struct {
 
 /* ---- Master bus ---- */
 typedef struct {
-    /* DynamicsCompressorNode: threshold 0, knee 10, ratio 12, attack 0,
-     * release 0.25 (index.ts). Approximated — this is the one node whose
-     * exact behaviour is implementation-defined rather than spec'd. */
-    float threshold_db, knee_db, ratio, attack_s, release_s;
-    float env_db;
-    float makeup;
-    /* Master distortion: whole-kit drive ahead of the compressor.
+    /* No compressor and no limiter. er-99 inherited a Web Audio
+     * DynamicsCompressorNode on the master bus; a TR-909 has nothing of the
+     * kind — its voices sum through a mixer straight into the output amp. The
+     * headroom comes from the gain structure instead (voice Level tops out at
+     * the ceiling, master volume 0.35), and the only thing left on the bus is
+     * the distortion, which is ours and optional.
+     *
+     * Master distortion: whole-kit drive.
      * dist_mode: 0=Off, 1=Diode, 2=Hard Clip, 3=Wavefolder, 4=Bitcrush
      * (modes 1..4 map to er99_shape types 0..3). */
     float drive;

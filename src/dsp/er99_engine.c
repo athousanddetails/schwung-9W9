@@ -333,18 +333,6 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
     }
 
     /* ---- Master ---- */
-    e->master.threshold_db = 0.0f;
-    e->master.knee_db      = 10.0f;
-    e->master.ratio        = 12.0f;
-    e->master.attack_s     = 0.0f;
-    /* 60 ms, not 250. This is a safety limiter on the sum, not a bus
-     * compressor: at 250 ms it never recovered between sixteenth notes, so it
-     * sat ducked and every voice's Level stopped doing anything past a point —
-     * turning one up could even measure QUIETER. A 909 has no such thing on
-     * its mix bus; the least we can do is let ours get out of the way. */
-    e->master.release_s    = 0.06f;
-    e->master.env_db       = 0.0f;
-    e->master.makeup       = 1.0f;
     e->master.drive        = 2.0f;   /* amount when a mode is chosen */
     e->master.dist_mode    = 0.0f;   /* Off by default */
     /* 0.35, not 0.5. With accent (x2) a single voice at its default Level was
@@ -656,37 +644,6 @@ static float render_sampler(er99_sampler_t *s)
     return v;
 }
 
-/* DynamicsCompressorNode approximation (threshold 0 dB, knee 10, ratio 12). */
-static float master_compress(er99_master_t *m, const float _in, const float _sr)
-{
-    const float mag = fabsf(_in);
-    const float in_db = mag > 1e-9f ? 20.0f * log10f(mag) : -120.0f;
-
-    float over = in_db - m->threshold_db;
-    float gain_db = 0.0f;
-    if(over > 0.0f)
-    {
-        if(over < m->knee_db)   /* soft knee */
-            gain_db = -((1.0f - 1.0f / m->ratio) * over * over) / (2.0f * m->knee_db);
-        else
-            gain_db = -(over - over / m->ratio) + 0.0f;
-    }
-
-    /* Zero attack made this a WAVESHAPER, not a limiter: the gain followed the
-     * instantaneous sample, so every sample above the threshold was squashed by
-     * its own magnitude, flattening the waveform. Push a voice harder and the
-     * measured peak went DOWN — kick Level read 29994 at pot 80 and 18266 at
-     * 112, which is the "Level stops doing anything" on the panel.
-     *
-     * A real limiter smooths its detector. 1.5 ms is fast enough to catch a
-     * drum transient before it clips and slow enough not to trace the wave. */
-    const float atk = expf(-1.0f / (0.0015f * _sr));
-    const float rel = expf(-1.0f / (m->release_s * _sr));
-    const float coef = gain_db < m->env_db ? atk : rel;
-    m->env_db = gain_db + (m->env_db - gain_db) * coef;
-
-    return _in * powf(10.0f, m->env_db / 20.0f);
-}
 
 void er99_engine_render(er99_engine_t *e, float *out, const int frames)
 {
@@ -712,8 +669,7 @@ void er99_engine_render(er99_engine_t *e, float *out, const int frames)
         if(e->master.dist_mode >= 0.5f)
             mix = er99_shape(mix * e->master.drive, e->master.drive,
                              e->master.dist_mode - 1.0f) * 0.7f;
-        mix = master_compress(&e->master, mix, e->sample_rate);
-        out[n] = mix * e->master.makeup * e->master.volume;
+        out[n] = mix * e->master.volume;
     }
 }
 
