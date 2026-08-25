@@ -85,26 +85,30 @@
   function pot(k, n)      { return { k: k, n: n }; }
   function en(k, n, opts) { return { k: k, n: n, opts: opts }; }
 
-  function voice(id) {
-    return [ pot(id+"_c_tune","Pitch"), pot(id+"_c_sweep_depth","P.Depth"),
-             pot(id+"_c_sweep_time","Tune"), pot(id+"_c_attack","Attack"),
-             pot(id+"_c_decay","Decay"), pot(id+"_c_drive","Drive"),
+  /* One row per voice, matching the device pages: only what the machine has.
+     The engine still has a sub layer, tube stage, drift, click tone and second
+     oscillator — they sit at their tuned defaults and are no longer knobs. */
+  function tom(id) {
+    return [ pot(id+"_c_tune","Tune"), pot(id+"_c_decay","Decay"),
+             pot(id+"_c_attack","Attack"), pot(id+"_c_drive","Drive"),
              en(id+"_c_dist_type","Dist",DIST), pot(id+"_c_level","Level") ];
   }
 
   /* lane = bit in synth:mutes; -1 = no mute button */
   var SECTIONS = [
-    { name: "BASS DRUM", lane: 0, knobs: voice("bd").concat([
-        pot("bd_c_sub","Sub"), pot("bd_c_tube","Tube"),
-        pot("bd_c_drift","Drift"), pot("bd_c_click_tone","Click"),
-        pot("bd_c_tune2","Body"), pot("bd_c_osc2_mix","B.Mix") ]) },
-    { name: "SNARE DRUM", lane: 1, knobs: voice("sd").concat([
-        pot("sd_c_tune2","Shell 2"), pot("sd_c_osc2_mix","Sh.Mix"),
+    { name: "BASS DRUM", lane: 0, knobs: [
+        pot("bd_c_tune","Pitch"), pot("bd_c_sweep_depth","P.Depth"),
+        pot("bd_c_sweep_time","Tune"), pot("bd_c_attack","Attack"),
+        pot("bd_c_decay","Decay"), pot("bd_c_drive","Drive"),
+        en("bd_c_dist_type","Dist",DIST), pot("bd_c_level","Level") ] },
+    { name: "SNARE DRUM", lane: 1, knobs: [
+        pot("sd_c_tune","Tune"), pot("sd_c_noise_hp","Tone"),
         pot("sd_c_snappy","Snappy"), pot("sd_c_noise_decay","Sn.Dcy"),
-        pot("sd_c_noise_hp","Sn.Tone") ]) },
-    { name: "LOW TOM", lane: 2, knobs: voice("lt") },
-    { name: "MID TOM", lane: 3, knobs: voice("mt") },
-    { name: "HI TOM",  lane: 4, knobs: voice("ht") },
+        pot("sd_c_attack","Attack"), pot("sd_c_drive","Drive"),
+        en("sd_c_dist_type","Dist",DIST), pot("sd_c_level","Level") ] },
+    { name: "LOW TOM", lane: 2, knobs: tom("lt") },
+    { name: "MID TOM", lane: 3, knobs: tom("mt") },
+    { name: "HI TOM",  lane: 4, knobs: tom("ht") },
     { name: "RIM SHOT", lane: 5, knobs: [
         pot("rs_tune","Pitch"), pot("rs_tune2","Tone"), pot("rs_res","Res"),
         pot("rs_decay","Decay"), pot("rs_noise","Noise"),

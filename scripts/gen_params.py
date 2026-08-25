@@ -39,29 +39,50 @@ root=[{"key":"circuit_model","name":"Engine"},{"key":"note_map","name":"Note Map
 cp+=[{"key":"note_map","name":"Note Map","type":"enum","options":["Drum Rack (36+)","General MIDI"]},
      {"key":"circuit_model","name":"Engine","type":"enum","options":["Stock er-99","Circuit 909","Bridged-T"]}]
 
+# One page per voice, and only the controls the machine itself has.
+#
+# The TR-909's own panel is TUNE / ATTACK / DECAY / LEVEL for the kick,
+# TUNE / TONE / SNAPPY / LEVEL for the snare and TUNE / DECAY / LEVEL for each
+# tom — that is the whole front panel. What we add on top is what the mod
+# community added: the kick's PITCH and P.DEPTH (the stock TUNE pot sets only
+# how fast the pitch envelope falls, not the pitch), a snare decay, and our own
+# Drive + Distortion.
+#
+# Everything else the engine has — sub layer, tube stage, per-hit drift, click
+# tone, second shell / tom body — keeps working at its tuned default but is no
+# longer a knob. They were the parts nobody asked for and every one of them
+# cost a page turn.
 for vid,cfg in V.items():
-    tl,th=cfg["tune"]; dl,dh=cfg["decay"]; sl,sh=cfg["sweep"]; bl,bh=cfg["body"]
-    # RD-9 / modded-909 panel names: PITCH = base freq, P.DEPTH = amount of
-    # the initial sweep (pot 0 = flat), TUNE = how fast the sweep decays.
-    ps=[I(f"{vid}_c_tune","Pitch",tl,th,"Hz"),
-        F(f"{vid}_c_sweep_depth","P. Depth",1,6,0.05),
-        I(f"{vid}_c_sweep_time","Tune",sl,sh,"ms"),
-        F(f"{vid}_c_attack","Attack",0,1,0.01),
-        I(f"{vid}_c_decay","Decay",dl,dh,"ms"),
-        F(f"{vid}_c_drive","Drive",0.2,8,0.1),
-        {"key":f"{vid}_c_dist_type","name":"Distortion","type":"enum","options":DIST},
-        F(f"{vid}_c_level","Level",0,2,0.01),
-        I(f"{vid}_c_click_tone","Click Tone",500,8000,"Hz")]
+    tl,th=cfg["tune"]; dl,dh=cfg["decay"]; sl,sh=cfg["sweep"]
     if vid=="bd":
-        ps+=[F("bd_c_sub","Sub",0,1,0.01),
-             F("bd_c_tube","Tube",0,6,0.05),
-             F("bd_c_drift","Drift",0,1,0.01)]
-    if vid=="sd":
-        ps+=[I("sd_c_tune2","Shell 2",bl,bh,"Hz"), F("sd_c_osc2_mix","Shell Mix",0,1,0.01),
-             F("sd_c_snappy","Snappy",0,1,0.01), I("sd_c_noise_decay","Snare Decay",10,400,"ms"),
-             I("sd_c_noise_hp","Snare Tone",200,6000,"Hz")]
+        # RD-9 / modded-909 names: PITCH = base freq, P.DEPTH = how much the
+        # note starts sharp, TUNE = how fast that falls back (the stock pot).
+        ps=[I("bd_c_tune","Pitch",tl,th,"Hz"),
+            F("bd_c_sweep_depth","P. Depth",1,6,0.05),
+            I("bd_c_sweep_time","Tune",sl,sh,"ms"),
+            F("bd_c_attack","Attack",0,1,0.01),
+            I("bd_c_decay","Decay",dl,dh,"ms"),
+            F("bd_c_drive","Drive",0.2,8,0.1),
+            {"key":"bd_c_dist_type","name":"Distortion","type":"enum","options":DIST},
+            F("bd_c_level","Level",0,2,0.01)]
+    elif vid=="sd":
+        # The 909 snare has no decay pot: the shells ring for a fixed time and
+        # TONE/SNAPPY shape the noise. Snare Decay is ours, and earns its slot.
+        ps=[I("sd_c_tune","Tune",tl,th,"Hz"),
+            I("sd_c_noise_hp","Tone",200,6000,"Hz"),
+            F("sd_c_snappy","Snappy",0,1,0.01),
+            I("sd_c_noise_decay","Sn Decay",10,400,"ms"),
+            F("sd_c_attack","Attack",0,1,0.01),
+            F("sd_c_drive","Drive",0.2,8,0.1),
+            {"key":"sd_c_dist_type","name":"Distortion","type":"enum","options":DIST},
+            F("sd_c_level","Level",0,2,0.01)]
     else:
-        ps+=[I(f"{vid}_c_tune2","Body Freq",bl,bh,"Hz"), F(f"{vid}_c_osc2_mix","Body Mix",0,1,0.01)]
+        ps=[I(f"{vid}_c_tune","Tune",tl,th,"Hz"),
+            I(f"{vid}_c_decay","Decay",dl,dh,"ms"),
+            F(f"{vid}_c_attack","Attack",0,1,0.01),
+            F(f"{vid}_c_drive","Drive",0.2,8,0.1),
+            {"key":f"{vid}_c_dist_type","name":"Distortion","type":"enum","options":DIST},
+            F(f"{vid}_c_level","Level",0,2,0.01)]
     cp+=ps
     levels[vid]={"name":cfg["name"],
         "knobs":[x["key"] for x in ps[:8]],
