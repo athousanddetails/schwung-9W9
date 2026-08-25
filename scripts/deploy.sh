@@ -28,10 +28,16 @@ scp -q "$BUILD" "$HOST:$DEST/dsp.so.new"
 scp -q "$SRC/src/module.json" "$HOST:$DEST/module.json.new"
 scp -q "$SRC/src/ui_chain.js" "$HOST:$DEST/ui_chain.js.new"
 scp -q "$SRC/src/movy_config.json" "$HOST:$DEST/movy_config.json"
+# The remote panel and the on-device help are served straight off these files.
+# They were missing here for months: every deploy shipped new DSP with the
+# panel from whenever the module was last installed from a tarball, so the
+# browser editor still showed controls the engine had stopped having.
+scp -q "$SRC/src/web_ui.html" "$HOST:$DEST/web_ui.html.new"
+scp -q "$SRC/src/help.json"   "$HOST:$DEST/help.json.new"
 scp -q "$SRC"/src/samples/*.wav "$HOST:$DEST/samples/"
 
 # Atomic swap. Do NOT replace this with a direct scp.
-ssh "$HOST" "cd $DEST && mv -f dsp.so.new dsp.so && mv -f module.json.new module.json && mv -f ui_chain.js.new ui_chain.js && chmod 755 dsp.so && ls -l dsp.so ui_chain.js"
+ssh "$HOST" "cd $DEST && mv -f dsp.so.new dsp.so && mv -f module.json.new module.json && mv -f ui_chain.js.new ui_chain.js && mv -f web_ui.html.new web_ui.html && mv -f help.json.new help.json && chmod 755 dsp.so && ls -l dsp.so ui_chain.js web_ui.html help.json"
 
 if [ -f "$SRC/src/patches/9W9.json" ]; then
     scp -q "$SRC/src/patches/9W9.json" "$HOST:/data/UserData/schwung/patches/9W9.json.new"

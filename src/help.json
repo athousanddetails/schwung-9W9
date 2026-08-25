@@ -19,13 +19,15 @@
         "Pads (left 4x4):",
         " row1: BD SD LT MT",
         " row2: HT RS CP CH",
-        " row3: OH CR RC",
-        " pad16: Master pg",
+        " row3: OH CR RC MAIN",
+        " row4: .. .. REV DLY",
         "",
         "Shift+Pad: select",
         " without sounding.",
         "Mute+Pad: mute that",
-        " drum ([M] in bar)."
+        " drum ([M] in bar).",
+        "Main/Rev/Dly pads",
+        " switch page only."
       ]
     },
     {
@@ -36,11 +38,31 @@
         "Jog: change page.",
         "All pots are 0-127.",
         "",
-        "Kick: Pitch, P.Depth",
-        "(sweep amount), Tune",
-        "(sweep decay), Sub,",
-        "Tube, Drift on the",
-        "BD MORE page."
+        "Jog click on Main:",
+        " locks the page.",
+        " Pads still play,",
+        " page stays put.",
+        " ([L] in the bar)",
+        " Shift+Pad still",
+        " selects. Click",
+        " again to unlock."
+      ]
+    },
+    {
+      "title": "Send FX",
+      "lines": [
+        "Every drum but the",
+        "kick has Rev and",
+        "Dly sends on its",
+        "page.",
+        "",
+        "Reverb and Delay",
+        "pages are last.",
+        "Delay Time is a",
+        "note division,",
+        "synced to tempo.",
+        "HPF on each keeps",
+        "low end out."
       ]
     },
     {
