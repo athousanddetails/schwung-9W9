@@ -199,6 +199,8 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
              * sub/tube/drift were our inventions and are pinned off at
              * trigger — a 909 has none of them. */
             b->tune = 13.0f;  /* sweep tau ms: the C recording's position */
+            b->sweep_depth = 0.0f;   /* P.Depth: mods disengaged = stock */
+            b->pitch_mod   = 1.0f;   /* Pitch: unity = stock */
             b->decay = 1380.0f; b->amp_hold = 40.0f;
             b->attack = 0.10f; b->click_tone = 2500.0f;
             b->drive = 0.2f;  b->level = 1.0f;
@@ -718,7 +720,7 @@ static const bt_field_t g_bt_fields[] = {
     BTF(tune), BTF(sweep_depth), BTF(sweep_time), BTF(decay), BTF(attack),
     BTF(click_tone), BTF(drive), BTF(level), BTF(dist_type),
     BTF(tune2), BTF(osc2_mix), BTF(snappy), BTF(noise_decay), BTF(noise_hp),
-    BTF(sub), BTF(tube), BTF(drift),
+    BTF(sub), BTF(tube), BTF(drift), BTF(pitch_mod),
 };
 #define ER99_BT_FIELD_COUNT (sizeof(g_bt_fields)/sizeof(g_bt_fields[0]))
 

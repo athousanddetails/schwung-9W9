@@ -39,7 +39,11 @@ static const er99_pot_t g_er99_pots[] = {
      * a 909 kick at any setting. */
     { "bd_c_decay",       100.0f, 4000.0f, ER99_EXP },
     { "bd_c_attack",        0.0f,    1.0f, ER99_LIN },
-    { "bd_c_sweep_depth",   1.0f,    3.0f, ER99_LIN },
+    /* The two kick mod pots. P.Depth 0 = stock kick bit for bit, and Pitch is
+     * inert until P.Depth opens it (RD-9 behaviour, per Gus). Pitch spans the
+     * doc's 0.43x..4.7x of the usual frequency; unity sits at pot ~45. */
+    { "bd_c_sweep_depth",   0.0f,    1.0f, ER99_LIN },
+    { "bd_c_pitch_mod",     0.43f,   4.7f, ER99_EXP },
     { "bd_c_sweep_time",     8.0f,  136.0f, ER99_EXP },
     { "bd_c_drive",         0.2f,    8.0f, ER99_EXP },
     /* Level tops out AT the output ceiling, not past it: 1.35 x accent (2.0)

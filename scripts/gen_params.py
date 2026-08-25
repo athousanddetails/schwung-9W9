@@ -63,9 +63,15 @@ for vid,cfg in V.items():
         # Distortion. No mod pots: the sweep itself is stock and fixed, and
         # Tune spans the 39-66 Hz Gus measured on his own machine, original
         # position ~55.
+        # ...plus the two mod pots after Decay (Fraser/Whittle: Tune Depth to
+        # 2.2x the normal sweep, Pitch 0.43-4.7x of usual). P.Depth at zero is
+        # the stock kick bit for bit, and Pitch does nothing until P.Depth has
+        # some value — RD-9 behaviour, per Gus.
         ps=[I("bd_c_tune","Tune",39,66,"Hz"),
             F("bd_c_attack","Attack",0,1,0.01),
             I("bd_c_decay","Decay",dl,dh,"ms"),
+            F("bd_c_sweep_depth","P. Depth",0,1,0.01),
+            F("bd_c_pitch_mod","Pitch",0.43,4.7,0.01),
             F("bd_c_drive","Drive",0.2,8,0.1),
             {"key":"bd_c_dist_type","name":"Distortion","type":"enum","options":DIST},
             F("bd_c_level","Level",0,2,0.01)]

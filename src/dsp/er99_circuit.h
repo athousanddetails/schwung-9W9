@@ -82,6 +82,13 @@ typedef struct {
     int         bd_sweep;      /* use the additive stock sweep       */
     float       bd_df;         /* current Hz above base              */
     float       bd_mult;       /* per-sample decay of bd_df          */
+    float       bd_base;       /* this hit's base Hz (mods applied)  */
+    /* The two mod pots (Fraser/Whittle), wired so P.Depth ZERO is the stock
+     * kick bit for bit and Pitch is inert until P.Depth opens it:
+     *   sweep height x(1 + 1.2*depth)  -> 2.2x stock at max (the 330K)
+     *   base 49 x (1 + depth*(pitch-1)) -> full 0.43..4.7x only at full depth
+     * pitch_mod is the multiplier itself (1.0 = stock). */
+    float       pitch_mod;
     int         bd_phold;      /* samples before the sweep starts to
                                   fall — C9's charge time; Fraser's
                                   "fixed attack time of the sweep"    */
@@ -216,6 +223,22 @@ static inline float er99_shape(const float _x, const float _drive, const float _
     }
 }
 
+/* The measured resting pitch of the stock kick — every Tune position on the
+ * reference machine settles here. */
+#define ER99_BD_BASE_HZ 49.0f
+/* Fitted against all four lettered Tune positions at once (24 windowed pitch
+ * readings, total squared error 26 — about 1 Hz per point): the sweep rises
+ * 4.6 Hz per ms of its time constant, and HOLDS for ~16 ms before falling —
+ * C9's charge time, Fraser's "fixed attack time of the sweep". Without the
+ * hold no exponential matches the recordings; the early readings sit far
+ * above any curve that starts falling at t=0. */
+#ifndef ER99_BD_DF_PER_MS
+#define ER99_BD_DF_PER_MS 4.6f     /* sweep height per ms of tau */
+#endif
+#ifndef ER99_BD_PHOLD_MS
+#define ER99_BD_PHOLD_MS  16.0f    /* sweep hold before the fall */
+#endif
+
 static inline void er99_bt_init(er99_bt_t *v, const float _sr)
 {
     v->sample_rate = _sr;
@@ -247,26 +270,12 @@ static inline void er99_bt_init(er99_bt_t *v, const float _sr)
     v->noise_gated = 0;
     v->amp_hold_left = 0;
     v->bd_sweep = 0; v->bd_df = 0.0f; v->bd_mult = 0.0f; v->bd_phold = 0;
+    v->bd_base = ER99_BD_BASE_HZ;
+    if(v->pitch_mod <= 0.0f) v->pitch_mod = 1.0f;
     v->out_gain = 0.0f;
     v->impulse = 0;
     v->mute_countdown = 0.0;
 }
-
-/* The measured resting pitch of the stock kick — every Tune position on the
- * reference machine settles here. */
-#define ER99_BD_BASE_HZ 49.0f
-/* Fitted against all four lettered Tune positions at once (24 windowed pitch
- * readings, total squared error 26 — about 1 Hz per point): the sweep rises
- * 4.6 Hz per ms of its time constant, and HOLDS for ~16 ms before falling —
- * C9's charge time, Fraser's "fixed attack time of the sweep". Without the
- * hold no exponential matches the recordings; the early readings sit far
- * above any curve that starts falling at t=0. */
-#ifndef ER99_BD_DF_PER_MS
-#define ER99_BD_DF_PER_MS 4.6f     /* sweep height per ms of tau */
-#endif
-#ifndef ER99_BD_PHOLD_MS
-#define ER99_BD_PHOLD_MS  16.0f    /* sweep hold before the fall */
-#endif
 
 static inline void er99_bt_trigger(er99_bt_t *v, const float _accent)
 {
@@ -313,11 +322,15 @@ static inline void er99_bt_trigger(er99_bt_t *v, const float _accent)
     {
         /* v->tune carries the Tune pot as the sweep time constant in ms
          * (7..33); height follows at the measured 4.1 Hz/ms. */
-        const float tau = v->tune < 7.0f ? 7.0f : (v->tune > 33.0f ? 33.0f : v->tune);
-        v->bd_df    = ER99_BD_DF_PER_MS * tau;
+        const float tau = v->tune < 6.0f ? 6.0f : (v->tune > 32.0f ? 32.0f : v->tune);
+        const float m  = v->sweep_depth < 0.0f ? 0.0f
+                       : (v->sweep_depth > 1.0f ? 1.0f : v->sweep_depth);
+        const float pm = v->pitch_mod > 0.0f ? v->pitch_mod : 1.0f;
+        v->bd_base  = ER99_BD_BASE_HZ * (1.0f + m * (pm - 1.0f));
+        v->bd_df    = ER99_BD_DF_PER_MS * tau * (1.0f + 1.2f * m);
         v->bd_mult  = expf(-1.0f / (tau * ms));
         v->bd_phold = (int)(ER99_BD_PHOLD_MS * ms);
-        wa_set_value(&v->pitch, ER99_BD_BASE_HZ);
+        wa_set_value(&v->pitch, v->bd_base);
     }
     else
     {
@@ -362,7 +375,7 @@ static inline float er99_bt_render(er99_bt_t *v, const float _noise)
     float f = wa_param_tick(&v->pitch);
     if(v->bd_sweep)
     {
-        f = ER99_BD_BASE_HZ + v->bd_df;
+        f = v->bd_base + v->bd_df;
         if(v->bd_phold > 0) --v->bd_phold;
         else v->bd_df *= v->bd_mult;
     }
