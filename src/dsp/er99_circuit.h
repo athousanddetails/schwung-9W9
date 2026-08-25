@@ -70,6 +70,21 @@ typedef struct {
      * this (the snare's shells start decaying at once). */
     float       amp_hold;
     int         amp_hold_left;
+    /* Stock-909 pitch sweep (BD only), measured from four Tune positions of a
+     * real machine (letters F/A/B/C on the recordings): the BASE pitch is
+     * fixed at ~49 Hz in every one; the knob raises the sweep's height and
+     * length TOGETHER — height tracks 4.1 Hz per ms of time constant across
+     * the whole ladder (the C9 charge/discharge race), tau spanning ~7-33 ms
+     * (x3.7 gives Fraser's quoted 30-120 ms full decay). And the fall is
+     * exponential IN HERTZ (f = base + df*e^(-t/tau)), not the geometric ramp
+     * wa_param makes — geometric dives under the base and never holds the
+     * long tail the F recording shows still 7 Hz sharp at 100 ms. */
+    int         bd_sweep;      /* use the additive stock sweep       */
+    float       bd_df;         /* current Hz above base              */
+    float       bd_mult;       /* per-sample decay of bd_df          */
+    int         bd_phold;      /* samples before the sweep starts to
+                                  fall — C9's charge time; Fraser's
+                                  "fixed attack time of the sweep"    */
     uint32_t    rng;           /* per-voice drift RNG                */
     float       hit_tune;      /* this hit's (drifted) base pitch    */
     float       hit_gain;      /* this hit's (drifted) level scale   */
@@ -231,10 +246,27 @@ static inline void er99_bt_init(er99_bt_t *v, const float _sr)
     v->noise_hold = 0;
     v->noise_gated = 0;
     v->amp_hold_left = 0;
+    v->bd_sweep = 0; v->bd_df = 0.0f; v->bd_mult = 0.0f; v->bd_phold = 0;
     v->out_gain = 0.0f;
     v->impulse = 0;
     v->mute_countdown = 0.0;
 }
+
+/* The measured resting pitch of the stock kick — every Tune position on the
+ * reference machine settles here. */
+#define ER99_BD_BASE_HZ 49.0f
+/* Fitted against all four lettered Tune positions at once (24 windowed pitch
+ * readings, total squared error 26 — about 1 Hz per point): the sweep rises
+ * 4.6 Hz per ms of its time constant, and HOLDS for ~16 ms before falling —
+ * C9's charge time, Fraser's "fixed attack time of the sweep". Without the
+ * hold no exponential matches the recordings; the early readings sit far
+ * above any curve that starts falling at t=0. */
+#ifndef ER99_BD_DF_PER_MS
+#define ER99_BD_DF_PER_MS 4.6f     /* sweep height per ms of tau */
+#endif
+#ifndef ER99_BD_PHOLD_MS
+#define ER99_BD_PHOLD_MS  16.0f    /* sweep hold before the fall */
+#endif
 
 static inline void er99_bt_trigger(er99_bt_t *v, const float _accent)
 {
@@ -277,9 +309,22 @@ static inline void er99_bt_trigger(er99_bt_t *v, const float _accent)
      * identical hits land differently. */
     wa_biquad_reset(&v->dc_block);
 
-    /* Pitch: start high, sweep down to (drifted) Tune. */
-    wa_set_value(&v->pitch, v->hit_tune * v->sweep_depth);
-    wa_exp_ramp(&v->pitch, v->hit_tune, v->sweep_time * ms);
+    if(v->bd_sweep)
+    {
+        /* v->tune carries the Tune pot as the sweep time constant in ms
+         * (7..33); height follows at the measured 4.1 Hz/ms. */
+        const float tau = v->tune < 7.0f ? 7.0f : (v->tune > 33.0f ? 33.0f : v->tune);
+        v->bd_df    = ER99_BD_DF_PER_MS * tau;
+        v->bd_mult  = expf(-1.0f / (tau * ms));
+        v->bd_phold = (int)(ER99_BD_PHOLD_MS * ms);
+        wa_set_value(&v->pitch, ER99_BD_BASE_HZ);
+    }
+    else
+    {
+        /* Pitch: start high, sweep down to (drifted) Tune. */
+        wa_set_value(&v->pitch, v->hit_tune * v->sweep_depth);
+        wa_exp_ramp(&v->pitch, v->hit_tune, v->sweep_time * ms);
+    }
 
     /* Amplitude: the analog envelope is an RC discharge — exponential, after
      * the hold above (see amp_hold). */
@@ -314,7 +359,13 @@ static inline float er99_bt_render(er99_bt_t *v, const float _noise)
     if(v->mute_countdown <= 0.0) return 0.0f;
     v->mute_countdown -= 1.0;
 
-    const float f   = wa_param_tick(&v->pitch);
+    float f = wa_param_tick(&v->pitch);
+    if(v->bd_sweep)
+    {
+        f = ER99_BD_BASE_HZ + v->bd_df;
+        if(v->bd_phold > 0) --v->bd_phold;
+        else v->bd_df *= v->bd_mult;
+    }
 
     if(v->amp_hold_left > 0 && --v->amp_hold_left == 0)
         wa_exp_ramp(&v->amp, 0.00001f, v->decay * 0.001f * v->sample_rate);
@@ -336,7 +387,15 @@ static inline float er99_bt_render(er99_bt_t *v, const float _noise)
      * raw triangle, which is buzzy in a way no 909 ever is. */
     float o = wa_osc_triangle(&v->osc, f);
     if(!(v->tune2 > 0.0f && v->osc2_mix > 0.0f))
-        o = er99_diode_round(o, 2.0f);
+    {
+        /* Fitted to the recordings' settled body: H3/H1 4-5% (k 2.0 gave 7%)
+         * and H2/H1 2-4% — the pair conducts slightly asymmetrically, and a
+         * perfectly symmetric shaper produces none. The square term's DC goes
+         * through the blocker below. */
+        o = er99_diode_round(o, 1.6f);
+        o += 0.05f * o * o;
+        o = wa_biquad_tick(&v->dc_block, o);
+    }
     if(v->tune2 > 0.0f && v->osc2_mix > 0.0f)
     {
         /* Two-shell voice (snare). On the board EACH VCO has its own diode
