@@ -96,11 +96,15 @@ static inline float er99_shape(const float _x, const float _drive, const float _
     const float k = _drive > 0.01f ? _drive : 0.01f;
     switch(t)
     {
+    /* Below unity drive the clip and fold stages would only ATTENUATE (x*k
+     * never reaches the rails), so switching Dist at low Drive changed the
+     * level by up to 14 dB and nothing else. Normalising by k below unity
+     * makes Drive 0 genuinely transparent for every type. */
     case 1: {   /* hard clip — aggressive, square-ish */
         float v = _x * k;
         if(v >  1.0f) v =  1.0f;
         if(v < -1.0f) v = -1.0f;
-        return v;
+        return k < 1.0f ? v / k : v;
     }
     case 2: {   /* wavefolder — metallic, adds odd harmonics as drive rises */
         float v = _x * k;
@@ -109,7 +113,7 @@ static inline float er99_shape(const float _x, const float _drive, const float _
             if(v >  1.0f) v =  2.0f - v;
             if(v < -1.0f) v = -2.0f - v;
         }
-        return v;
+        return k < 1.0f ? v / k : v;
     }
     case 3: {   /* bitcrush/decimate — lo-fi grit */
         const float steps = 2.0f + 30.0f / k;
@@ -238,9 +242,17 @@ static inline float er99_bt_render(er99_bt_t *v, const float _noise)
     float o = wa_osc_triangle(&v->osc, f);
     if(v->tune2 > 0.0f && v->osc2_mix > 0.0f)
     {
-        /* Second oscillator tracks the same sweep ratio (snare shell / tom body). */
+        /* Two-shell voice (snare). On the board EACH VCO has its own diode
+         * pair and its own VCA — the two shells are rounded separately and
+         * only meet at the summing node. Shaping the SUM instead (what this
+         * did) intermodulates them: 205 and 325 Hz through one nonlinearity
+         * grow a ~120 Hz difference tone, a phantom pitch no 909 makes. The
+         * user Drive stage after this still distorts the mix on purpose;
+         * at low Drive it stays clean. */
+        o = er99_diode_round(o, 2.0f);
         const float ratio = v->tune > 1.0f ? v->tune2 / v->tune : 1.0f;
-        o += wa_osc_triangle(&v->osc2, f * ratio) * v->osc2_mix;
+        o += er99_diode_round(wa_osc_triangle(&v->osc2, f * ratio), 2.0f)
+           * v->osc2_mix;
         o /= (1.0f + v->osc2_mix);
     }
     /* Sub layer: one octave below, tracks the same pitch envelope. Rounded

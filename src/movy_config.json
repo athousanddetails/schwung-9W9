@@ -95,7 +95,7 @@
             "max": 127
           },
           {
-            "key": "sd_c_noise_hp",
+            "key": "sd_c_noise_decay",
             "short": "TONE",
             "full": "Tone",
             "type": "int",
@@ -106,22 +106,6 @@
             "key": "sd_c_snappy",
             "short": "SNAPY",
             "full": "Snappy",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "sd_c_noise_decay",
-            "short": "SNDCY",
-            "full": "Sn Decay",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "sd_c_attack",
-            "short": "ATTK",
-            "full": "Attack",
             "type": "int",
             "min": 0,
             "max": 127
@@ -153,7 +137,9 @@
             "type": "int",
             "min": 0,
             "max": 127
-          }
+          },
+          null,
+          null
         ]
       ]
     },

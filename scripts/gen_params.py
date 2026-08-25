@@ -66,13 +66,13 @@ for vid,cfg in V.items():
             {"key":"bd_c_dist_type","name":"Distortion","type":"enum","options":DIST},
             F("bd_c_level","Level",0,2,0.01)]
     elif vid=="sd":
-        # The 909 snare has no decay pot: the shells ring for a fixed time and
-        # TONE/SNAPPY shape the noise. Snare Decay is ours, and earns its slot.
+        # The 909 snare panel, exactly: TUNE / TONE / SNAPPY / LEVEL, plus our
+        # Drive and Distortion. TONE is what it is on the hardware — ENV4's
+        # discharge resistor (VR7), i.e. how long the noise rings — NOT a
+        # filter; the noise bandpass is fixed circuitry and stays hidden.
         ps=[I("sd_c_tune","Tune",tl,th,"Hz"),
-            I("sd_c_noise_hp","Tone",200,6000,"Hz"),
+            I("sd_c_noise_decay","Tone",60,2000,"ms"),
             F("sd_c_snappy","Snappy",0,1,0.01),
-            I("sd_c_noise_decay","Sn Decay",10,400,"ms"),
-            F("sd_c_attack","Attack",0,1,0.01),
             F("sd_c_drive","Drive",0.2,8,0.1),
             {"key":"sd_c_dist_type","name":"Distortion","type":"enum","options":DIST},
             F("sd_c_level","Level",0,2,0.01)]

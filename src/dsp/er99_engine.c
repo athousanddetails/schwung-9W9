@@ -379,6 +379,8 @@ static void trigger_instrument(er99_engine_t *e, er99_instrument_t *v, const flo
     v->mute_countdown = ms_to_samples(mute_ms, sr);
 }
 
+int er99_engine_set_raw(er99_engine_t *e, const char *key, const float value);
+
 void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const int _velocity)
 {
 
@@ -388,6 +390,24 @@ void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const in
     switch(_which)
     {
     case ER99_BD: case ER99_SD: case ER99_LT: case ER99_MT: case ER99_HT:
+        /* Everything on the snare that is not a panel pot is fixed circuitry:
+         * the shell interval (one pitch CV, D-network ratio 1.585), the pitch
+         * pulse (ENV1 — "the same for all SD notes"), the shell decay
+         * (C70/C79 discharge) and the noise bandpass. Pinned here, at the
+         * moment they matter, so no stale saved state can detune the pair,
+         * re-arm the old 1.6x pitch swoop, or shorten the shells — the blob
+         * still restores those fields, and this overrules it. */
+        if(_which == ER99_SD)
+        {
+            er99_bt_t *sd = &e->bt[ER99_SD];
+            sd->tune2       = sd->tune * 1.585f;
+            sd->sweep_depth = 1.08f;
+            sd->sweep_time  = 25.0f;
+            sd->decay       = 320.0f;
+            sd->attack      = 0.0f;    /* the 909 SD has no click path */
+            if(sd->noise_hp < 990.0f || sd->noise_hp > 1010.0f)
+                er99_engine_set_raw(e, "sd_c_noise_hp", 1000.0f);
+        }
         if(!e->circuit_model)
             trigger_instrument(e, &e->inst[_which], accent);
         /* The toms are their own circuit: three oscillators with separate
@@ -717,12 +737,6 @@ static er99_instrument_t *find_instrument(er99_engine_t *e, const char *_key,
 
 int er99_engine_set_raw(er99_engine_t *e, const char *key, const float value)
 {
-    /* Both snare shells hang off ONE pitch CV on the board, so the Tune pot
-     * moves them together at a fixed interval (measured 205:325 = 1.585).
-     * tune2 is not a panel control any more; it follows. */
-    if(!strcmp(key, "sd_c_tune"))
-        e->bt[ER99_SD].tune2 = value * 1.585f;
-
     const char *rest = NULL;
     er99_instrument_t *v = find_instrument(e, key, &rest);
     if(v)
