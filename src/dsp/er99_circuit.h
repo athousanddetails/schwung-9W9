@@ -122,9 +122,14 @@ static inline float er99_diode_round(const float _x, const float _drive)
  * has them at -30 dB and audible to 150. Fitted again once the shell decay was
  * measured directly (tau 28 ms, not 36): at 0.005 the tail still gated off
  * before 150 ms where the references are at -39 dB and running to -46 at
- * 200 ms. Overridable so the fitting rig can sweep it (-DER99_VCA_VT=...). */
+ * 200 ms. Overridable so the fitting rig can sweep it (-DER99_VCA_VT=...).
+ *
+ * 0.0002 after fitting the shells against Roland's own TR-909 with Snappy at
+ * zero — the cleanest shell reference there is. At 0.001 the tail still cut
+ * short of theirs (0.005 against 0.015 at 150 ms, both around -40 dB, so this
+ * is tidiness rather than anything audible). */
 #ifndef ER99_VCA_VT
-#define ER99_VCA_VT    0.001f
+#define ER99_VCA_VT    0.0002f
 #endif
 #define ER99_VCA_NORM  (1.0f / (1.0f - ER99_VCA_VT))
 
