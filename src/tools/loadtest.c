@@ -303,6 +303,34 @@ int main(int argc, char**argv){
               peaks[3] > peaks[2]*103/100 && peaks[4] > peaks[3]*103/100, l);
     }
 
+    /* The Comp knob: zero is a hard bypass (identical output), and turning it
+     * up must actually change the waveform. */
+    {
+        static int16_t c0[40*128*2], c1[40*128*2], cb[128*2];
+        api->set_param(inst, "master_comp", "0");
+        for(int b=0;b<400;++b) api->render_block(inst,cb,128);
+        { uint8_t m3[3]={0x90,36,110}; api->on_midi(inst,m3,3,0); }
+        { uint8_t m3[3]={0x90,38,110}; api->on_midi(inst,m3,3,0); }
+        for(int b=0;b<40;++b) api->render_block(inst,c0+b*256,128);
+        for(int b=0;b<400;++b) api->render_block(inst,cb,128);
+        { uint8_t m3[3]={0x90,36,110}; api->on_midi(inst,m3,3,0); }
+        { uint8_t m3[3]={0x90,38,110}; api->on_midi(inst,m3,3,0); }
+        for(int b=0;b<40;++b) api->render_block(inst,c1+b*256,128);
+        int same = memcmp(c0,c1,sizeof(c0)) == 0;
+        CHECK(same, "comp at 0 is a hard bypass (repeat renders identical)");
+        api->set_param(inst, "master_comp", "127");
+        for(int b=0;b<400;++b) api->render_block(inst,cb,128);
+        { uint8_t m3[3]={0x90,36,110}; api->on_midi(inst,m3,3,0); }
+        { uint8_t m3[3]={0x90,38,110}; api->on_midi(inst,m3,3,0); }
+        for(int b=0;b<40;++b) api->render_block(inst,c1+b*256,128);
+        long d=0, ref=0;
+        for(int k=0;k<40*256;++k){ long x=(long)c1[k]-(long)c0[k]; d+=x<0?-x:x;
+                                   long a2=c0[k]; ref+=a2<0?-a2:a2; }
+        char l[120]; snprintf(l,sizeof(l),"comp engages (diff %ld vs ref %ld)",d,ref);
+        CHECK(d > ref/10, l);
+        api->set_param(inst, "master_comp", "0");
+    }
+
     /* master distortion applies and is audible */
     api->set_param(inst, "master_dist", "2");
     api->get_param(inst, "master_dist", buf, sizeof(buf));

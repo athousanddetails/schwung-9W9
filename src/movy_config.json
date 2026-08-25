@@ -542,6 +542,14 @@
             "max": 127
           },
           {
+            "key": "master_comp",
+            "short": "COMP",
+            "full": "Compressor",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
             "key": "volume",
             "short": "VOL",
             "full": "Volume",
@@ -557,7 +565,6 @@
             "min": 0,
             "max": 127
           },
-          null,
           null,
           null,
           null

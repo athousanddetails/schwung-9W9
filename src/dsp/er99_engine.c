@@ -348,6 +348,9 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
     }
 
     /* ---- Master ---- */
+    e->master.comp         = 0.0f;
+    e->master.comp_env_db  = 0.0f;
+    e->master.comp_det     = 0.0f;
     e->master.drive        = 2.0f;   /* amount when a mode is chosen */
     e->master.dist_mode    = 0.0f;   /* Off by default */
     /* 0.35, not 0.5. With accent (x2) a single voice at its default Level was
@@ -693,6 +696,59 @@ static float render_sampler(er99_sampler_t *s)
 }
 
 
+/* One-knob glue. The knob lowers the threshold (-8 to -26 dB), raises the
+ * ratio (2:1 to 5:1) and applies makeup scaled to the deeper threshold, so
+ * loudness stays in the same ballpark while the kit pulls together. Detector
+ * is smoothed — 8 ms attack so transients punch through, 150 ms release, 6 dB
+ * soft knee. The old inherited compressor's sins are not repeated: no zero-
+ * attack waveshaping, and amount zero means the stage is not in the path. */
+static float master_glue(er99_master_t *m, const float _in, const float _sr)
+{
+    const float a = m->comp;
+    /* Gentler curve than the first cut: -26 dB threshold at 5:1 measured
+     * 12 dB of reduction on the kit and the 6.5 dB makeup then amplified the
+     * transients the 8 ms attack let through — peak UP 50%%, RMS halved.
+     * Glue, not a pump: shallower threshold, 4:1 tops, 3 ms attack. */
+    /* Anchored to the bus's actual level: the sum runs about +6 dBFS peak
+     * BEFORE master volume scales it down, so dBFS-style thresholds sit tens
+     * of dB under the signal and slam it (first cut measured 17 dB of
+     * standing reduction). 4-6a puts max reduction near 6 dB at full knob. */
+    /* The measured bus: a single voice peaks ~+6 dB (pre-volume), a four-
+     * voice accented stack reaches +15 with its body riding +5..+12. The
+     * knob walks the threshold down through that range: at low amounts only
+     * stacked hits get caught; at full, single hits breathe too. */
+    const float thr = 12.0f - 10.0f * a;
+    const float ratio = 2.0f + 2.0f * a;
+    const float knee = 6.0f;
+
+    /* Level-follow BEFORE the dB math. Detecting on the instantaneous sample
+     * made the stage track the waveform of a 50 Hz kick — its period is 20 ms,
+     * far longer than the attack — locking the gain to the cycle's peaks and
+     * crushing everything between them (RMS fell to a third while peaks
+     * passed). The follower rides the envelope instead. */
+    const float mag = fabsf(_in);
+    const float drel = expf(-1.0f / (0.050f * _sr));
+    m->comp_det = mag > m->comp_det ? mag : m->comp_det * drel;
+    const float in_db = m->comp_det > 1e-9f ? 20.0f * log10f(m->comp_det) : -120.0f;
+    const float over = in_db - thr;
+    float gr = 0.0f;
+    if(over >= knee * 0.5f)
+        gr = -(over) * (1.0f - 1.0f / ratio);
+    else if(over > -knee * 0.5f)
+    {
+        const float t = over + knee * 0.5f;
+        gr = -(t * t) / (2.0f * knee) * (1.0f - 1.0f / ratio);
+    }
+
+    const float atk = expf(-1.0f / (0.003f * _sr));
+    const float rel = expf(-1.0f / (0.120f * _sr));
+    const float coef = gr < m->comp_env_db ? atk : rel;
+    m->comp_env_db = gr + (m->comp_env_db - gr) * coef;
+
+    const float makeup = a * 4.0f;   /* dB, tracks the deeper threshold */
+    return _in * powf(10.0f, (m->comp_env_db + makeup) / 20.0f);
+}
+
 void er99_engine_render(er99_engine_t *e, float *out, const int frames)
 {
     for(int n=0; n<frames; ++n)
@@ -717,6 +773,8 @@ void er99_engine_render(er99_engine_t *e, float *out, const int frames)
         if(e->master.dist_mode >= 0.5f)
             mix = er99_shape(mix * e->master.drive, e->master.drive,
                              e->master.dist_mode - 1.0f) * 0.7f;
+        if(e->master.comp > 0.001f)
+            mix = master_glue(&e->master, mix, e->sample_rate);
         out[n] = mix * e->master.volume;
     }
 }
@@ -746,7 +804,7 @@ static const char *const g_other_state_keys[] = {
     "chh_decay", "chh_volume", "chh_pitch", "chh_drive",
     "rc_decay", "rc_volume", "rc_pitch",
     "cr_decay", "cr_volume", "cr_pitch",
-    "volume", "accent", "circuit_model", "master_dist",
+    "volume", "accent", "circuit_model", "master_dist", "master_comp",
     "rs_dist_type", "hc_dist_type", "ohh_dist_type", "chh_dist_type",
     "rc_dist_type", "cr_dist_type",
 };
@@ -881,6 +939,7 @@ int er99_engine_set_raw(er99_engine_t *e, const char *key, const float value)
 
     if(!strcmp(key, "master_drive")) { e->master.drive = value; return 1; }
     if(!strcmp(key, "master_dist"))  { e->master.dist_mode = value < 0 ? 0 : (value > 4 ? 4 : value); return 1; }
+    if(!strcmp(key, "master_comp")) { e->master.comp = value < 0.0f ? 0.0f : (value > 1.0f ? 1.0f : value); return 1; }
     if(!strcmp(key, "volume")) { e->master.volume = value; return 1; }
     if(!strcmp(key, "accent")) { e->master.accent = value; return 1; }
     return 0;
@@ -958,6 +1017,7 @@ int er99_engine_get_raw(const er99_engine_t *e, const char *key, float *out)
     if(!strcmp(key, "hc_decay"))  { *out = e->clap.decay; return 1; }
     if(!strcmp(key, "master_drive")) { *out = e->master.drive; return 1; }
     if(!strcmp(key, "master_dist"))  { *out = e->master.dist_mode; return 1; }
+    if(!strcmp(key, "master_comp")) { *out = e->master.comp; return 1; }
     if(!strcmp(key, "volume"))    { *out = e->master.volume; return 1; }
     if(!strcmp(key, "accent"))    { *out = e->master.accent; return 1; }
     return 0;

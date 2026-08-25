@@ -157,6 +157,14 @@ typedef struct {
     float dist_mode;
     float volume;
     float accent;       /* globalParams.globalAccent = 2.0 */
+
+    /* One-knob bus glue — OURS, requested as a feature, not 909 circuitry,
+     * and unlike the compressor this module once inherited it is honest
+     * about it: at zero the stage is bypassed entirely (bit-identical), and
+     * the knob blends threshold, ratio and auto-makeup together. */
+    float comp;         /* 0..1 amount; 0 = hard bypass  */
+    float comp_env_db;  /* smoothed gain reduction state */
+    float comp_det;     /* rectified level follower      */
 } er99_master_t;
 
 typedef struct {

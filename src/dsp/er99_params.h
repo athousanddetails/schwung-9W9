@@ -3,7 +3,7 @@
  * dynamically from the DSP via get_param(). */
 #ifndef ER99_PARAMS_H
 #define ER99_PARAMS_H
-#define ER99_CHAIN_PARAMS_LEN 5497
+#define ER99_CHAIN_PARAMS_LEN 5564
 static const char er99_chain_params_json[] =
     "[{\"key\":\"note_map\",\"name\":\"Note Map\",\"type\":\"enum\",\"options\":[\"Drum Rack (36+)\",\"General MIDI\"]},{\"k"
     "ey\":\"circuit_model\",\"name\":\"Engine\",\"type\":\"enum\",\"options\":[\"Stock er-99\",\"Circuit 909\"]},{\"key\":\"b"
@@ -58,9 +58,10 @@ static const char er99_chain_params_json[] =
     "s\":[\"Diode (909)\",\"Hard Clip\",\"Wavefolder\",\"Bitcrush\"]},{\"key\":\"cr_volume\",\"name\":\"Level\",\"type\":\"in"
     "t\",\"min\":0,\"max\":127,\"viz\":{\"kind\":\"fader\"}},{\"key\":\"master_dist\",\"name\":\"Master Dist\",\"type\":\"enum\""
     ",\"options\":[\"Off\",\"Diode (909)\",\"Hard Clip\",\"Wavefolder\",\"Bitcrush\"]},{\"key\":\"master_drive\",\"name\":\""
-    "Master Drive\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"volume\",\"name\":\"Volume\",\"type\":\"int\",\"min\":0,\""
-    "max\":127,\"viz\":{\"kind\":\"fader\"}},{\"key\":\"accent\",\"name\":\"Accent\",\"type\":\"int\",\"min\":0,\"max\":127}]";
-#define ER99_UI_HIERARCHY_LEN 4294
+    "Master Drive\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"master_comp\",\"name\":\"Comp\",\"type\":\"int\",\"min\":"
+    "0,\"max\":127},{\"key\":\"volume\",\"name\":\"Volume\",\"type\":\"int\",\"min\":0,\"max\":127,\"viz\":{\"kind\":\"fader\"}},"
+    "{\"key\":\"accent\",\"name\":\"Accent\",\"type\":\"int\",\"min\":0,\"max\":127}]";
+#define ER99_UI_HIERARCHY_LEN 4344
 static const char er99_ui_hierarchy_json[] =
     "{\"levels\":{\"bd\":{\"name\":\"Bass Drum\",\"knobs\":[\"bd_c_tune\",\"bd_c_attack\",\"bd_c_decay\",\"bd_c_sweep_dept"
     "h\",\"bd_c_pitch_mod\",\"bd_c_drive\",\"bd_c_dist_type\",\"bd_c_level\"],\"params\":[{\"key\":\"bd_c_tune\",\"name\":"
@@ -98,11 +99,12 @@ static const char er99_ui_hierarchy_json[] =
     "\":\"Level\"}]},\"crash\":{\"name\":\"Crash\",\"knobs\":[\"cr_decay\",\"cr_pitch\",\"cr_drive\",\"cr_dist_type\",\"cr_vo"
     "lume\"],\"params\":[{\"key\":\"cr_decay\",\"name\":\"Decay\"},{\"key\":\"cr_pitch\",\"name\":\"Tune\"},{\"key\":\"cr_drive"
     "\",\"name\":\"Drive\"},{\"key\":\"cr_dist_type\",\"name\":\"Distortion\"},{\"key\":\"cr_volume\",\"name\":\"Level\"}]},\"r"
-    "oot\":{\"name\":\"9W9\",\"knobs\":[\"master_dist\",\"master_drive\",\"volume\",\"accent\"],\"params\":[{\"key\":\"circui"
-    "t_model\",\"name\":\"Engine\"},{\"key\":\"note_map\",\"name\":\"Note Map\"},{\"level\":\"bd\",\"label\":\"Bass Drum\"},{\""
-    "level\":\"sd\",\"label\":\"Snare\"},{\"level\":\"lt\",\"label\":\"Low Tom\"},{\"level\":\"mt\",\"label\":\"Med Tom\"},{\"lev"
-    "el\":\"ht\",\"label\":\"Hi Tom\"},{\"level\":\"rim\",\"label\":\"Rim Shot\"},{\"level\":\"clap\",\"label\":\"Hand Clap\"},{"
-    "\"level\":\"chh\",\"label\":\"Closed Hat\"},{\"level\":\"ohh\",\"label\":\"Open Hat\"},{\"level\":\"ride\",\"label\":\"Ride"
-    "\"},{\"level\":\"crash\",\"label\":\"Crash\"},{\"key\":\"master_dist\",\"name\":\"Master Dist\"},{\"key\":\"master_drive"
-    "\",\"name\":\"Master Drive\"},{\"key\":\"volume\",\"name\":\"Volume\"},{\"key\":\"accent\",\"name\":\"Accent\"}]}}}";
+    "oot\":{\"name\":\"9W9\",\"knobs\":[\"master_dist\",\"master_drive\",\"master_comp\",\"volume\",\"accent\"],\"params\":["
+    "{\"key\":\"circuit_model\",\"name\":\"Engine\"},{\"key\":\"note_map\",\"name\":\"Note Map\"},{\"level\":\"bd\",\"label\":\""
+    "Bass Drum\"},{\"level\":\"sd\",\"label\":\"Snare\"},{\"level\":\"lt\",\"label\":\"Low Tom\"},{\"level\":\"mt\",\"label\":\"M"
+    "ed Tom\"},{\"level\":\"ht\",\"label\":\"Hi Tom\"},{\"level\":\"rim\",\"label\":\"Rim Shot\"},{\"level\":\"clap\",\"label\":"
+    "\"Hand Clap\"},{\"level\":\"chh\",\"label\":\"Closed Hat\"},{\"level\":\"ohh\",\"label\":\"Open Hat\"},{\"level\":\"ride\""
+    ",\"label\":\"Ride\"},{\"level\":\"crash\",\"label\":\"Crash\"},{\"key\":\"master_dist\",\"name\":\"Master Dist\"},{\"key\""
+    ":\"master_drive\",\"name\":\"Master Drive\"},{\"key\":\"master_comp\",\"name\":\"Comp\"},{\"key\":\"volume\",\"name\":\"V"
+    "olume\"},{\"key\":\"accent\",\"name\":\"Accent\"}]}}}";
 #endif

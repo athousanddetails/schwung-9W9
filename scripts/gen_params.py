@@ -137,6 +137,7 @@ crash=[I("cr_decay","Decay",100,3000,"ms"), F("cr_pitch","Tune",0.25,4,0.01),
 glob=[{"key":"master_dist","name":"Master Dist","type":"enum",
        "options":["Off","Diode (909)","Hard Clip","Wavefolder","Bitcrush"]},
       F("master_drive","Master Drive",0,127,1),
+      F("master_comp","Comp",0,1,0.01),
       F("volume","Volume",0,1,0.01), F("accent","Accent",1,4,0.05)]
 cp+=rim+clap+chat+ohat+ride+crash+glob
 
@@ -148,8 +149,9 @@ for lid,label,ps in (("rim","Rim Shot",rim),("clap","Hand Clap",clap),
     root.append({"level":lid,"label":label})
 
 root+=[{"key":"master_dist","name":"Master Dist"},{"key":"master_drive","name":"Master Drive"},
+       {"key":"master_comp","name":"Comp"},
        {"key":"volume","name":"Volume"},{"key":"accent","name":"Accent"}]
-levels["root"]={"name":"9W9","knobs":["master_dist","master_drive","volume","accent"],"params":root}
+levels["root"]={"name":"9W9","knobs":["master_dist","master_drive","master_comp","volume","accent"],"params":root}
 
 cpj=json.dumps(cp,separators=(",",":")); uhj=json.dumps({"levels":levels},separators=(",",":"))
 def cstr(s):
