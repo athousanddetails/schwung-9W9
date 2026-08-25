@@ -117,10 +117,10 @@ static const er99_pot_t g_er99_pots[] = {
     { "rs_volume",          0.0f,    1.35f, ER99_LIN },
 
     /* --- Clap (909 model) --- */
-    { "hc_tune",          400.0f, 2500.0f, ER99_EXP },
+    { "hc_tune",          650.0f, 1400.0f, ER99_EXP },
     { "hc_spread",          2.0f,   30.0f, ER99_EXP },
     { "hc_tone_decay",      2.0f,   40.0f, ER99_EXP },   /* burst pulse decay */
-    { "hc_decay",          40.0f,  600.0f, ER99_EXP },   /* room tail         */
+    { "hc_decay",         120.0f, 1000.0f, ER99_EXP },   /* room tail         */
     { "hc_tail",            0.0f,    1.0f, ER99_LIN },
     { "hc_drive",           0.2f,    8.0f, ER99_EXP },
     { "hc_volume",          0.0f,    1.35f, ER99_LIN },

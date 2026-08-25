@@ -113,10 +113,11 @@ def DIST_T(k,n="Distortion"): return {"key":k,"name":n,"type":"enum","options":D
 rim=[I("rs_tune","Tune",0,127),
      I("rs_saturation","Drive",0,127), DIST_T("rs_dist_type"),
      I("rs_volume","Level",0,127)]
-clap=[I("hc_tune","Tune",0,127), I("hc_spread","Spread",0,127),
-      I("hc_tone_decay","Burst",0,127), I("hc_decay","Tail",0,127),
-      I("hc_tail","Tail Mix",0,127), I("hc_drive","Drive",0,127),
-      DIST_T("hc_dist_type"), I("hc_volume","Level",0,127)]
+# The real 909 clap has ONE pot: Level. Tune and Tail stay because Gus likes
+# them; spread, echo decay and tail share are the circuit's, pinned at trigger.
+clap=[I("hc_tune","Tune",0,127), I("hc_decay","Tail",0,127),
+      I("hc_drive","Drive",0,127), DIST_T("hc_dist_type"),
+      I("hc_volume","Level",0,127)]
 # Closed and open hat are one pair of cymbals but two voices: each has its own
 # tuning, decay, drive and level, and triggering either chokes the other (the
 # pedal cannot be shut and open at once). Ride and crash likewise get a page

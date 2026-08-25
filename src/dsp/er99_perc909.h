@@ -146,7 +146,7 @@ static inline void er99_clap909_init(er99_clap909_t *v, const float _sr)
     wa_biquad_set(&v->hp, WA_HIGHPASS, 400.0f, 0.7071f, 0.0f, _sr);
     wa_param_init(&v->burst, 0.0f);
     wa_param_init(&v->tail, 0.0f);
-    v->pulse_index = 3;
+    v->pulse_index = 4;
     v->mute_countdown = 0.0;
     v->accent_gain_ = 1.0f;
 }
@@ -161,11 +161,13 @@ static inline void er99_clap909_trigger(er99_clap909_t *v, const float _accent)
     const float ms = 0.001f * v->sample_rate;
     v->pulse_index = 0;
     v->next_pulse = 0.0;
-    /* The tail runs from the start, under the burst. */
-    wa_set_value(&v->tail, v->tail_level);
-    wa_exp_ramp(&v->tail, 0.00001f, v->tail_decay * ms);
+    /* The tail is armed by the FOURTH event (see render), not here: on the
+     * measured clap the three pre-echoes RISE into the main hit at ~3 spreads
+     * and the room tail hangs off that hit — a tail from t=0 puts energy
+     * under the echoes and smears the gaps that make it read as hands. */
+    wa_set_value(&v->tail, 0.0f);
     v->accent_gain_ = _accent;
-    v->mute_countdown = (v->tail_decay + v->spread * 4.0f + 20.0f) * ms;
+    v->mute_countdown = (v->tail_decay + v->spread * 4.0f + 40.0f) * ms;
 }
 
 static inline float er99_clap909_render(er99_clap909_t *v, const float _noise)
@@ -175,13 +177,24 @@ static inline float er99_clap909_render(er99_clap909_t *v, const float _noise)
 
     const float ms = 0.001f * v->sample_rate;
 
-    /* Three fast pulses = the hands. */
-    if(v->pulse_index < 3)
+    /* Four events, measured off the real drum: three pre-echoes RISING in
+     * level (0.62 / 0.70 / 0.86, ~12 ms apart), then the main clap at full —
+     * and the room tail starts THERE. */
+    if(v->pulse_index < 4)
     {
         if(v->next_pulse <= 0.0)
         {
-            wa_set_value(&v->burst, 1.0f);
+            /* Echo levels compensate for the tail that rides under the main
+             * hit's analysis window — raw 0.62/0.70/0.86 relative to (main +
+             * tail) once rendered. */
+            static const float amp[4] = { 1.22f, 1.35f, 1.68f, 1.0f };
+            wa_set_value(&v->burst, amp[v->pulse_index]);
             wa_exp_ramp(&v->burst, 0.00001f, v->burst_decay * ms);
+            if(v->pulse_index == 3)
+            {
+                wa_set_value(&v->tail, v->tail_level);
+                wa_exp_ramp(&v->tail, 0.00001f, v->tail_decay * ms);
+            }
             v->pulse_index++;
             v->next_pulse = v->spread * ms;
         }

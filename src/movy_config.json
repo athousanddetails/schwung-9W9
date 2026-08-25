@@ -269,14 +269,6 @@
             "max": 127
           },
           {
-            "key": "hc_spread",
-            "short": "CPSPR",
-            "full": "Clap Spread",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
             "key": "hc_decay",
             "short": "CPTAL",
             "full": "Clap Tail",
@@ -312,6 +304,7 @@
             "min": 0,
             "max": 127
           },
+          null,
           null,
           null
         ]

@@ -301,9 +301,13 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
 
         er99_clap909_t *c9 = &e->clap909;
         memset(c9, 0, sizeof(*c9));
-        c9->tune = 1050.0f; c9->res = 2.4f;
-        c9->spread = 9.0f;  c9->burst_decay = 7.0f;
-        c9->tail_decay = 210.0f; c9->tail_level = 0.42f;
+        /* Fitted to Clap 909 Clean: bandpass centred ~950 Hz (Q ~2, burst
+         * spectrum 925 with content to 3 k), echoes 12 ms apart, each dying in
+         * a few ms; tail from the main hit at ~0.65 of it, single-exponential
+         * tau ~30 ms matching the measured 0.62/0.43/0.23/0.10 ride-down. */
+        c9->tune = 950.0f;  c9->res = 2.0f;
+        c9->spread = 12.0f; c9->burst_decay = 50.0f;
+        c9->tail_decay = 345.0f; c9->tail_level = 0.58f;
         c9->drive = 1.6f;  c9->dist_type = 0.0f; c9->level = 1.3f;
         er99_clap909_init(c9, _sr);
     }
@@ -430,6 +434,16 @@ void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const in
              * four lettered recordings show (base fixed at 49 Hz on all of
              * them); the pot value is the sweep's time constant in ms. */
             bd->bd_sweep = 1;
+        }
+        /* Clap: the real 909 gives it ONE pot (Level). Tune and Tail stay
+         * because Gus likes them; the burst geometry is the circuit's and is
+         * pinned — echo spacing, echo decay, tail share and the filter's Q. */
+        if(_which == ER99_HC && e->circuit_model)
+        {
+            er99_clap909_t *c9 = &e->clap909;
+            c9->spread = 12.0f; c9->burst_decay = 50.0f;
+            c9->tail_level = 0.58f;
+            if(c9->res != 2.0f) { c9->res = 2.0f; er99_clap909_retune(c9); }
         }
         if(_which == ER99_SD)
         {
