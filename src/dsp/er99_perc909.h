@@ -33,6 +33,12 @@
 #include "er99_circuit.h"   /* er99_shape() */
 
 /* ===================== RIM SHOT ===================== */
+/* 723/210 from the BOM's 22K x 10n section against the measured body. */
+/* Centred between the recording's 700 and 890 Hz pair and left broad (Q ~3),
+ * so one section covers both the way the real spectrum shows them — nearly
+ * equal in level — rather than spiking on one. */
+#define ER99_RIM_F3(tune) ((tune) * 3.76f)
+
 typedef struct {
     float tune;        /* Hz, low resonance ("tock")  */
     float tune2;       /* Hz, high resonance ("tick") */
@@ -43,7 +49,7 @@ typedef struct {
     float dist_type;
     float level;
 
-    wa_biquad_t bp1, bp2, hp;
+    wa_biquad_t bp1, bp2, bp3, hp;
     wa_param_t  amp;
     int         impulse;
     double      mute_countdown;
@@ -62,6 +68,14 @@ static inline void er99_rim909_init(er99_rim909_t *v, const float _sr)
      * die too slowly relative to the body. */
     wa_biquad_set(&v->bp2, WA_BANDPASS, v->tune2 > 0 ? v->tune2 : 480.0f,
                   v->res > 0 ? v->res * 1.1f : 11.0f, 0.0f, _sr);
+    /* Third section — the wood. The rim's capacitors come in matched pairs in
+     * the BOM (4.7n, 27n, 10n, 10n), i.e. more Sallen-Key sections than the
+     * two obvious resonances, and the RC values land where the recording has
+     * energy: 12K x 27n = 491 Hz (the 480), 22K x 10n = 723 Hz (this one),
+     * 12K x 10n = 1327 Hz (the faint top). Broad and low, so it covers the
+     * 700 and 890 Hz pair the real drum shows rather than a single spike. */
+    wa_biquad_set(&v->bp3, WA_BANDPASS, ER99_RIM_F3(v->tune),
+                  v->res > 0 ? v->res * 0.30f : 3.0f, 0.0f, _sr);
     wa_biquad_set(&v->hp, WA_HIGHPASS, 120.0f, 0.7071f, 0.0f, _sr);
     wa_param_init(&v->amp, 0.0f);
     v->impulse = 0;
@@ -73,6 +87,8 @@ static inline void er99_rim909_retune(er99_rim909_t *v)
 {
     wa_biquad_set(&v->bp1, WA_BANDPASS, v->tune, v->res, 0.0f, v->sample_rate);
     wa_biquad_set(&v->bp2, WA_BANDPASS, v->tune2, v->res * 1.1f, 0.0f, v->sample_rate);
+    wa_biquad_set(&v->bp3, WA_BANDPASS, ER99_RIM_F3(v->tune), v->res * 0.30f,
+                  0.0f, v->sample_rate);
 }
 
 static inline void er99_rim909_trigger(er99_rim909_t *v, const float _accent)
@@ -111,7 +127,8 @@ static inline float er99_rim909_render(er99_rim909_t *v, const float _noise)
     /* Rebalanced once the noise stopped driving the pair: the upper resonator
      * had been living off that hiss, and lost most of its level when it went. */
     float y = wa_biquad_tick(&v->bp1, exc) * 60.0f
-            + wa_biquad_tick(&v->bp2, exc) * 32.0f;
+            + wa_biquad_tick(&v->bp2, exc) * 32.0f
+            + wa_biquad_tick(&v->bp3, exc) * 330.0f;
     y = er99_shape(y * a, v->drive, v->dist_type);
     y = wa_biquad_tick(&v->hp, y);
     return y * v->level * v->accent_gain_;

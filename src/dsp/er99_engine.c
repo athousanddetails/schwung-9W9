@@ -284,8 +284,8 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
          * from 2.4: the shaper was distorting the pair hard enough to invert
          * their balance — 480 Hz came out 2.5x the 210 where the hardware has
          * it at half. Distortion stays available on the knob. */
-        r9->decay = 200.0f; r9->noise_mix = 0.35f;
-        r9->drive = 1.4f;  r9->dist_type = 0.0f; r9->level = 1.1f;
+        r9->decay = 300.0f; r9->noise_mix = 0.35f;
+        r9->drive = 1.4f;  r9->dist_type = 0.0f; r9->level = 0.58f;
         er99_rim909_init(r9, _sr);
 
         er99_clap909_t *c9 = &e->clap909;
@@ -443,7 +443,7 @@ void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const in
             if(r9->tune2 != t2 || r9->res != q)
             { r9->tune2 = t2; r9->res = q; er99_rim909_retune(r9); }
             r9->noise_mix = 0.35f;   /* inside the 2-sample pulse only */
-            r9->decay     = 200.0f;  /* -30 dB at ~30 ms, as measured */
+            r9->decay     = 300.0f;  /* -30 dB at ~30 ms, as measured */
             er99_rim909_trigger(r9, accent);
             break;
         }
