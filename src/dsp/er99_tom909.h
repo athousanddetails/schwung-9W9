@@ -61,6 +61,7 @@ typedef struct {
     wa_biquad_t dc_block;
     float       out_gain;
     float       noise_level;
+    float       crush_st[2];
     double      mute_countdown;
     float       sample_rate;
 } er99_tom_t;
@@ -152,7 +153,7 @@ static inline float er99_tom909_render(er99_tom_t *t, const er99_bt_t *p,
     const float stick = wa_biquad_tick(&t->noise_bp, _noise)
                       * wa_param_tick(&t->noise_env) * t->noise_level * 1.5f;
 
-    float y = er99_shape(o + stick, p->drive, p->dist_type);
+    float y = er99_shape_st(o + stick, p->drive, p->dist_type, t->crush_st);
     y = wa_biquad_tick(&t->dc_block, y);
     return y * t->out_gain;
 }

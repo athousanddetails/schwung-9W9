@@ -74,6 +74,7 @@ typedef struct {
      * exponential IN HERTZ (f = base + df*e^(-t/tau)), not the geometric ramp
      * wa_param makes — geometric dives under the base and never holds the
      * long tail the F recording shows still 7 Hz sharp at 100 ms. */
+    float       crush_st[2];   /* bitcrush decimator state           */
     int         bd_sweep;      /* use the additive stock sweep       */
     float       bd_df;         /* current Hz above base              */
     float       bd_mult;       /* per-sample decay of bd_df          */
@@ -155,34 +156,36 @@ static inline float er99_diode_round(const float _x, const float _drive)
 #endif
 #define ER99_VCA_NORM  (1.0f / (1.0f - ER99_VCA_VT))
 
-static inline float er99_shape(const float _x, const float _drive, const float _type)
+/*
+ * The voice/master distortion stage. Seven characters:
+ *   0 Diode     — the 909's own back-to-back pair. UNTOUCHED: every voice in
+ *                 the module is fitted through it.
+ *   1 Hard Clip — single-ended asymmetric saturator (even harmonics).
+ *   2 Wavefold  — folds with a clipped floor under it so the note survives.
+ *   3 Bitcrush  — amplitude quantise PLUS sample-rate decimation (the part
+ *                 that makes a crush musical needs two floats of state; a
+ *                 caller with no state gets quantise only).
+ *   4 Saturate  — warm parallel drive, Heat/Karacter territory: rational
+ *                 soft-knee with a touch of even harmonics, blended with the
+ *                 dry so the transient survives.
+ *   5 Boum      — fuzz, OTO territory: high gain into a rational clipper
+ *                 (fatter approach than tanh) with a bias shift; collapses to
+ *                 a thick square-ish wall when pushed.
+ *   6 Decap     — punchy tube-style stage, Decapitator territory: biased
+ *                 cubic soft clip, hard-limited past its knee — strong odd
+ *                 harmonics with the bias's even ones, reads as "crunch".
+ *
+ * All types are level-normalised below unity drive, so Drive at minimum is
+ * transparent for every one of them.
+ */
+static inline float er99_shape_st(const float _x, const float _drive,
+                                  const float _type, float *_st)
 {
     const int t = (int)(_type + 0.5f);
     const float k = _drive > 0.01f ? _drive : 0.01f;
     switch(t)
     {
-    /* Below unity drive the clip and fold stages would only ATTENUATE (x*k
-     * never reaches the rails), so switching Dist at low Drive changed the
-     * level by up to 14 dB and nothing else. Normalising by k below unity
-     * makes Drive 0 genuinely transparent for every type.
-     *
-     * These three are ours, not the 909's, and they were all SYMMETRIC —
-     * measured at 1.2% even harmonics against up to 39% odd. Odd-only
-     * distortion is the hollow, brittle sound Gus called thin; the even
-     * harmonics that make an overdriven amp sound full come from asymmetry.
-     * Diode (case 0) is deliberately left alone: it is the 909's own
-     * back-to-back diode pair, symmetric by nature, and every voice in the
-     * module is fitted through it. */
     case 1: {   /* asymmetric soft clip — amp-like, even harmonics and all */
-        /* One rail saturates sooner than the other, as a single-ended stage
-         * does. Offset by the bias' own output so silence stays silence and
-         * no DC reaches the mix. */
-        /* The bias is added AFTER the drive gain, not scaled by it: biasing
-         * the input meant that at high drive one rail saturated completely
-         * and the stage turned into a rectifier with 30x gain. Here the two
-         * rails stay 1 : 1.5 apart at any drive, which is a single-ended
-         * stage's asymmetry rather than a broken one. 0.958 sets unity
-         * small-signal gain, so Drive 0 is still transparent. */
         const float bias = 0.35f, tb = 0.33638f;   /* tanhf(0.35f) */
         const float v = (tanhf(_x * k + bias) - tb) * 0.958f;
         return k < 1.0f ? v / k : v;
@@ -194,26 +197,65 @@ static inline float er99_shape(const float _x, const float _drive, const float _
             if(v >  1.0f) v =  2.0f - v;
             if(v < -1.0f) v = -2.0f - v;
         }
-        /* Folding EATS the fundamental — measured 7455 down to 3387 at high
-         * drive, which is why it sounded thin rather than metallic. Keep a
-         * floor of the clipped signal underneath so the note survives its own
-         * harmonics. */
         float body = _x * k;
         if(body >  1.0f) body =  1.0f;
         if(body < -1.0f) body = -1.0f;
         v = 0.62f * v + 0.38f * body;
         return k < 1.0f ? v / k : v;
     }
-    case 3: {   /* bitcrush — lo-fi grit */
-        /* Was 2 + 30/k: even wide open that is ~6 levels, and measured under
-         * 4% THD, so the setting did almost nothing. Bites now. */
+    case 3: {   /* bitcrush — quantise + decimate */
+        /* Depth falls and the hold stretches together as drive rises: from
+         * (transparent, full rate) to (~3 levels, ~2.2 kHz at 44k1). */
         const float steps = 1.5f + 9.0f / k;
-        return floorf(_x * steps + 0.5f) / steps;
+        float q = floorf(_x * steps + 0.5f) / steps;
+        if(_st)
+        {
+            const float hold = k < 1.0f ? 1.0f : 1.0f + (k - 1.0f) * 1.7f;
+            _st[1] += 1.0f;                 /* phase */
+            if(_st[1] >= hold) { _st[1] -= hold; _st[0] = q; }
+            q = _st[0];
+        }
+        return q;
+    }
+    case 4: {   /* saturate — warm, parallel, keeps the transient */
+        const float u = _x * k + 0.08f * k * _x * _x;
+        const float wet = u / (1.0f + fabsf(u));
+        const float m = k < 1.0f ? k : 1.0f;    /* dry blend below unity */
+        const float v = (1.0f - 0.65f * m) * _x * (k < 1.0f ? k : 1.0f)
+                      + 0.65f * m * wet * 1.35f;
+        return k < 1.0f ? v / k : v;
+    }
+    case 5: {   /* boum — thick fuzz wall */
+        /* The 2.5x pre-gain fuzzes even at minimum drive, so the fuzz is
+         * crossfaded in between 0.85 and 2 — below that the stage passes dry
+         * (Drive-at-zero-is-transparent holds for this type too). */
+        const float g = k * 2.5f;
+        const float u = _x * g + 0.22f;
+        const float wet = (u / (1.0f + fabsf(u)) - 0.18033f) * 1.05f;
+        float m = (k - 0.85f) / 1.15f;
+        if(m < 0.0f) m = 0.0f;
+        if(m > 1.0f) m = 1.0f;
+        return (1.0f - m) * _x + m * wet;
+    }
+    case 6: {   /* decap — biased cubic crunch */
+        float u = _x * k + 0.12f;
+        if(u >  1.0f) u =  1.0f;
+        if(u < -1.0f) u = -1.0f;
+        const float y0 = 0.12f - (0.12f*0.12f*0.12f)/3.0f;   /* silence -> 0 */
+        /* 1.5/1.479 makes the small-signal gain exactly k, so minimum drive
+         * is transparent and the curve is continuous — the /k trick the other
+         * types use would boost this one +3.4 dB at the knee. */
+        return ((u - u*u*u/3.0f) - y0) * (1.5f / 1.479f);
     }
     case 0:
     default:
         return er99_diode_round(_x, k);
     }
+}
+
+static inline float er99_shape(const float _x, const float _drive, const float _type)
+{
+    return er99_shape_st(_x, _drive, _type, (float*)0);
 }
 
 /* The measured resting pitch of the stock kick — every Tune position on the
@@ -388,7 +430,7 @@ static inline float er99_bt_render(er99_bt_t *v, const float _noise)
            * v->osc2_mix;
         o /= (1.0f + v->osc2_mix);
     }
-    float body = er99_shape(o, v->drive, v->dist_type) * amp;
+    float body = er99_shape_st(o, v->drive, v->dist_type, v->crush_st) * amp;
 
     /* Click: impulse + lowpass-filtered noise, own envelope (Attack). */
     float click = 0.0f;

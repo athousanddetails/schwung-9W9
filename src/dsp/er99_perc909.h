@@ -45,6 +45,7 @@ typedef struct {
 
     wa_biquad_t bp1, bp2, hp;
     wa_param_t  amp;
+    float       crush_st[2];
     int         impulse;
     double      mute_countdown;
     float       sample_rate;
@@ -112,7 +113,7 @@ static inline float er99_rim909_render(er99_rim909_t *v, const float _noise)
      * had been living off that hiss, and lost most of its level when it went. */
     float y = wa_biquad_tick(&v->bp1, exc) * 60.0f
             + wa_biquad_tick(&v->bp2, exc) * 32.0f;
-    y = er99_shape(y * a, v->drive, v->dist_type);
+    y = er99_shape_st(y * a, v->drive, v->dist_type, v->crush_st);
     y = wa_biquad_tick(&v->hp, y);
     return y * v->level * v->accent_gain_;
 }
@@ -131,6 +132,7 @@ typedef struct {
 
     wa_biquad_t bp, hp;
     wa_param_t  burst, tail;
+    float       crush_st[2];
     int         pulse_index;
     double      next_pulse;
     double      mute_countdown;
@@ -203,7 +205,7 @@ static inline float er99_clap909_render(er99_clap909_t *v, const float _noise)
 
     const float env = wa_param_tick(&v->burst) + wa_param_tick(&v->tail);
     float y = wa_biquad_tick(&v->bp, _noise) * env;
-    y = er99_shape(y, v->drive, v->dist_type);
+    y = er99_shape_st(y, v->drive, v->dist_type, v->crush_st);
     y = wa_biquad_tick(&v->hp, y);
     return y * v->level * v->accent_gain_;
 }

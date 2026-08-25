@@ -426,7 +426,7 @@ static float render_sampler(er99_sampler_t *s)
     }
     v *= wa_param_tick(&s->out);
     if(s->drive > 0.25f)                     /* below this the shape is inaudible */
-        v = er99_shape(v * (1.0f + s->drive * 0.5f), s->drive, s->dist_type);
+        v = er99_shape_st(v * (1.0f + s->drive * 0.5f), s->drive, s->dist_type, s->crush_st);
     return v;
 }
 
@@ -510,8 +510,8 @@ void er99_engine_render(er99_engine_t *e, float *out, const int frames)
             mix += render_sampler(&e->sampler[i]);
 
         if(e->master.dist_mode >= 0.5f)
-            mix = er99_shape(mix * e->master.drive, e->master.drive,
-                             e->master.dist_mode - 1.0f) * 0.7f;
+            mix = er99_shape_st(mix * e->master.drive, e->master.drive,
+                             e->master.dist_mode - 1.0f, e->master.crush_st) * 0.7f;
         if(e->master.comp > 0.001f)
             mix = master_glue(&e->master, mix, e->sample_rate);
         out[n] = mix * e->master.volume;
@@ -607,14 +607,14 @@ int er99_engine_set_raw(er99_engine_t *e, const char *key, const float value)
         snprintf(buf, sizeof(buf), "%s_drive", sn[i]);
         if(!strcmp(key, buf)) { e->sampler[i].drive = value; return 1; }
         snprintf(buf, sizeof(buf), "%s_dist_type", sn[i]);
-        if(!strcmp(key, buf)) { e->sampler[i].dist_type = value < 0 ? 0 : (value > 3 ? 3 : value); return 1; }
+        if(!strcmp(key, buf)) { e->sampler[i].dist_type = value < 0 ? 0 : (value > 6 ? 6 : value); return 1; }
     }
 
-    if(!strcmp(key, "rs_dist_type")) { e->rim909.dist_type = value < 0 ? 0 : (value > 3 ? 3 : value); return 1; }
-    if(!strcmp(key, "hc_dist_type")) { e->clap909.dist_type = value < 0 ? 0 : (value > 3 ? 3 : value); return 1; }
+    if(!strcmp(key, "rs_dist_type")) { e->rim909.dist_type = value < 0 ? 0 : (value > 6 ? 6 : value); return 1; }
+    if(!strcmp(key, "hc_dist_type")) { e->clap909.dist_type = value < 0 ? 0 : (value > 6 ? 6 : value); return 1; }
 
     if(!strcmp(key, "master_drive")) { e->master.drive = value; return 1; }
-    if(!strcmp(key, "master_dist"))  { e->master.dist_mode = value < 0 ? 0 : (value > 4 ? 4 : value); return 1; }
+    if(!strcmp(key, "master_dist"))  { e->master.dist_mode = value < 0 ? 0 : (value > 7 ? 7 : value); return 1; }
     if(!strcmp(key, "master_comp")) { e->master.comp = value < 0.0f ? 0.0f : (value > 1.0f ? 1.0f : value); return 1; }
     if(!strcmp(key, "volume")) { e->master.volume = value; return 1; }
     if(!strcmp(key, "accent")) { e->master.accent = value; return 1; }

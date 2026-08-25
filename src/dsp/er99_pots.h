@@ -45,7 +45,11 @@ static const er99_pot_t g_er99_pots[] = {
     { "bd_c_sweep_depth",   0.0f,    1.0f, ER99_LIN },
     { "bd_c_pitch_mod",     0.43f,   4.7f, ER99_EXP },
     { "bd_c_sweep_time",     8.0f,  136.0f, ER99_EXP },
-    { "bd_c_drive",         0.2f,    8.0f, ER99_EXP },
+    /* Drive pots start at 0.85 — just under the shaping knee — instead of 0.2:
+     * below unity every type is level-normalised transparent, so the old range
+     * spent pots 0-52 doing nothing ("only kinda kicks in around 53"). Bite
+     * now arrives by pot ~12; the top reaches half again further. */
+    { "bd_c_drive",         0.85f,   12.0f, ER99_EXP },
     /* Level tops out AT the output ceiling, not past it: 1.35 x accent (2.0)
      * x master volume (0.35) = 0.945 FS. Ranges that went to 2.0 (3.0 on the
      * rim and clap) put the last third of every pot into the limiter, which is
@@ -61,7 +65,7 @@ static const er99_pot_t g_er99_pots[] = {
     { "sd_c_attack",        0.0f,    1.0f, ER99_LIN },
     { "sd_c_sweep_depth",   1.0f,    6.0f, ER99_LIN },
     { "sd_c_sweep_time",    1.0f,   60.0f, ER99_EXP },
-    { "sd_c_drive",         0.2f,    8.0f, ER99_EXP },
+    { "sd_c_drive",         0.85f,   12.0f, ER99_EXP },
     { "sd_c_level",         0.0f,    1.35f, ER99_LIN },
     { "sd_c_click_tone",  500.0f, 8000.0f, ER99_EXP },
     { "sd_c_tune2",       150.0f,  800.0f, ER99_EXP },
@@ -79,7 +83,7 @@ static const er99_pot_t g_er99_pots[] = {
     { "lt_c_attack",        0.0f,    1.0f, ER99_LIN },
     { "lt_c_sweep_depth",   1.0f,    6.0f, ER99_LIN },
     { "lt_c_sweep_time",    1.0f,  250.0f, ER99_EXP },
-    { "lt_c_drive",         0.2f,    8.0f, ER99_EXP },
+    { "lt_c_drive",         0.85f,   12.0f, ER99_EXP },
     { "lt_c_level",         0.0f,    1.35f, ER99_LIN },
     { "lt_c_tune2",        20.0f,  300.0f, ER99_EXP },
     { "lt_c_osc2_mix",      0.0f,    1.0f, ER99_LIN },
@@ -89,7 +93,7 @@ static const er99_pot_t g_er99_pots[] = {
     { "mt_c_attack",        0.0f,    1.0f, ER99_LIN },
     { "mt_c_sweep_depth",   1.0f,    6.0f, ER99_LIN },
     { "mt_c_sweep_time",    1.0f,  250.0f, ER99_EXP },
-    { "mt_c_drive",         0.2f,    8.0f, ER99_EXP },
+    { "mt_c_drive",         0.85f,   12.0f, ER99_EXP },
     { "mt_c_level",         0.0f,    1.35f, ER99_LIN },
     { "mt_c_tune2",        30.0f,  400.0f, ER99_EXP },
     { "mt_c_osc2_mix",      0.0f,    1.0f, ER99_LIN },
@@ -99,7 +103,7 @@ static const er99_pot_t g_er99_pots[] = {
     { "ht_c_attack",        0.0f,    1.0f, ER99_LIN },
     { "ht_c_sweep_depth",   1.0f,    6.0f, ER99_LIN },
     { "ht_c_sweep_time",    1.0f,  250.0f, ER99_EXP },
-    { "ht_c_drive",         0.2f,    8.0f, ER99_EXP },
+    { "ht_c_drive",         0.85f,   12.0f, ER99_EXP },
     { "ht_c_level",         0.0f,    1.35f, ER99_LIN },
     { "ht_c_tune2",        50.0f,  600.0f, ER99_EXP },
     { "ht_c_osc2_mix",      0.0f,    1.0f, ER99_LIN },
@@ -110,7 +114,7 @@ static const er99_pot_t g_er99_pots[] = {
     { "rs_res",             4.0f,   20.0f, ER99_EXP },
     { "rs_decay",          40.0f,  700.0f, ER99_EXP },
     { "rs_noise",           0.0f,    1.0f, ER99_LIN },
-    { "rs_saturation",      0.2f,    8.0f, ER99_EXP },
+    { "rs_saturation",      0.85f,   12.0f, ER99_EXP },
     { "rs_volume",          0.0f,    1.35f, ER99_LIN },
 
     /* --- Clap (909 model) --- */
@@ -119,29 +123,29 @@ static const er99_pot_t g_er99_pots[] = {
     { "hc_tone_decay",      2.0f,   40.0f, ER99_EXP },   /* burst pulse decay */
     { "hc_decay",         120.0f, 1000.0f, ER99_EXP },   /* room tail         */
     { "hc_tail",            0.0f,    1.0f, ER99_LIN },
-    { "hc_drive",           0.2f,    8.0f, ER99_EXP },
+    { "hc_drive",           0.85f,   12.0f, ER99_EXP },
     { "hc_volume",          0.0f,    1.35f, ER99_LIN },
 
     /* --- Hats / cymbals --- */
     { "ohh_decay",         20.0f, 1200.0f, ER99_EXP },
     { "ohh_pitch",          0.25f,   4.0f, ER99_EXP },
     { "ohh_volume",         0.0f,    1.35f, ER99_LIN },
-    { "ohh_drive",          0.2f,    8.0f, ER99_EXP },
+    { "ohh_drive",          0.85f,   12.0f, ER99_EXP },
     { "chh_decay",         15.0f,  300.0f, ER99_EXP },
     { "chh_pitch",          0.25f,   4.0f, ER99_EXP },
     { "chh_volume",         0.0f,    1.35f, ER99_LIN },
-    { "chh_drive",          0.2f,    8.0f, ER99_EXP },
+    { "chh_drive",          0.85f,   12.0f, ER99_EXP },
     { "rc_decay",         100.0f, 3000.0f, ER99_EXP },
     { "rc_pitch",           0.25f,   4.0f, ER99_EXP },
     { "rc_volume",          0.0f,    1.35f, ER99_LIN },
-    { "rc_drive",           0.2f,    8.0f, ER99_EXP },
+    { "rc_drive",           0.85f,   12.0f, ER99_EXP },
     { "cr_decay",         100.0f, 3000.0f, ER99_EXP },
     { "cr_pitch",           0.25f,   4.0f, ER99_EXP },
     { "cr_volume",          0.0f,    1.35f, ER99_LIN },
-    { "cr_drive",           0.2f,    8.0f, ER99_EXP },
+    { "cr_drive",           0.85f,   12.0f, ER99_EXP },
 
     /* --- Global --- */
-    { "master_drive",       0.5f,   10.0f, ER99_EXP },
+    { "master_drive",       0.85f,   12.0f, ER99_EXP },
     { "master_comp",        0.0f,    1.0f, ER99_LIN },
     { "volume",             0.0f,    1.0f, ER99_LIN },
     { "accent",             1.0f,    4.0f, ER99_LIN },

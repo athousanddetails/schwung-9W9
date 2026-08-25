@@ -55,6 +55,8 @@ typedef struct {
     float  drive;         /* per-sampler distortion (er99_shape) */
     float  dist_type;
 
+    float  crush_st[2];
+
     const float *buffer;
     uint32_t     length;
     double       pos;
@@ -83,6 +85,7 @@ typedef struct {
      * and unlike the compressor this module once inherited it is honest
      * about it: at zero the stage is bypassed entirely (bit-identical), and
      * the knob blends threshold, ratio and auto-makeup together. */
+    float crush_st[2];  /* master bitcrush decimator     */
     float comp;         /* 0..1 amount; 0 = hard bypass  */
     float comp_env_db;  /* smoothed gain reduction state */
     float comp_det;     /* rectified level follower      */
