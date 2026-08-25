@@ -147,6 +147,8 @@ static void instrument_defaults(er99_instrument_t *v, const int _index)
     }
 }
 
+static void er99_apply_topology(er99_engine_t *e);
+
 void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir)
 {
     memset(e, 0, sizeof(*e));
@@ -187,7 +189,13 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
             b->tune = 55.0f;  b->sweep_depth = 3.2f; b->sweep_time = 22.0f;
             b->decay = 190.0f; b->attack = 0.35f; b->click_tone = 2500.0f;
             b->drive = 2.2f;  b->level = 1.0f;
-            b->sub = 0.35f; b->tube = 1.2f; b->drift = 0.12f;
+            b->sub = 0.35f; b->tube = 1.2f;
+            /* Drift OFF by default. Per-hit pitch/level jitter is a real
+             * analog behaviour and the knob is still there for anyone who
+             * wants it, but a kick that lands on a different pitch every bar
+             * is the single most complained-about thing about this engine —
+             * a drum machine should repeat exactly unless asked not to. */
+            b->drift = 0.0f;
             break;
         case 1: /* Snare Drum: two tuned shells + snappy noise */
             b->tune = 238.0f; b->tune2 = 476.0f; b->osc2_mix = 0.7f;
@@ -218,6 +226,7 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
         }
         er99_bt_init(b, _sr);
     }
+    er99_apply_topology(e);
 
     /* ---- Rim shot (generator.ts / instruments.ts) ---- */
     er99_rim_t *r = &e->rim;
@@ -615,6 +624,16 @@ typedef struct { const char *name; size_t off; } field_t;
 /* Circuit-voice fields, shared by set_param/get_param and state save/load. */
 typedef struct { const char *n; size_t off; } bt_field_t;
 #define BTF(n) { #n, offsetof(er99_bt_t, n) }
+/* circuit_model 2 ("Bridged-T") swaps the shells and tom bodies over to the
+ * shock-excited resonator core. The kick keeps the oscillator core: its click
+ * path and pitch sweep are separate circuitry on the real machine, so it is
+ * worth converting on its own terms rather than as part of this switch. */
+static void er99_apply_topology(er99_engine_t *e)
+{
+    for(int i = 0; i < ER99_NUM_INSTRUMENTS; ++i)
+        e->bt[i].bridged_t = (e->circuit_model == 2 && i != 0) ? 1 : 0;
+}
+
 static const bt_field_t g_bt_fields[] = {
     BTF(tune), BTF(sweep_depth), BTF(sweep_time), BTF(decay), BTF(attack),
     BTF(click_tone), BTF(drive), BTF(level), BTF(dist_type),
@@ -688,7 +707,13 @@ int er99_engine_set_raw(er99_engine_t *e, const char *key, const float value)
         return 0;
     }
 
-    if(!strcmp(key, "circuit_model")) { e->circuit_model = value > 0.5f; return 1; }
+    if(!strcmp(key, "circuit_model"))
+    {
+        int m = (int)(value + 0.5f);
+        e->circuit_model = m < 0 ? 0 : (m > 2 ? 2 : m);
+        er99_apply_topology(e);
+        return 1;
+    }
     {
         for(int i=0; i<ER99_NUM_INSTRUMENTS; ++i)
         {

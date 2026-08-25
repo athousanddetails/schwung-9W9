@@ -341,6 +341,14 @@ static inline void wa_osc_init(wa_osc_t *o, const double _sample_rate)
     o->sample_rate = _sample_rate;
 }
 
+/* Restart the cycle at a known point. Analog drum voices are shock-excited by
+ * the trigger pulse, so every hit starts identically; a free-running phase is
+ * a synth behaviour, not a drum one. */
+static inline void wa_osc_set_phase(wa_osc_t *o, const double _phase)
+{
+    o->phase = _phase;
+}
+
 static inline float wa_osc_triangle(wa_osc_t *o, const float _freq)
 {
     o->phase += (double)_freq / o->sample_rate;

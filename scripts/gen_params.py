@@ -37,7 +37,7 @@ cp=[]; levels={}
 # Root holds ONLY globals and navigation — no per-voice params leaking in.
 root=[{"key":"circuit_model","name":"Engine"},{"key":"note_map","name":"Note Map"}]
 cp+=[{"key":"note_map","name":"Note Map","type":"enum","options":["Drum Rack (36+)","General MIDI"]},
-     {"key":"circuit_model","name":"Engine","type":"enum","options":["Stock er-99","Circuit 909"]}]
+     {"key":"circuit_model","name":"Engine","type":"enum","options":["Stock er-99","Circuit 909","Bridged-T"]}]
 
 for vid,cfg in V.items():
     tl,th=cfg["tune"]; dl,dh=cfg["decay"]; sl,sh=cfg["sweep"]; bl,bh=cfg["body"]

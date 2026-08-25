@@ -106,6 +106,136 @@ int main(int argc, char**argv){
         CHECK(e1 > e0*2, lbl);
     }
 
+    /* Per-hit drift is off by default, so the kick repeats. Turning the knob
+     * up must still vary the hit, or the control is dead. */
+    {
+        /* Two identical hits must SOUND the same by default. Compared sample by
+         * sample over the attack (a late block is two silences and passes
+         * either way), with the beater click muted: its noise is free-running
+         * on purpose, varies every hit, and has nothing to do with pitch. */
+        #define DRIFT_BLOCKS 24
+        static int16_t hit[2][DRIFT_BLOCKS*128*2];
+        api->set_param(inst,"bd_c_decay","64");
+        api->set_param(inst,"bd_c_attack","0");      /* mute the beater noise */
+        long d_off = 0, d_on = 0, energy = 0;
+        for(int pass = 0; pass < 2; ++pass)
+        {
+            /* pass 0: default (drift off).  pass 1: drift at full. */
+            if(pass) api->set_param(inst,"bd_c_drift","127");
+            for(int h = 0; h < 2; ++h)
+            {
+                uint8_t m2[3]={0x90,36,100}; api->on_midi(inst,m2,3,0);
+                for(int k=0;k<DRIFT_BLOCKS;++k)
+                    api->render_block(inst, hit[h] + k*128*2, 128);
+                /* Let the voice ring out so hit 2 starts from the same
+                 * (settled) filter state hit 1 did. */
+                static int16_t tail[128*2];
+                for(int k=0;k<160;++k) api->render_block(inst, tail, 128);
+            }
+            long d = 0;
+            for(int k=0;k<DRIFT_BLOCKS*256;++k)
+            {
+                long x = (long)hit[0][k] - (long)hit[1][k];
+                d += x < 0 ? -x : x;
+                if(!pass) { long a2 = hit[0][k]; energy += a2 < 0 ? -a2 : a2; }
+            }
+            if(!pass) d_off = d; else d_on = d;
+        }
+        api->set_param(inst,"bd_c_drift","0");
+        api->set_param(inst,"bd_c_attack","45");
+        char l1[128], l2[128];
+        snprintf(l1,sizeof(l1),"kick repeats identically by default (diff %ld vs energy %ld)",d_off,energy);
+        snprintf(l2,sizeof(l2),"drift knob still varies the hit when turned up (diff %ld)",d_on);
+        CHECK(d_off * 1000 < energy, l1);
+        CHECK(d_on  * 100  > energy, l2);
+        #undef DRIFT_BLOCKS
+    }
+
+    /* Bridged-T topology (circuit_model 2): the snare and toms become
+     * shock-excited resonators. Three things must hold, or it is not a
+     * resonator model — it is an oscillator wearing a hat. */
+    {
+        static int16_t o3[128*2];
+        api->set_param(inst,"circuit_model","2");
+
+        /* 1. It rings: struck once, the network keeps sounding well after the
+         *    excitation pulse (0.6 ms) has gone. */
+        long late = 0;
+        { uint8_t m2[3]={0x90,38,100}; api->on_midi(inst,m2,3,0); }   /* low tom */
+        for(int b=0;b<8;++b) api->render_block(inst,o3,128);          /* skip 23 ms */
+        for(int b=0;b<16;++b){ api->render_block(inst,o3,128);
+            for(int k=0;k<256;++k){ long a2=o3[k]<0?-o3[k]:o3[k]; late+=a2; } }
+        CHECK(late > 10000, "bridged-T rings on after the trigger pulse");
+
+        /* 2. Pitch follows the Tune pot: a resonator tuned lower crosses zero
+         *    fewer times in the same window. Counted on the ring, not the
+         *    transient. */
+        int zc[2] = {0,0};
+        for(int pass=0; pass<2; ++pass)
+        {
+            api->set_param(inst,"lt_c_tune", pass ? "110" : "20");
+            { uint8_t m2[3]={0x90,38,100}; api->on_midi(inst,m2,3,0); }
+            for(int b=0;b<4;++b) api->render_block(inst,o3,128);
+            int prev = 0;
+            for(int b=0;b<16;++b){ api->render_block(inst,o3,128);
+                for(int k=0;k<256;k+=2){
+                    const int cur = o3[k] > 0 ? 1 : (o3[k] < 0 ? -1 : 0);
+                    if(cur && prev && cur != prev) zc[pass]++;
+                    if(cur) prev = cur; } }
+        }
+        { char l[110]; snprintf(l,sizeof(l),
+            "bridged-T pitch tracks Tune (%d crossings low vs %d high)", zc[0], zc[1]);
+          CHECK(zc[1] > zc[0] + 4, l); }
+
+        /* 3. A retrigger ADDS to a ringing network instead of clearing it.
+         *    The discriminator is not "does the second hit make sound" — a
+         *    reset does that too — it is that striking a network which is
+         *    still ringing cannot sound the same as striking a silent one.
+         *    A voice that resets on trigger produces identical samples. */
+        #define RT_BLOCKS 6
+        static int16_t fresh[RT_BLOCKS*128*2], onto_ring[RT_BLOCKS*128*2];
+        for(int b=0;b<300;++b) api->render_block(inst,o3,128);      /* silence */
+        { uint8_t m2[3]={0x90,38,100}; api->on_midi(inst,m2,3,0); }
+        for(int b=0;b<RT_BLOCKS;++b) api->render_block(inst, fresh + b*256, 128);
+        for(int b=0;b<300;++b) api->render_block(inst,o3,128);      /* ring out */
+
+        { uint8_t m2[3]={0x90,38,100}; api->on_midi(inst,m2,3,0); }
+        for(int b=0;b<4;++b) api->render_block(inst,o3,128);        /* still ringing */
+        { uint8_t m2[3]={0x90,38,100}; api->on_midi(inst,m2,3,0); }
+        for(int b=0;b<RT_BLOCKS;++b) api->render_block(inst, onto_ring + b*256, 128);
+
+        long diff = 0, ref = 0;
+        for(int k=0;k<RT_BLOCKS*256;++k)
+        {
+            long d2 = (long)onto_ring[k] - (long)fresh[k];
+            diff += d2 < 0 ? -d2 : d2;
+            long a2 = fresh[k];
+            ref += a2 < 0 ? -a2 : a2;
+        }
+        { char l[120]; snprintf(l,sizeof(l),
+            "retrigger adds to the ring rather than resetting (diff %ld vs %ld)", diff, ref);
+          CHECK(diff > ref/10, l); }
+        #undef RT_BLOCKS
+
+        /* 4. Every converted voice still sounds, at a comparable level to the
+         *    oscillator core — a resonator tuned or damped wrong goes silent
+         *    rather than wrong, which no other check here would catch. */
+        for(int note = 37; note <= 40; ++note)
+        {
+            for(int b=0;b<200;++b) api->render_block(inst,o3,128);
+            int peak = 0;
+            { uint8_t m2[3]={0x90,(uint8_t)note,100}; api->on_midi(inst,m2,3,0); }
+            for(int b=0;b<60;++b){ api->render_block(inst,o3,128);
+                for(int k=0;k<256;++k){ int a2=o3[k]<0?-o3[k]:o3[k]; if(a2>peak) peak=a2; } }
+            char l[110]; snprintf(l,sizeof(l),
+                "bridged-T note %d sounds (peak %d)", note, peak);
+            CHECK(peak > 2000, l);
+        }
+
+        api->set_param(inst,"lt_c_tune","64");
+        api->set_param(inst,"circuit_model","1");
+    }
+
     /* master distortion applies and is audible */
     api->set_param(inst, "master_dist", "2");
     api->get_param(inst, "master_dist", buf, sizeof(buf));
