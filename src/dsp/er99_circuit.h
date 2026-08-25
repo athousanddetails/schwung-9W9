@@ -90,6 +90,12 @@ static inline float er99_diode_round(const float _x, const float _drive)
  * deliberate extensions — the point of doing this in software rather than
  * cloning the circuit exactly.
  */
+/* Turn-on voltage of the single-transistor VCAs, as a fraction of the ~15 V
+ * envelope, and the gain that renormalises what is left so a full-scale
+ * envelope still opens the VCA fully. */
+#define ER99_VCA_VT    0.027f
+#define ER99_VCA_NORM  (1.0f / (1.0f - ER99_VCA_VT))
+
 static inline float er99_shape(const float _x, const float _drive, const float _type)
 {
     const int t = (int)(_type + 0.5f);
@@ -238,10 +244,14 @@ static inline float er99_bt_render(er99_bt_t *v, const float _noise)
 
     float amp = wa_param_tick(&v->amp);
     /* The shell VCAs are the same crude single-transistor stage as the noise
-     * one (Q50/Q51) and pass nothing once the envelope is under ~0.4 V of its
-     * ~15 V: a two-shell voice stops dead at about -31 dB instead of ringing
-     * politely to silence. Half of "too resonant" is not having this. */
-    if(v->tune2 > 0.0f && v->osc2_mix > 0.0f && amp < 0.027f) amp = 0.0f;
+     * one (Q50/Q51): conduction falls to nothing as the envelope approaches
+     * the transistor's turn-on voltage (~0.4 V of ~15 V), so the voice stops
+     * well short of the exponential's tail. Modelled as the threshold
+     * SUBTRACTED from the envelope, not as a switch at it — gain reaches zero
+     * continuously, which is what the junction does. Zeroing gain outright
+     * (what this did first) cuts the shell mid-cycle and clicks. */
+    if(v->tune2 > 0.0f && v->osc2_mix > 0.0f)
+        amp = amp > ER99_VCA_VT ? (amp - ER99_VCA_VT) * ER99_VCA_NORM : 0.0f;
 
     /* Oscillator: triangle, rounded toward sine by the diode pair. */
     float o = wa_osc_triangle(&v->osc, f);
@@ -301,8 +311,13 @@ static inline float er99_bt_render(er99_bt_t *v, const float _noise)
                             * 0.7f * 0.001f * v->sample_rate);
         }
         float env = wa_param_tick(&v->noise_env);
-        if(v->noise_hold <= 0 && env < 0.027f)   /* ~0.4 V of ~15 V: gate */
-        { env = 0.0f; v->noise_gated = 1; }
+        if(v->noise_hold <= 0)
+        {
+            /* Same junction, same soft cutoff — and once it is shut, stay shut
+             * (the envelope only falls further). */
+            env = env > ER99_VCA_VT ? (env - ER99_VCA_VT) * ER99_VCA_NORM : 0.0f;
+            if(env <= 0.0f) v->noise_gated = 1;
+        }
         snare = wa_biquad_tick(&v->noise_lpf,
                     wa_biquad_tick(&v->noise_hpf, _noise))
               * env * v->snappy;
