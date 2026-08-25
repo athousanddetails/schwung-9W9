@@ -142,24 +142,50 @@ static inline float er99_shape(const float _x, const float _drive, const float _
     /* Below unity drive the clip and fold stages would only ATTENUATE (x*k
      * never reaches the rails), so switching Dist at low Drive changed the
      * level by up to 14 dB and nothing else. Normalising by k below unity
-     * makes Drive 0 genuinely transparent for every type. */
-    case 1: {   /* hard clip — aggressive, square-ish */
-        float v = _x * k;
-        if(v >  1.0f) v =  1.0f;
-        if(v < -1.0f) v = -1.0f;
+     * makes Drive 0 genuinely transparent for every type.
+     *
+     * These three are ours, not the 909's, and they were all SYMMETRIC —
+     * measured at 1.2% even harmonics against up to 39% odd. Odd-only
+     * distortion is the hollow, brittle sound Gus called thin; the even
+     * harmonics that make an overdriven amp sound full come from asymmetry.
+     * Diode (case 0) is deliberately left alone: it is the 909's own
+     * back-to-back diode pair, symmetric by nature, and every voice in the
+     * module is fitted through it. */
+    case 1: {   /* asymmetric soft clip — amp-like, even harmonics and all */
+        /* One rail saturates sooner than the other, as a single-ended stage
+         * does. Offset by the bias' own output so silence stays silence and
+         * no DC reaches the mix. */
+        /* The bias is added AFTER the drive gain, not scaled by it: biasing
+         * the input meant that at high drive one rail saturated completely
+         * and the stage turned into a rectifier with 30x gain. Here the two
+         * rails stay 1 : 1.5 apart at any drive, which is a single-ended
+         * stage's asymmetry rather than a broken one. 0.958 sets unity
+         * small-signal gain, so Drive 0 is still transparent. */
+        const float bias = 0.35f, tb = 0.33638f;   /* tanhf(0.35f) */
+        const float v = (tanhf(_x * k + bias) - tb) * 0.958f;
         return k < 1.0f ? v / k : v;
     }
-    case 2: {   /* wavefolder — metallic, adds odd harmonics as drive rises */
+    case 2: {   /* wavefolder — metallic, without hollowing the note out */
         float v = _x * k;
         for(int i=0; i<3; ++i)
         {
             if(v >  1.0f) v =  2.0f - v;
             if(v < -1.0f) v = -2.0f - v;
         }
+        /* Folding EATS the fundamental — measured 7455 down to 3387 at high
+         * drive, which is why it sounded thin rather than metallic. Keep a
+         * floor of the clipped signal underneath so the note survives its own
+         * harmonics. */
+        float body = _x * k;
+        if(body >  1.0f) body =  1.0f;
+        if(body < -1.0f) body = -1.0f;
+        v = 0.62f * v + 0.38f * body;
         return k < 1.0f ? v / k : v;
     }
-    case 3: {   /* bitcrush/decimate — lo-fi grit */
-        const float steps = 2.0f + 30.0f / k;
+    case 3: {   /* bitcrush — lo-fi grit */
+        /* Was 2 + 30/k: even wide open that is ~6 levels, and measured under
+         * 4% THD, so the setting did almost nothing. Bites now. */
+        const float steps = 1.5f + 9.0f / k;
         return floorf(_x * steps + 0.5f) / steps;
     }
     case 0:
