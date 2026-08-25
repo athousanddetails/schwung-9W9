@@ -224,6 +224,7 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
         }
         er99_bt_init(b, _sr);
     }
+    for(int i=0; i<3; ++i) er99_tom909_init(&e->tom909[i], _sr);
 
     /* ---- Rim shot (generator.ts / instruments.ts) ---- */
     er99_rim_t *r = &e->rim;
@@ -376,10 +377,15 @@ void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const in
     switch(_which)
     {
     case ER99_BD: case ER99_SD: case ER99_LT: case ER99_MT: case ER99_HT:
-        if(e->circuit_model)
-            er99_bt_trigger(&e->bt[_which], accent);
-        else
+        if(!e->circuit_model)
             trigger_instrument(e, &e->inst[_which], accent);
+        /* The toms are their own circuit: three oscillators with separate
+         * envelopes plus a noise attack (er99_tom909.h). They read the same
+         * panel values as the two-oscillator voice, so nothing else changes. */
+        else if(_which >= ER99_LT && _which <= ER99_HT)
+            er99_tom909_trigger(&e->tom909[_which - ER99_LT], &e->bt[_which], accent);
+        else
+            er99_bt_trigger(&e->bt[_which], accent);
         break;
 
     case ER99_RS: {
@@ -616,8 +622,12 @@ void er99_engine_render(er99_engine_t *e, float *out, const int frames)
 
         float mix = 0.0f;
         for(int i=0; i<ER99_NUM_INSTRUMENTS; ++i)
-            mix += e->circuit_model ? er99_bt_render(&e->bt[i], noise)
-                                    : render_instrument(e, &e->inst[i], noise);
+            if(!e->circuit_model)
+                mix += render_instrument(e, &e->inst[i], noise);
+            else if(i >= ER99_LT && i <= ER99_HT)
+                mix += er99_tom909_render(&e->tom909[i - ER99_LT], &e->bt[i], noise);
+            else
+                mix += er99_bt_render(&e->bt[i], noise);
         mix += e->circuit_model ? er99_rim909_render(&e->rim909, noise)
                                 : render_rim(&e->rim);
         mix += e->circuit_model ? er99_clap909_render(&e->clap909, noise)

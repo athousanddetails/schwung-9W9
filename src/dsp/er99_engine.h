@@ -13,6 +13,7 @@
 #include <stdint.h>
 #include "webaudio.h"
 #include "er99_circuit.h"
+#include "er99_tom909.h"
 #include "er99_pots.h"
 #include "er99_perc909.h"
 
@@ -168,6 +169,7 @@ typedef struct {
     int               circuit_model;
     er99_rim_t        rim;      /* stock er-99 (circuit_model=0) */
     er99_clap_t       clap;
+    er99_tom_t        tom909[3]; /* LT/MT/HT, three oscillators each */
     er99_rim909_t     rim909;   /* circuit models (default)      */
     er99_clap909_t    clap909;
     er99_sampler_t    sampler[ER99_NUM_SAMPLERS];

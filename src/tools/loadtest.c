@@ -151,6 +151,65 @@ int main(int argc, char**argv){
         #undef DRIFT_BLOCKS
     }
 
+    /* The tom must really have the board's three oscillators, not one with a
+     * bright edge: measure energy at the partial ratios with a Goertzel and
+     * compare against frequencies that are NOT partials. Measured after the
+     * pitch sweep settles, so the fundamental is stable. */
+    {
+        static float mono[16384];
+        static int16_t tb[128*2];
+        /* Loud and long: measured late or quiet, the bins are int16
+         * quantisation noise and the ratios mean nothing. */
+        api->set_param(inst,"lt_c_decay","127");
+        api->set_param(inst,"lt_c_level","127");
+        api->set_param(inst,"lt_c_attack","0");     /* stick noise out of the way */
+        /* Flatten the pitch envelope for the measurement: a sweep still in
+         * progress smears every partial across the bins and the ratios cannot
+         * be seen. (Hidden from the UI, still settable — see gen_params.py.) */
+        api->set_param(inst,"lt_c_sweep_depth","0");
+        /* And take Drive out: the shaper's harmonics and intermodulation
+         * products land all over the spectrum and bury the ratios. */
+        api->set_param(inst,"lt_c_drive","0");
+        { uint8_t m2[3]={0x90,38,100}; api->on_midi(inst,m2,3,0); }
+        for(int b=0;b<6;++b) api->render_block(inst,tb,128);       /* past the onset */
+        int n = 0;
+        for(int b=0; b<64 && n < (int)(sizeof(mono)/sizeof(mono[0])); ++b)
+        {
+            api->render_block(inst,tb,128);
+            for(int k=0;k<128 && n<(int)(sizeof(mono)/sizeof(mono[0])); ++k)
+                mono[n++] = (float)tb[k*2] / 32768.0f;
+        }
+        /* Goertzel: energy at one frequency, no FFT needed. */
+        #define GOERTZ(F) ({ \
+            const float w = 2.0f*3.14159265f*(F)/44100.0f; \
+            const float c = 2.0f*cosf(w); float s1=0.0f, s2=0.0f; \
+            for(int q=0;q<n;++q){ const float s0 = mono[q] + c*s1 - s2; s2=s1; s1=s0; } \
+            sqrtf(s1*s1 + s2*s2 - c*s1*s2); })
+
+        /* Find the fundamental: the strongest bin in the low tom's range. */
+        float f0 = 0.0f, best = 0.0f;
+        for(float f = 40.0f; f <= 200.0f; f += 1.0f)
+        { const float m = GOERTZ(f); if(m > best) { best = m; f0 = f; } }
+
+        const float p2 = GOERTZ(f0 * 1.50f);      /* VCO1 : C18 22n */
+        const float p3 = GOERTZ(f0 * 2.75f);      /* VCO3 : C20 12n */
+        const float n1 = GOERTZ(f0 * 1.25f);      /* not a partial */
+        const float n2 = GOERTZ(f0 * 2.20f);      /* not a partial */
+        char l[140];
+        snprintf(l,sizeof(l),"tom has the 1.50x partial (f0=%.0fHz  %.0f vs %.0f off-ratio)",
+                 f0, (double)p2, (double)n1);
+        CHECK(p2 > n1 * 2.0f, l);
+        snprintf(l,sizeof(l),"tom has the 2.75x partial (%.0f vs %.0f off-ratio)",
+                 (double)p3, (double)n2);
+        CHECK(p3 > n2 * 2.0f, l);
+        #undef GOERTZ
+        api->set_param(inst,"lt_c_attack","45");
+        api->set_param(inst,"lt_c_sweep_depth","30");
+        api->set_param(inst,"lt_c_drive","40");
+        api->set_param(inst,"lt_c_level","64");
+        api->set_param(inst,"lt_c_decay","64");
+    }
+
     /* Closed hat is its own voice: its own tuning/level, and the two hats choke
      * each other because they are one pair of cymbals. */
     {
