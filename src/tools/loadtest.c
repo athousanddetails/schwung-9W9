@@ -277,6 +277,14 @@ int main(int argc, char**argv){
     api->get_param(inst, "bd_c_tune", buf, sizeof(buf));
     CHECK(atof(buf)==77.0, "state restore brings bd_c_tune back to 77");
 
+    /* Pre-rebuild blobs must be REJECTED whole: their pot positions map onto
+     * changed ranges and pinned fields, and restoring one resurrects the old
+     * sound from any slot autosave, set state or patch it hides in. */
+    api->set_param(inst, "bd_c_tune", "50");
+    api->set_param(inst, "state", "er99v2;bd_c_tune=90;sd_c_osc2_mix=0.7;");
+    api->get_param(inst, "bd_c_tune", buf, sizeof(buf));
+    CHECK(atof(buf)==50.0, "v2 state blob is rejected whole (defaults survive)");
+
     /* audio: every drum-rack note must make sound */
     static int16_t out[128*2];
     const int notes[] = {36,37,38,39,40,41,42,43,44,45,46};

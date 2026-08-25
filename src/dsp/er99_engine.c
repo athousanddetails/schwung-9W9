@@ -935,7 +935,12 @@ int er99_engine_get_state(const er99_engine_t *e, char *buf, const int len)
 {
     if(!buf || len <= 0) return -1;
     int n = 0;
-    n += snprintf(buf + n, (size_t)(len - n), "er99v2;");   /* v2 = pot positions */
+    /* v3: the voice-rebuild cut. v2 blobs carry pot positions whose meanings
+     * and ranges changed under them (tom decay ranges, snare Tune centre, the
+     * old octave tune2, the 1.6x sweep, osc2_mix 0.7) — restoring one
+     * resurrects the pre-rebuild sound no matter how the defaults are set,
+     * which is exactly what kept happening. Old blobs are discarded whole. */
+    n += snprintf(buf + n, (size_t)(len - n), "er99v3;");
 
     /* Pot positions: what the panel shows, and exactly what restores it. */
     for(int i=0; i<ER99_POT_COUNT && n < len - 1; ++i)
@@ -967,8 +972,8 @@ int er99_engine_set_state(er99_engine_t *e, const char *blob)
      * i.e. total silence. Anything that isn't v2 is discarded so the engine
      * keeps its (audible) defaults instead of being silently muted.
      */
-    if(strncmp(blob, "er99v2;", 7) != 0)
-        return 0;
+    if(strncmp(blob, "er99v3;", 7) != 0)
+        return 0;      /* v1/v2/unknown: keep the (correct) defaults */
 
     const char *p = blob;
     while(*p)
