@@ -205,7 +205,7 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
             b->tune = 205.0f; b->tune2 = 325.0f; b->osc2_mix = 0.40f;
             b->sweep_depth = 1.045f; b->sweep_time = 30.0f;
             b->decay = 320.0f; b->attack = 0.15f;
-            b->snappy = 0.5f; b->noise_decay = 480.0f; b->noise_hp = 1000.0f;
+            b->snappy = 0.5f; b->noise_decay = 600.0f; b->noise_hp = 1000.0f;
             b->drive = 1.8f;  b->level = 0.7f;
             break;
         /* Tom tuning, glide and decay are fitted to measurements of a real
