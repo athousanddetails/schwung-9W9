@@ -198,7 +198,7 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
              * the stock diode pair, now applied unconditionally in the render;
              * sub/tube/drift were our inventions and are pinned off at
              * trigger — a 909 has none of them. */
-            b->tune = 50.0f;  b->sweep_depth = 1.9f; b->sweep_time = 34.0f;
+            b->tune = 55.0f;  b->sweep_depth = 1.9f; b->sweep_time = 34.0f;
             b->decay = 1380.0f; b->amp_hold = 40.0f;
             b->attack = 0.10f; b->click_tone = 2500.0f;
             b->drive = 0.2f;  b->level = 1.0f;
@@ -424,6 +424,12 @@ void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const in
             bd->tune2 = 0.0f; bd->osc2_mix = 0.0f;
             bd->click_tone = 2500.0f;
             bd->amp_hold = 40.0f;
+            /* Stock kick, no mods: the pitch sweep is fixed circuitry —
+             * 1.9x settling over 34 ms, fitted against BD 909 Clean Long A's
+             * own pitch track (within 2 Hz at every point). Tune moves the
+             * base pitch across the 39-66 Hz Gus measured on his machine. */
+            bd->sweep_depth = 1.9f;
+            bd->sweep_time  = 34.0f;
         }
         if(_which == ER99_SD)
         {

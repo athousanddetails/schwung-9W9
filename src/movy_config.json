@@ -12,7 +12,7 @@
       "rows": [
         [
           {
-            "key": "bd_c_sweep_time",
+            "key": "bd_c_tune",
             "short": "TUNE",
             "full": "Tune",
             "type": "int",
@@ -31,22 +31,6 @@
             "key": "bd_c_decay",
             "short": "DECAY",
             "full": "Decay",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "bd_c_sweep_depth",
-            "short": "PDEP",
-            "full": "P. Depth",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "bd_c_tune",
-            "short": "PITCH",
-            "full": "Pitch",
             "type": "int",
             "min": 0,
             "max": 127
@@ -78,7 +62,9 @@
             "type": "int",
             "min": 0,
             "max": 127
-          }
+          },
+          null,
+          null
         ]
       ]
     },

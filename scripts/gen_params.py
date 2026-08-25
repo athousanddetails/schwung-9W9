@@ -57,15 +57,15 @@ for vid,cfg in V.items():
     if vid=="bd":
         # RD-9 / modded-909 names: PITCH = base freq, P.DEPTH = how much the
         # note starts sharp, TUNE = how fast that falls back (the stock pot).
-        # Panel order per Gus: the stock 909 controls first (TUNE = pitch-env
-        # decay, exactly as on the hardware), then the two mod pots, then ours.
-        # P.Depth at zero disables the sweep, at which point Tune audibly does
-        # nothing — that is the hardware's behaviour, not a bug.
-        ps=[I("bd_c_sweep_time","Tune",sl,sh,"ms"),
+        # The original 909 bass drum panel: TUNE, ATTACK, DECAY, LEVEL
+        # (Colin Fraser: Tune = decay of the initial pitch sweep; Attack =
+        # noise burst + click level; Decay = ENV1 length) — plus our Drive and
+        # Distortion. No mod pots: the sweep itself is stock and fixed, and
+        # Tune spans the 39-66 Hz Gus measured on his own machine, original
+        # position ~55.
+        ps=[I("bd_c_tune","Tune",39,66,"Hz"),
             F("bd_c_attack","Attack",0,1,0.01),
             I("bd_c_decay","Decay",dl,dh,"ms"),
-            F("bd_c_sweep_depth","P. Depth",1,6,0.05),
-            I("bd_c_tune","Pitch",tl,th,"Hz"),
             F("bd_c_drive","Drive",0.2,8,0.1),
             {"key":"bd_c_dist_type","name":"Distortion","type":"enum","options":DIST},
             F("bd_c_level","Level",0,2,0.01)]

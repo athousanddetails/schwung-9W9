@@ -30,7 +30,7 @@ typedef struct {
 /* Order is the storage order for pot values and for the state blob. */
 static const er99_pot_t g_er99_pots[] = {
     /* --- Bass Drum --- */
-    { "bd_c_tune",         22.0f,  180.0f, ER99_EXP },
+    { "bd_c_tune",         39.0f,   66.0f, ER99_LIN },
     /* From the board: ENV1 is C8 0.33 uF discharging through VR5 1M(A) plus
      * R58 47K — tau 15 ms with the pot closed, 345 ms wide open. This ramp's
      * tau is nominal/11.5, so 100..4000 nominal covers exactly that span; the

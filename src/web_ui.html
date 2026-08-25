@@ -104,9 +104,8 @@
   /* lane = bit in synth:mutes; -1 = no mute button */
   var SECTIONS = [
     { name: "BASS DRUM", lane: 0, knobs: [
-        pot("bd_c_sweep_time","Tune"), pot("bd_c_attack","Attack"),
-        pot("bd_c_decay","Decay"), pot("bd_c_sweep_depth","P.Depth"),
-        pot("bd_c_tune","Pitch"), pot("bd_c_drive","Drive"),
+        pot("bd_c_tune","Tune"), pot("bd_c_attack","Attack"),
+        pot("bd_c_decay","Decay"), pot("bd_c_drive","Drive"),
         en("bd_c_dist_type","Dist",DIST), pot("bd_c_level","Level") ] },
     { name: "SNARE DRUM", lane: 1, knobs: [
         pot("sd_c_tune","Tune"), pot("sd_c_noise_decay","Tone"),
