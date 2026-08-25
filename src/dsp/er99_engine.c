@@ -432,7 +432,20 @@ void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const in
         break;
 
     case ER99_RS: {
-        if(e->circuit_model) { er99_rim909_trigger(&e->rim909, accent); break; }
+        if(e->circuit_model)
+        {
+            /* Fixed circuitry, not pots: the upper resonance is the same
+             * network as the lower (measured 480/210 = 2.286, so it tracks
+             * Tune), both ring at Q ~10, and the trigger pulse carries a set
+             * amount of noise. Pinned here so no saved state can drift them. */
+            er99_rim909_t *r9 = &e->rim909;
+            const float t2 = r9->tune * 2.286f, q = 10.0f;
+            if(r9->tune2 != t2 || r9->res != q)
+            { r9->tune2 = t2; r9->res = q; er99_rim909_retune(r9); }
+            r9->noise_mix = 0.18f;
+            er99_rim909_trigger(r9, accent);
+            break;
+        }
         er99_rim_t *r = &e->rim;
         wa_set_value(&r->noise_gain, 1.0f);
         wa_exp_ramp(&r->noise_gain, 0.00001f, ms_to_samples(r->decay, sr));

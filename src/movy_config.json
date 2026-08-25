@@ -220,8 +220,8 @@
         [
           {
             "key": "rs_tune",
-            "short": "RMPCH",
-            "full": "Rim Pitch",
+            "short": "RMTUN",
+            "full": "Rim Tune",
             "type": "int",
             "min": 0,
             "max": 127
@@ -235,6 +235,26 @@
             "max": 127
           },
           {
+            "key": "rs_saturation",
+            "short": "RMDRV",
+            "full": "Rim Drive",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "rs_dist_type",
+            "short": "RMDST",
+            "full": "Rim Dist",
+            "type": "enum",
+            "options": [
+              "Diode",
+              "Clip",
+              "Fold",
+              "Crush"
+            ]
+          },
+          {
             "key": "rs_volume",
             "short": "RMLVL",
             "full": "Rim Level",
@@ -242,10 +262,15 @@
             "min": 0,
             "max": 127
           },
+          null,
+          null,
+          null
+        ],
+        [
           {
             "key": "hc_tune",
-            "short": "CPPCH",
-            "full": "Clap Pitch",
+            "short": "CPTUN",
+            "full": "Clap Tune",
             "type": "int",
             "min": 0,
             "max": 127
@@ -253,14 +278,14 @@
           {
             "key": "hc_spread",
             "short": "CPSPR",
-            "full": "Clap Sprd",
+            "full": "Clap Spread",
             "type": "int",
             "min": 0,
             "max": 127
           },
           {
             "key": "hc_decay",
-            "short": "CPTL",
+            "short": "CPTAL",
             "full": "Clap Tail",
             "type": "int",
             "min": 0,
@@ -275,13 +300,27 @@
             "max": 127
           },
           {
+            "key": "hc_dist_type",
+            "short": "CPDST",
+            "full": "Clap Dist",
+            "type": "enum",
+            "options": [
+              "Diode",
+              "Clip",
+              "Fold",
+              "Crush"
+            ]
+          },
+          {
             "key": "hc_volume",
             "short": "CPLVL",
             "full": "Clap Level",
             "type": "int",
             "min": 0,
             "max": 127
-          }
+          },
+          null,
+          null
         ]
       ]
     },
