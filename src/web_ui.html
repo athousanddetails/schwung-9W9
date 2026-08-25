@@ -79,8 +79,8 @@
 (function () {
   "use strict";
 
-  var DIST  = ["Diode", "Clip", "Fold", "Crush", "SAT", "BFZ", "PDIST"];
-  var MDIST = ["Off", "Diode", "Clip", "Fold", "Crush", "SAT", "BFZ", "PDIST"];
+  var DIST  = ["Diode", "Clip", "SAT", "BFZ", "PDIST", "Fold", "Crush"];
+  var MDIST = ["Off", "Diode", "Clip", "SAT", "BFZ", "PDIST", "Fold", "Crush"];
 
   function pot(k, n)      { return { k: k, n: n }; }
   function en(k, n, opts) { return { k: k, n: n, opts: opts }; }

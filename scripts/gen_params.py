@@ -13,7 +13,7 @@ V = {
   "mt": dict(name="Med Tom",   tune=(70,260),  decay=(30,600),  sweep=(1,250), body=(0,400)),
   "ht": dict(name="Hi Tom",    tune=(110,400), decay=(30,500),  sweep=(1,250), body=(0,600)),
 }
-DIST = ["Diode (909)","Hard Clip","Wavefolder","Bitcrush","SAT","BFZ","PDIST"]
+DIST = ["Diode (909)","Hard Clip","SAT","BFZ","PDIST","Wavefolder","Bitcrush"]
 
 # Every continuous control is a 0..127 pot, exactly like the hardware panel.
 # The DSP maps each pot to its real range with a musical curve (er99_pots.h),
@@ -134,7 +134,7 @@ crash=[I("cr_decay","Decay",100,3000,"ms"), F("cr_pitch","Tune",0.25,4,0.01),
        F("cr_drive","Drive",0.2,8,0.1), DIST_T("cr_dist_type"),
        F("cr_volume","Level",0,2,0.01)]
 glob=[{"key":"master_dist","name":"Master Dist","type":"enum",
-       "options":["Off","Diode (909)","Hard Clip","Wavefolder","Bitcrush","SAT","BFZ","PDIST"]},
+       "options":["Off","Diode (909)","Hard Clip","SAT","BFZ","PDIST","Wavefolder","Bitcrush"]},
       F("master_drive","Master Drive",0,127,1),
       F("master_comp","Comp",0,1,0.01),
       F("volume","Volume",0,1,0.01), F("accent","Accent",1,4,0.05)]

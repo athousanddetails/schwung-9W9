@@ -67,11 +67,11 @@
             "options": [
               "Diode",
               "Clip",
-              "Fold",
-              "Crush",
               "SAT",
               "BFZ",
-              "PDIST"
+              "PDIST",
+              "Fold",
+              "Crush"
             ]
           },
           {
@@ -129,11 +129,11 @@
             "options": [
               "Diode",
               "Clip",
-              "Fold",
-              "Crush",
               "SAT",
               "BFZ",
-              "PDIST"
+              "PDIST",
+              "Fold",
+              "Crush"
             ]
           },
           {
@@ -248,11 +248,11 @@
             "options": [
               "Diode",
               "Clip",
-              "Fold",
-              "Crush",
               "SAT",
               "BFZ",
-              "PDIST"
+              "PDIST",
+              "Fold",
+              "Crush"
             ]
           },
           {
@@ -301,11 +301,11 @@
             "options": [
               "Diode",
               "Clip",
-              "Fold",
-              "Crush",
               "SAT",
               "BFZ",
-              "PDIST"
+              "PDIST",
+              "Fold",
+              "Crush"
             ]
           },
           {
@@ -358,11 +358,11 @@
             "options": [
               "Diode",
               "Clip",
-              "Fold",
-              "Crush",
               "SAT",
               "BFZ",
-              "PDIST"
+              "PDIST",
+              "Fold",
+              "Crush"
             ]
           },
           {
@@ -410,11 +410,11 @@
             "options": [
               "Diode",
               "Clip",
-              "Fold",
-              "Crush",
               "SAT",
               "BFZ",
-              "PDIST"
+              "PDIST",
+              "Fold",
+              "Crush"
             ]
           },
           {
@@ -467,11 +467,11 @@
             "options": [
               "Diode",
               "Clip",
-              "Fold",
-              "Crush",
               "SAT",
               "BFZ",
-              "PDIST"
+              "PDIST",
+              "Fold",
+              "Crush"
             ]
           },
           {
@@ -519,11 +519,11 @@
             "options": [
               "Diode",
               "Clip",
-              "Fold",
-              "Crush",
               "SAT",
               "BFZ",
-              "PDIST"
+              "PDIST",
+              "Fold",
+              "Crush"
             ]
           },
           {
@@ -553,11 +553,11 @@
               "Off",
               "Diode",
               "Clip",
-              "Fold",
-              "Crush",
               "SAT",
               "BFZ",
-              "PDIST"
+              "PDIST",
+              "Fold",
+              "Crush"
             ]
           },
           {

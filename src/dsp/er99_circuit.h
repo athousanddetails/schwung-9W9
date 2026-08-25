@@ -161,19 +161,16 @@ static inline float er99_diode_round(const float _x, const float _drive)
  *   0 Diode     — the 909's own back-to-back pair. UNTOUCHED: every voice in
  *                 the module is fitted through it.
  *   1 Hard Clip — single-ended asymmetric saturator (even harmonics).
- *   2 Wavefold  — folds with a clipped floor under it so the note survives.
- *   3 Bitcrush  — amplitude quantise PLUS sample-rate decimation (the part
- *                 that makes a crush musical needs two floats of state; a
- *                 caller with no state gets quantise only).
- *   4 SAT       — warm parallel drive: rational
- *                 soft-knee with a touch of even harmonics, blended with the
- *                 dry so the transient survives.
- *   5 BFZ       — fuzz: high gain into a rational clipper
- *                 (fatter approach than tanh) with a bias shift; collapses to
- *                 a thick square-ish wall when pushed.
- *   6 PDIST     — punchy tube-style stage: biased
- *                 cubic soft clip, hard-limited past its knee — strong odd
- *                 harmonics with the bias's even ones, reads as "crunch".
+ *   2 SAT       — warm parallel drive: rational soft-knee with a touch of
+ *                 even harmonics, blended with the dry so the transient
+ *                 survives.
+ *   3 BFZ       — fuzz: high gain into a rational clipper (fatter approach
+ *                 than tanh) with a bias shift; a thick wall when pushed.
+ *   4 PDIST     — punchy tube-style stage: biased cubic soft clip, hard-
+ *                 limited past its knee — crunch.
+ *   5 Wavefold  — folds with a clipped floor under it so the note survives.
+ *   6 Bitcrush  — amplitude quantise PLUS sample-rate decimation (needs two
+ *                 floats of state; a caller without one gets quantise only).
  *
  * All types are level-normalised below unity drive, so Drive at minimum is
  * transparent for every one of them.
@@ -190,7 +187,7 @@ static inline float er99_shape_st(const float _x, const float _drive,
         const float v = (tanhf(_x * k + bias) - tb) * 0.958f;
         return k < 1.0f ? v / k : v;
     }
-    case 2: {   /* wavefolder — metallic, without hollowing the note out */
+    case 5: {   /* wavefolder — metallic, without hollowing the note out */
         float v = _x * k;
         for(int i=0; i<3; ++i)
         {
@@ -203,7 +200,7 @@ static inline float er99_shape_st(const float _x, const float _drive,
         v = 0.62f * v + 0.38f * body;
         return k < 1.0f ? v / k : v;
     }
-    case 3: {   /* bitcrush — quantise + decimate */
+    case 6: {   /* bitcrush — quantise + decimate */
         /* Depth falls and the hold stretches together as drive rises: from
          * (transparent, full rate) to (~3 levels, ~2.2 kHz at 44k1). */
         const float steps = 1.5f + 9.0f / k;
@@ -217,7 +214,7 @@ static inline float er99_shape_st(const float _x, const float _drive,
         }
         return q;
     }
-    case 4: {   /* SAT — warm, parallel, keeps the transient */
+    case 2: {   /* SAT — warm, parallel, keeps the transient */
         const float u = _x * k + 0.08f * k * _x * _x;
         const float wet = u / (1.0f + fabsf(u));
         const float m = k < 1.0f ? k : 1.0f;    /* dry blend below unity */
@@ -225,7 +222,7 @@ static inline float er99_shape_st(const float _x, const float _drive,
                       + 0.65f * m * wet * 1.35f;
         return k < 1.0f ? v / k : v;
     }
-    case 5: {   /* BFZ — thick fuzz wall */
+    case 3: {   /* BFZ — thick fuzz wall */
         /* The 2.5x pre-gain fuzzes even at minimum drive, so the fuzz is
          * crossfaded in between 0.85 and 2 — below that the stage passes dry
          * (Drive-at-zero-is-transparent holds for this type too). */
@@ -237,7 +234,7 @@ static inline float er99_shape_st(const float _x, const float _drive,
         if(m > 1.0f) m = 1.0f;
         return (1.0f - m) * _x + m * wet;
     }
-    case 6: {   /* PDIST — biased cubic crunch */
+    case 4: {   /* PDIST — biased cubic crunch */
         float u = _x * k + 0.12f;
         if(u >  1.0f) u =  1.0f;
         if(u < -1.0f) u = -1.0f;
