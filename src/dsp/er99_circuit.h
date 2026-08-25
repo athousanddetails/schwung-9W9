@@ -54,7 +54,15 @@ typedef struct {
     /* --- runtime --- */
     wa_osc_t    osc, osc2, sub_osc;
     wa_param_t  pitch, amp, click_env, noise_env;
-    wa_biquad_t click_lp, noise_hpf, dc_block;
+    wa_biquad_t click_lp, noise_hpf, noise_lpf, dc_block;
+    /* ENV4's shape, from the SD schematic: C73 holds the noise VCA fully open
+     * for ~24 ms before the decay starts; the discharge then runs to a
+     * NEGATIVE rail (VR7+R254), so it falls faster than a natural exponential;
+     * and the single-transistor VCA passes nothing below ~0.4 V of its ~15 V
+     * envelope — the tail GATES off at about -31 dB instead of fading out.
+     * This plateau + hard gate is the 909 snare's signature snap. */
+    int         noise_hold;    /* samples of plateau left    */
+    int         noise_gated;   /* env fell through the floor */
     uint32_t    rng;           /* per-voice drift RNG                */
     float       hit_tune;      /* this hit's (drifted) base pitch    */
     float       hit_gain;      /* this hit's (drifted) level scale   */
@@ -133,6 +141,15 @@ static inline void er99_bt_init(er99_bt_t *v, const float _sr)
                   v->click_tone > 0.0f ? v->click_tone : 3000.0f, 0.7071f, 0.0f, _sr);
     wa_biquad_set(&v->noise_hpf, WA_HIGHPASS,
                   v->noise_hp > 0.0f ? v->noise_hp : 800.0f, 0.7071f, 0.0f, _sr);
+    /* The board's noise path is a Sallen-Key HP and LP pair — a bandpass, not
+     * a bare highpass. The LP is what keeps the snap from being pure hiss. */
+    wa_biquad_set(&v->noise_lpf, WA_LOWPASS, 6500.0f, 0.7071f, 0.0f, _sr);
+    wa_biquad_reset(&v->noise_hpf);
+    wa_biquad_reset(&v->noise_lpf);
+    wa_biquad_reset(&v->click_lp);
+    wa_biquad_reset(&v->dc_block);
+    v->noise_hold = 0;
+    v->noise_gated = 0;
     v->out_gain = 0.0f;
     v->impulse = 0;
     v->mute_countdown = 0.0;
@@ -191,12 +208,13 @@ static inline void er99_bt_trigger(er99_bt_t *v, const float _accent)
     wa_set_value(&v->click_env, 1.0f);
     wa_exp_ramp(&v->click_env, 0.00001f, 3.0f * ms);
 
-    /* Snare noise path. */
+    /* Snare noise path: plateau first (C73), decay armed when it ends. */
     if(v->snappy > 0.0f)
     {
         wa_set_value(&v->noise_env, 1.0f);
-        wa_exp_ramp(&v->noise_env, 0.00001f,
-                    (v->noise_decay > 0.0f ? v->noise_decay : 120.0f) * ms);
+        v->noise_hold = (int)(24.0f * ms);
+        v->noise_gated = 0;
+        (void)(v->noise_decay > 0.0f ? v->noise_decay : 120.0f);
     }
 
     /* Two-sample impulse = the pulse generator's burst of energy. */
@@ -251,11 +269,27 @@ static inline float er99_bt_render(er99_bt_t *v, const float _noise)
     click += wa_biquad_tick(&v->click_lp, _noise);
     click *= wa_param_tick(&v->click_env) * v->attack;
 
-    /* Snare noise (Snappy). */
+    /* Snare noise (Snappy): ENV4's plateau, accelerated fall, and gate. */
     float snare = 0.0f;
-    if(v->snappy > 0.0f)
-        snare = wa_biquad_tick(&v->noise_hpf, _noise)
-              * wa_param_tick(&v->noise_env) * v->snappy;
+    if(v->snappy > 0.0f && !v->noise_gated)
+    {
+        if(v->noise_hold > 0)
+        {
+            /* C73 still holding the VCA open. Arm the decay on the last
+             * sample; the extra 0.7 on the time models the discharge running
+             * toward the negative rail — faster than a decay to zero. */
+            if(--v->noise_hold == 0)
+                wa_exp_ramp(&v->noise_env, 0.00001f,
+                            (v->noise_decay > 0.0f ? v->noise_decay : 120.0f)
+                            * 0.7f * 0.001f * v->sample_rate);
+        }
+        float env = wa_param_tick(&v->noise_env);
+        if(v->noise_hold <= 0 && env < 0.027f)   /* ~0.4 V of ~15 V: gate */
+        { env = 0.0f; v->noise_gated = 1; }
+        snare = wa_biquad_tick(&v->noise_lpf,
+                    wa_biquad_tick(&v->noise_hpf, _noise))
+              * env * v->snappy;
+    }
 
     return (body + click + snare) * v->out_gain;
 }
