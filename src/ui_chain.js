@@ -51,6 +51,14 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
     var mutesMask = 0;
     var controller = null;
 
+    /* Main-page lock: jog-click while ON the Main page toggles it. While
+     * locked, pads still play (and record) but no longer switch the page —
+     * so the master knobs (Comp, Volume...) stay under your hands while you
+     * jam the kit. Shift+Pad still selects: that gesture IS an explicit
+     * "take me there". Lives on globalThis so it survives the editor being
+     * re-entered (the host re-evaluates this file on every open). */
+    function mainLocked() { return !!globalThis.__9w9_main_lock; }
+
     /* First-run gesture hint: once per shadow_ui session, dismissed by any
      * input -- including pads, which are our layer -- or on its own after
      * HINT_MS. A hint nobody can wave away feels stuck. The "shown" flag lives
@@ -169,8 +177,14 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
     /* Title-bar text. The stock grid prints the page's own name on the right
      * of the bar, so this must NOT repeat it ("9W9 > BASS DRUM  BASS DRUM"):
      * just the module name plus the mute flag for the drum on screen. */
+    function onMainPage() {
+        var page = controller && controller.page;
+        return !!page && (page.level === "root" || page.level == null);
+    }
+
     function title() {
         var t = "9W9";
+        if (mainLocked()) t += " [L]";
         var page = controller && controller.page;
         var lane = page ? LEVEL2LANE[page.level] : -1;
         if (lane !== undefined && lane >= 0 && (mutesMask & (1 << lane)))
@@ -248,6 +262,12 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
 
             var level = PAD2LEVEL[d1];
 
+            /* Locked to Main: the pad plays, the page stays. */
+            if (mainLocked() && !shiftHeld()) {
+                if (d1 !== 87) injectToMove(data);
+                return;
+            }
+
             if (shiftHeld()) {
                 /* Silent select: page follows AND Move's white pad follows —
                  * the DSP swallows exactly the one note routed back (60 ms
@@ -276,6 +296,10 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
         if (!controller) return;
         var intent = decodeInput(data, { shift: shiftHeld(), mute: muteHeld });
         if (!intent) return;
+        if (intent.type === "click" && !controller.pickerOpen && onMainPage()) {
+            globalThis.__9w9_main_lock = !globalThis.__9w9_main_lock;
+            return;                        /* click = lock toggle, not picker */
+        }
         var todo = applyInput(controller, intent, { nowMs: Date.now(), reveal: false });
         if (todo && todo.action === "exit") {
             /* Back never reaches us (the host consumes it); any other exit

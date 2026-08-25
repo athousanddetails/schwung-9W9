@@ -484,7 +484,11 @@ static float master_glue(er99_master_t *m, const float _in, const float _sr)
     const float coef = gr < m->comp_env_db ? atk : rel;
     m->comp_env_db = gr + (m->comp_env_db - gr) * coef;
 
-    const float makeup = a * 7.0f;   /* dB, tracks the deeper threshold */
+    /* AutoGain: fitted so the pattern's loudness stays flat across the whole
+     * knob. Linear makeup left +1 dB at noon and -1.8 at full (the reduction
+     * grows faster than linearly as the threshold walks down); 2.2a + 6.6a^2
+     * is the measured loss inverted. */
+    const float makeup = a * 2.2f + a * a * 6.6f;
     return _in * powf(10.0f, (m->comp_env_db + makeup) / 20.0f);
 }
 
