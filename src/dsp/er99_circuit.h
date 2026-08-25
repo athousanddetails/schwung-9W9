@@ -236,7 +236,12 @@ static inline float er99_bt_render(er99_bt_t *v, const float _noise)
 
     const float f   = wa_param_tick(&v->pitch);
 
-    const float amp = wa_param_tick(&v->amp);
+    float amp = wa_param_tick(&v->amp);
+    /* The shell VCAs are the same crude single-transistor stage as the noise
+     * one (Q50/Q51) and pass nothing once the envelope is under ~0.4 V of its
+     * ~15 V: a two-shell voice stops dead at about -31 dB instead of ringing
+     * politely to silence. Half of "too resonant" is not having this. */
+    if(v->tune2 > 0.0f && v->osc2_mix > 0.0f && amp < 0.027f) amp = 0.0f;
 
     /* Oscillator: triangle, rounded toward sine by the diode pair. */
     float o = wa_osc_triangle(&v->osc, f);

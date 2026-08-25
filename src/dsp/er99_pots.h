@@ -45,7 +45,7 @@ static const er99_pot_t g_er99_pots[] = {
     { "bd_c_osc2_mix",      0.0f,    1.0f, ER99_LIN },
 
     /* --- Snare --- */
-    { "sd_c_tune",         150.0f,  330.0f, ER99_EXP },
+    { "sd_c_tune",         130.0f,  320.0f, ER99_EXP },
     { "sd_c_decay",         60.0f,  700.0f, ER99_EXP },
     { "sd_c_attack",        0.0f,    1.0f, ER99_LIN },
     { "sd_c_sweep_depth",   1.0f,    6.0f, ER99_LIN },

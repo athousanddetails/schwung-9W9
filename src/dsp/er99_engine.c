@@ -202,7 +202,7 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
          * longer than the shells (t60 0.34 s with Snappy up) — the shells are
          * the front of the sound, the noise is the tail. */
         case 1: /* Snare Drum: two tuned shells + snappy noise */
-            b->tune = 205.0f; b->tune2 = 325.0f; b->osc2_mix = 0.28f;
+            b->tune = 205.0f; b->tune2 = 325.0f; b->osc2_mix = 0.40f;
             b->sweep_depth = 1.08f; b->sweep_time = 25.0f;
             b->decay = 320.0f; b->attack = 0.15f;
             b->snappy = 0.5f; b->noise_decay = 480.0f; b->noise_hp = 1000.0f;
@@ -401,6 +401,7 @@ void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const in
         {
             er99_bt_t *sd = &e->bt[ER99_SD];
             sd->tune2       = sd->tune * 1.585f;
+            sd->osc2_mix    = 0.40f;   /* ~28% of shell 1 at the output */
             sd->sweep_depth = 1.08f;
             sd->sweep_time  = 25.0f;
             sd->decay       = 320.0f;
