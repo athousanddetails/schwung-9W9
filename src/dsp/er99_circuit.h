@@ -39,11 +39,6 @@ typedef struct {
     float level;        /* 0..1                                   */
     float dist_type;    /* 0 diode, 1 hard clip, 2 folder, 3 crush */
 
-    /* --- kick extras (0 disables; used by BD only) --- */
-    float sub;          /* 0..1 sub-oscillator layer (one octave down)   */
-    float tube;         /* 0..6 asymmetric tube stage ahead of the shaper */
-    float drift;        /* 0..1 per-hit analog drift (pitch/level jitter) */
-
     /* --- snare / tom extras (0 disables) --- */
     float tune2;        /* Hz, second oscillator                  */
     float osc2_mix;     /* 0..1                                   */
@@ -52,7 +47,7 @@ typedef struct {
     float noise_hp;     /* Hz, highpass on the snare noise        */
 
     /* --- runtime --- */
-    wa_osc_t    osc, osc2, sub_osc;
+    wa_osc_t    osc, osc2;
     wa_param_t  pitch, amp, click_env, noise_env;
     wa_biquad_t click_lp, noise_hpf, noise_lpf, dc_block;
     /* ENV4's shape, from the SD schematic: C73 holds the noise VCA fully open
@@ -92,9 +87,7 @@ typedef struct {
     int         bd_phold;      /* samples before the sweep starts to
                                   fall — C9's charge time; Fraser's
                                   "fixed attack time of the sweep"    */
-    uint32_t    rng;           /* per-voice drift RNG                */
     float       hit_tune;      /* this hit's (drifted) base pitch    */
-    float       hit_gain;      /* this hit's (drifted) level scale   */
     float       out_gain;
     int         impulse;        /* samples of initial impulse left */
     double      mute_countdown;
@@ -244,13 +237,9 @@ static inline void er99_bt_init(er99_bt_t *v, const float _sr)
     v->sample_rate = _sr;
     wa_osc_init(&v->osc,  _sr);
     wa_osc_init(&v->osc2, _sr);
-    wa_osc_init(&v->sub_osc, _sr);
-    /* DC blocker: the asymmetric tube stage adds a DC offset; a gentle 20 Hz
-     * highpass removes it without touching the kick fundamental. */
+    /* DC blocker: removes the offset the asymmetric diode rounding adds. */
     wa_biquad_set(&v->dc_block, WA_HIGHPASS, 20.0f, 0.7071f, 0.0f, _sr);
-    v->rng = 0x9E3779B9u;
     v->hit_tune = v->tune;
-    v->hit_gain = 1.0f;
     wa_param_init(&v->pitch, v->tune);
     wa_param_init(&v->amp, 0.0f);
     wa_param_init(&v->click_env, 0.0f);
@@ -282,41 +271,16 @@ static inline void er99_bt_trigger(er99_bt_t *v, const float _accent)
     const float sr = v->sample_rate;
     const float ms = 0.001f * sr;
 
-    /* Per-hit drift: tiny random pitch/level variation, like component
-     * tolerance and temperature in the analog original. At drift=1 the pitch
-     * wanders about +-3% and level about +-10%. */
-    v->hit_tune = v->tune;
-    v->hit_gain = 1.0f;
-    if(v->drift > 0.0f)
-    {
-        v->rng ^= v->rng << 13; v->rng ^= v->rng >> 17; v->rng ^= v->rng << 5;
-        const float r1 = ((float)(v->rng & 0xFFFF) / 32768.0f) - 1.0f;
-        v->rng ^= v->rng << 13; v->rng ^= v->rng >> 17; v->rng ^= v->rng << 5;
-        const float r2 = ((float)(v->rng & 0xFFFF) / 32768.0f) - 1.0f;
-        v->hit_tune *= 1.0f + 0.03f * v->drift * r1;
-        v->hit_gain  = 1.0f + 0.10f * v->drift * r2;
-    }
-
-    /* Every hit starts at the same point in the cycle. Free-running phase —
-     * what this did before — gave every hit a different attack, and under the
-     * pitch sweep a different perceived pitch: the "the kick moves around"
-     * complaint. 0.25 is the triangle's rising zero crossing, so the hit starts
-     * from silence instead of stepping straight to the negative peak.
-     *
-     * How much of this the 909 itself does is not settled: its voices are
-     * CMOS-inverter oscillators whose frequency comes from a starved supply
-     * rail, and they stop outright when that CV is low enough — so the pitch
-     * pulse at note start does restart them from rest at low Tune settings.
-     * With the CV higher they keep running between hits and the VCA does the
-     * gating. Treat this reset as ours, for consistency, not as a claim about
-     * the circuit. (TR-909 service notes, voicing board; Whittle's SD notes.) */
-    wa_osc_set_phase(&v->osc,     0.25);
-    wa_osc_set_phase(&v->osc2,    0.25);
-    wa_osc_set_phase(&v->sub_osc, 0.25);
-    /* Same reason: the tube stage's DC blocker holds charge from the previous
-     * hit, and its settling transient is the low thump that made otherwise
-     * identical hits land differently. */
+    /* Every hit starts at the same point in the cycle — shock excitation, see
+     * the history in the repo: free-running phase made every hit land on a
+     * different attack and perceived pitch. 0.25 is the triangle's rising zero
+     * crossing. The tube stage's DC blocker state is cleared for the same
+     * reason. */
+    wa_osc_set_phase(&v->osc,  0.25);
+    wa_osc_set_phase(&v->osc2, 0.25);
     wa_biquad_reset(&v->dc_block);
+
+    v->hit_tune = v->tune;
 
     if(v->bd_sweep)
     {
@@ -361,7 +325,7 @@ static inline void er99_bt_trigger(er99_bt_t *v, const float _accent)
 
     /* Two-sample impulse = the pulse generator's burst of energy. */
     v->impulse = 2;
-    v->out_gain = v->level * _accent * v->hit_gain;
+    v->out_gain = v->level * _accent;
 
     const float longest = v->decay > v->noise_decay ? v->decay : v->noise_decay;
     v->mute_countdown = (longest + 20.0f) * ms;
@@ -424,24 +388,6 @@ static inline float er99_bt_render(er99_bt_t *v, const float _noise)
            * v->osc2_mix;
         o /= (1.0f + v->osc2_mix);
     }
-    /* Sub layer: one octave below, tracks the same pitch envelope. Rounded
-     * hard toward a sine so it stays clean weight rather than buzz. */
-    if(v->sub > 0.0f)
-    {
-        const float s2 = er99_diode_round(wa_osc_triangle(&v->sub_osc, f * 0.5f), 3.0f);
-        o = (o + s2 * v->sub) / (1.0f + v->sub * 0.5f);
-    }
-
-    /* Tube stage: asymmetric soft clip ahead of the main shaper. The bias
-     * makes positive and negative halves saturate differently (even
-     * harmonics), then the DC blocker removes the offset it introduces. */
-    if(v->tube > 0.0f)
-    {
-        const float k = 1.0f + v->tube;
-        o = tanhf(k * (o + 0.12f * v->tube)) / tanhf(k);
-        o = wa_biquad_tick(&v->dc_block, o);
-    }
-
     float body = er99_shape(o, v->drive, v->dist_type) * amp;
 
     /* Click: impulse + lowpass-filtered noise, own envelope (Attack). */

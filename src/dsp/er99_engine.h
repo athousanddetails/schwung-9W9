@@ -38,92 +38,13 @@ typedef enum {
 #define ER99_SAMP_CHH        3
 
 /* ---- Oscillator+noise voices: BD, SD, LT, MT, HT ---- */
-typedef struct {
-    /* parameters (er-99 instruments.ts) */
-    float frequency;      /* Hz                                    */
-    float offset;         /* osc2 detune; osc2 exists only if > 0   */
-    float decay;          /* ms, amp envelope                      */
-    float tone;           /* noise amount 0..1                     */
-    float tone_decay;     /* ms, noise envelope                    */
-    float volume;         /* 0..1                                  */
-    float env_amount;     /* pitch env multiplier                  */
-    float env_duration;   /* ms                                    */
-    float saturation;     /* 0 = no waveshaper                     */
-    int   filter_type;    /* wa_filter_type_t, -1 = none           */
-    float filter_freq;
 
-    /* --- extensions beyond stock er-99 (default to stock values) --- */
-    float drive;          /* extra pre-shaper gain, 1.0 = stock    */
-    /*
-     * osc2_level > 0 fixes er-99's thin toms. Stock only builds osc2 when
-     * offset > 0 (so Med/Hi Tom never get one), and wires it into noiseInput,
-     * where it plays at `tone` level through the short noise envelope — on Low
-     * Tom that is 5% for 100 ms, i.e. inaudible. With osc2_level set, osc2 uses
-     * |offset|, tracks its own pitch envelope, and runs through the AMP
-     * envelope at this level. 0 = stock behaviour.
-     */
-    float osc2_level;
-    float filter_q;       /* resonance; 1.0 (no emphasis) = stock  */
-    float noise_lp;       /* Hz, lowpass on the noise path; 0 = off */
-    wa_biquad_t noise_filter;
-
-    /* runtime */
-    wa_osc_t    osc, osc2;
-    wa_param_t  pitch;        /* osc frequency envelope            */
-    wa_param_t  noise_gain;   /* noiseInput.gain                   */
-    wa_param_t  amp;          /* input.gain                        */
-    float       out_gain;     /* output.gain (set on trigger)      */
-    wa_biquad_t filter;
-    wa_shaper_t shaper;
-    int         has_filter;
-    int         amp_stage;    /* 0 = linear attack, 1 = exp decay  */
-    double      amp_decay_samples;
-    double      mute_countdown;
-} er99_instrument_t;
 
 /* ---- Rim shot ---- */
-typedef struct {
-    float decay;          /* ms                    */
-    float volume;
-    float saturation;
-    float hipass_freq;
-    float filter_freqs[3];
-    float filter_qs[3];
-    /* Stock er-99 only feeds bandpass[0] (see er99_engine.c). Set to 1 to
-     * drive all three in parallel — closer to the real hardware. */
-    int   all_bands;
 
-    wa_param_t  noise_gain;
-    wa_biquad_t bp[3];
-    wa_biquad_t hipass;
-    wa_shaper_t shaper;
-    float       out_gain;
-    int         buf_pos;      /* position in the 200-sample rim table */
-    double      mute_countdown;
-} er99_rim_t;
 
 /* ---- Hand clap ---- */
-typedef struct {
-    float decay;          /* ms                              */
-    float delay_const;    /* ms between taps ("spread")      */
-    float volume;
-    float tune;           /* tone bandpass centre, Hz        */
-    float tone_decay;     /* ms                              */
-    float hipass_freq;
-    float filter_freqs[2];
-    float filter_qs[2];
 
-    wa_param_t  noise_gain;    /* tone path       */
-    wa_param_t  delay_out;     /* the 5 taps      */
-    wa_biquad_t tone_bp;
-    wa_biquad_t hp, bp;        /* serial 900 / 1200 */
-    wa_biquad_t hipass;
-    wa_osc_t    modulator;     /* 40 Hz sawtooth  */
-    float       out_gain;
-    int         tap_index;
-    double      next_tap_samples;
-    double      mute_countdown;
-} er99_clap_t;
 
 /* ---- Samplers: hi-hat, ride, crash ---- */
 typedef struct {
@@ -170,14 +91,10 @@ typedef struct {
 typedef struct {
     float sample_rate;
 
-    er99_instrument_t inst[ER99_NUM_INSTRUMENTS];
-    /* Circuit-informed BD/SD/tom models (er99_circuit.h). `circuit_model`
+    /* Circuit-informed BD/SD/tom models (er99_circuit.h). The er-99 legacy
      * selects which engine the 5 oscillator voices use: 1 = circuit (default,
      * the good one), 0 = stock er-99 for comparison. */
     er99_bt_t         bt[ER99_NUM_INSTRUMENTS];
-    int               circuit_model;
-    er99_rim_t        rim;      /* stock er-99 (circuit_model=0) */
-    er99_clap_t       clap;
     er99_tom_t        tom909[3]; /* LT/MT/HT, three oscillators each */
     er99_rim909_t     rim909;   /* circuit models (default)      */
     er99_clap909_t    clap909;
@@ -213,7 +130,7 @@ int er99_engine_set_raw(er99_engine_t *e, const char *key, float value);
 int er99_engine_get_raw(const er99_engine_t *e, const char *key, float *out);
 
 /* Public parameter surface: pot positions 0..127, like the hardware panel.
- * Enum-style keys (dist_type, circuit_model, rs_all_bands) pass through as
+ * Enum-style keys (dist_type, master_dist) pass through as
  * their own small integer values rather than being scaled. */
 void er99_engine_seed_pots(er99_engine_t *e);
 int er99_engine_set_param(er99_engine_t *e, const char *key, float pot);

@@ -52,9 +52,6 @@ static const er99_pot_t g_er99_pots[] = {
      * why turning Level up past a point stopped doing anything. */
     { "bd_c_level",         0.0f,    1.35f, ER99_LIN },
     { "bd_c_click_tone",  500.0f, 8000.0f, ER99_EXP },
-    { "bd_c_sub",           0.0f,    1.0f, ER99_LIN },
-    { "bd_c_tube",          0.0f,    6.0f, ER99_LIN },
-    { "bd_c_drift",         0.0f,    1.0f, ER99_LIN },
     { "bd_c_tune2",        20.0f,  200.0f, ER99_EXP },
     { "bd_c_osc2_mix",      0.0f,    1.0f, ER99_LIN },
 

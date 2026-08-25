@@ -15,7 +15,6 @@
 #include <string.h>
 
 #include "er99_engine.h"
-#include "rim_noise.h"
 
 const char *const er99_trigger_names[ER99_NUM_TRIGGERS] = {
     "bd", "sd", "lt", "mt", "ht", "rs", "hc", "ohh", "chh", "rc", "cr"
@@ -105,77 +104,12 @@ static float *load_wav_mono(const char *_path, uint32_t *_out_len)
 /* Init                                                                   */
 /* ===================================================================== */
 
-static void instrument_defaults(er99_instrument_t *v, const int _index)
-{
-    memset(v, 0, sizeof(*v));
-    v->filter_type = -1;
-    v->drive       = 1.0f;
-    v->osc2_level  = 0.0f;   /* 0 = stock er-99 behaviour */
-    v->filter_q    = 1.0f;
-    v->noise_lp    = 0.0f;
-
-    switch(_index)
-    {
-    case 0: /* Bass Drum */
-        v->frequency = 80.0f;  v->decay = 300.0f; v->tone = 0.5f;
-        v->tone_decay = 20.0f; v->volume = 0.5f;  v->env_amount = 2.5f;
-        v->env_duration = 50.0f; v->saturation = 0.5f;
-        v->filter_type = WA_LOWPASS; v->filter_freq = 3000.0f;
-        break;
-    case 1: /* Snare Drum */
-        v->frequency = 220.0f; v->decay = 100.0f; v->tone = 0.25f;
-        v->tone_decay = 250.0f; v->volume = 0.5f; v->env_amount = 4.0f;
-        v->env_duration = 10.0f;
-        v->filter_type = WA_NOTCH; v->filter_freq = 1000.0f;
-        break;
-    case 2: /* Low Tom  — the only voice with offset > 0, so the only osc2 */
-        v->frequency = 100.0f; v->offset = 100.0f; v->decay = 200.0f;
-        v->tone = 0.05f; v->tone_decay = 100.0f; v->volume = 0.5f;
-        v->env_amount = 2.0f; v->env_duration = 100.0f;
-        break;
-    case 3: /* Med Tom — offset is negative, so er-99 creates no osc2 */
-        v->frequency = 200.0f; v->offset = -50.0f; v->decay = 200.0f;
-        v->tone = 0.05f; v->tone_decay = 100.0f; v->volume = 0.5f;
-        v->env_amount = 2.0f; v->env_duration = 100.0f;
-        break;
-    case 4: /* Hi Tom */
-        v->frequency = 300.0f; v->offset = -80.0f; v->decay = 200.0f;
-        v->tone = 0.05f; v->tone_decay = 100.0f; v->volume = 0.5f;
-        v->env_amount = 2.0f; v->env_duration = 100.0f;
-        break;
-    default: break;
-    }
-}
-
 void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir)
 {
     memset(e, 0, sizeof(*e));
     e->sample_rate = _sr;
     wa_noise_init(&e->noise, 0xC0FFEEu);
 
-    for(int i=0; i<ER99_NUM_INSTRUMENTS; ++i)
-    {
-        er99_instrument_t *v = &e->inst[i];
-        instrument_defaults(v, i);
-        wa_osc_init(&v->osc,  _sr);
-        wa_osc_init(&v->osc2, _sr);
-        wa_param_init(&v->pitch, v->frequency);
-        wa_param_init(&v->noise_gain, 0.0f);
-        wa_param_init(&v->amp, 0.0f);
-        v->has_filter = v->filter_type >= 0;
-        if(v->has_filter)
-            wa_biquad_set(&v->filter, (wa_filter_type_t)v->filter_type,
-                          v->filter_freq, v->filter_q, 0.0f, _sr);
-        wa_biquad_set(&v->noise_filter, WA_LOWPASS, 8000.0f, 0.7071f, 0.0f, _sr);
-        /* instrument.ts uses makeDistortionCurve(2) */
-        wa_shaper_init(&v->shaper, 2.0f, _sr);
-    }
-
-    /* ---- Circuit-informed BD / SD / toms ----
-     * Frequencies follow the 909's ranges; sweep depth and click balance are
-     * set so the kick has its characteristic beater attack and the toms have
-     * real body rather than a bare triangle. */
-    e->circuit_model = 1;
     for(int i=0; i<ER99_NUM_INSTRUMENTS; ++i)
     {
         er99_bt_t *b = &e->bt[i];
@@ -204,7 +138,6 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
             b->decay = 1380.0f; b->amp_hold = 40.0f;
             b->attack = 0.10f; b->click_tone = 2500.0f;
             b->drive = 0.2f;  b->level = 1.0f;
-            b->sub = 0.0f; b->tube = 0.0f; b->drift = 0.0f;
             break;
         /* Snare fitted to real 909 recordings (SD Clean E 01/03/10 — the same
          * drum at three Snappy settings): shells at 205 and 325 Hz (ratio
@@ -248,38 +181,7 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
     }
     for(int i=0; i<3; ++i) er99_tom909_init(&e->tom909[i], _sr);
 
-    /* ---- Rim shot (generator.ts / instruments.ts) ---- */
-    er99_rim_t *r = &e->rim;
-    r->decay = 30.0f; r->volume = 3.0f; r->saturation = 3.0f;
-    r->hipass_freq = 100.0f;
-    r->filter_freqs[0] = 220.0f; r->filter_freqs[1] = 500.0f; r->filter_freqs[2] = 950.0f;
-    r->filter_qs[0] = r->filter_qs[1] = r->filter_qs[2] = 10.5f;
-    r->all_bands = 0;   /* stock er-99 behaviour — see render loop */
-    for(int i=0; i<3; ++i)
-        wa_biquad_set(&r->bp[i], WA_BANDPASS, r->filter_freqs[i], r->filter_qs[i], 0.0f, _sr);
-    wa_biquad_set(&r->hipass, WA_HIGHPASS, r->hipass_freq, 1.0f, 0.0f, _sr);
-    wa_shaper_init(&r->shaper, 20.0f, _sr);   /* makeDistortionCurve(20) */
-    wa_param_init(&r->noise_gain, 0.0f);
-    r->buf_pos = ER99_RIM_NOISE_LEN;          /* idle */
-
-    /* ---- Hand clap ---- */
-    er99_clap_t *c = &e->clap;
-    c->decay = 80.0f; c->delay_const = 10.0f; c->volume = 1.5f;
-    c->tune = 1000.0f;      /* unused by stock graph, kept for parity */
-    c->tone_decay = 250.0f;
-    c->hipass_freq = 80.0f;
-    c->filter_freqs[0] = 900.0f;  c->filter_qs[0] = 1.2f;
-    c->filter_freqs[1] = 1200.0f; c->filter_qs[1] = 0.7f;
-    wa_biquad_set(&c->tone_bp, WA_BANDPASS, 2200.0f, 2.0f, 0.0f, _sr); /* tone: 2200 */
-    wa_biquad_set(&c->hp, WA_HIGHPASS, c->filter_freqs[0], c->filter_qs[0], 0.0f, _sr);
-    wa_biquad_set(&c->bp, WA_BANDPASS, c->filter_freqs[1], c->filter_qs[1], 0.0f, _sr);
-    wa_biquad_set(&c->hipass, WA_HIGHPASS, c->hipass_freq, 1.0f, 0.0f, _sr);
-    wa_osc_init(&c->modulator, _sr);
-    wa_param_init(&c->noise_gain, 0.0f);
-    wa_param_init(&c->delay_out, 0.0f);
-    c->tap_index = 5;   /* idle */
-
-    /* ---- Circuit-informed rim + clap (default engine) ---- */
+    /* ---- Rim shot and hand clap (circuit models) ---- */
     {
         er99_rim909_t *r9 = &e->rim909;
         memset(r9, 0, sizeof(*r9));
@@ -381,35 +283,6 @@ void er99_engine_free(er99_engine_t *e)
 /* Triggering                                                             */
 /* ===================================================================== */
 
-static void trigger_instrument(er99_engine_t *e, er99_instrument_t *v, const float _accent)
-{
-    const float sr = e->sample_rate;
-
-    /* osc.frequency: setValueAtTime(f * env_amount) then expRamp(f, env_duration) */
-    wa_set_value(&v->pitch, v->frequency * v->env_amount);
-    wa_exp_ramp(&v->pitch, v->frequency, ms_to_samples(v->env_duration, sr));
-
-    /* noiseInput.gain: setValueAtTime(tone) then expRamp(0.00001, tone_decay) */
-    wa_set_value(&v->noise_gain, v->tone);
-    wa_exp_ramp(&v->noise_gain, 0.00001f, ms_to_samples(v->tone_decay, sr));
-
-    /* output.gain: volume * accent */
-    v->out_gain = v->volume * _accent;
-
-    /* input.gain: linearRamp(volume, +5ms) then expRamp(0.00001, +decay).
-     * Note the exp ramp's end time is decay from the TRIGGER, not from the
-     * end of the attack — so stage 2 runs for (decay - 5ms). */
-    wa_linear_ramp(&v->amp, v->volume, ms_to_samples(5.0f, sr));
-    v->amp_stage = 0;
-    v->amp_decay_samples = ms_to_samples(v->decay - 5.0f > 1.0f ? v->decay - 5.0f : 1.0f, sr);
-
-    /* index.ts mutes output after max(decay, tone_decay) */
-    const float mute_ms = v->decay > v->tone_decay ? v->decay : v->tone_decay;
-    v->mute_countdown = ms_to_samples(mute_ms, sr);
-}
-
-int er99_engine_set_raw(er99_engine_t *e, const char *key, const float value);
-
 void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const int _velocity)
 {
 
@@ -432,7 +305,6 @@ void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const in
         if(_which == ER99_BD)
         {
             er99_bt_t *bd = &e->bt[ER99_BD];
-            bd->sub = 0.0f; bd->tube = 0.0f; bd->drift = 0.0f;
             bd->tune2 = 0.0f; bd->osc2_mix = 0.0f;
             bd->click_tone = 2500.0f;
             bd->amp_hold = 40.0f;
@@ -444,7 +316,7 @@ void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const in
         /* Clap: the real 909 gives it ONE pot (Level). Tune and Tail stay
          * because Gus likes them; the burst geometry is the circuit's and is
          * pinned — echo spacing, echo decay, tail share and the filter's Q. */
-        if(_which == ER99_HC && e->circuit_model)
+        if(_which == ER99_HC)
         {
             er99_clap909_t *c9 = &e->clap909;
             c9->spread = 12.0f; c9->burst_decay = 50.0f;
@@ -471,19 +343,16 @@ void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const in
             if(sd->noise_hp < 990.0f || sd->noise_hp > 1010.0f)
                 er99_engine_set_raw(e, "sd_c_noise_hp", 1000.0f);
         }
-        if(!e->circuit_model)
-            trigger_instrument(e, &e->inst[_which], accent);
         /* The toms are their own circuit: three oscillators with separate
          * envelopes plus a noise attack (er99_tom909.h). They read the same
          * panel values as the two-oscillator voice, so nothing else changes. */
-        else if(_which >= ER99_LT && _which <= ER99_HT)
+        if(_which >= ER99_LT && _which <= ER99_HT)
             er99_tom909_trigger(&e->tom909[_which - ER99_LT], &e->bt[_which], accent);
         else
             er99_bt_trigger(&e->bt[_which], accent);
         break;
 
     case ER99_RS: {
-        if(e->circuit_model)
         {
             /* Fixed circuitry, not pots: the upper resonance is the same
              * network as the lower (measured 480/210 = 2.286, so it tracks
@@ -498,27 +367,10 @@ void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const in
             er99_rim909_trigger(r9, accent);
             break;
         }
-        er99_rim_t *r = &e->rim;
-        wa_set_value(&r->noise_gain, 1.0f);
-        wa_exp_ramp(&r->noise_gain, 0.00001f, ms_to_samples(r->decay, sr));
-        r->out_gain = r->volume * accent;
-        r->buf_pos = 0;                        /* replay the fixed noise table */
-        r->mute_countdown = ms_to_samples(r->decay, sr);
-        break;
     }
 
     case ER99_HC: {
-        if(e->circuit_model) { er99_clap909_trigger(&e->clap909, accent); break; }
-        er99_clap_t *c = &e->clap;
-        /* tone path: setValueAtTime(0.5), expRamp(0.001, tone_decay) */
-        wa_set_value(&c->noise_gain, 0.5f);
-        wa_exp_ramp(&c->noise_gain, 0.001f, ms_to_samples(c->tone_decay, sr));
-        /* first of five taps; the rest are scheduled in the render loop */
-        c->tap_index = 0;
-        c->next_tap_samples = 0.0;
-        c->out_gain = c->volume * accent;
-        /* playNote(): decay*3 + delayConst*8 */
-        c->mute_countdown = ms_to_samples(c->decay * 3.0f + c->delay_const * 8.0f, sr);
+        er99_clap909_trigger(&e->clap909, accent);
         break;
     }
 
@@ -555,126 +407,6 @@ void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const in
 /* ===================================================================== */
 /* Per-voice rendering                                                    */
 /* ===================================================================== */
-
-static float render_instrument(er99_engine_t *e, er99_instrument_t *v, const float _noise)
-{
-    if(v->mute_countdown <= 0.0) return 0.0f;
-    v->mute_countdown -= 1.0;
-
-    const float freq = wa_param_tick(&v->pitch);
-
-    /* Amp envelope: 5 ms linear attack, then exponential decay. */
-    if(v->amp_stage == 0 && v->amp.type == WA_SEG_CONST)
-    {
-        v->amp_stage = 1;
-        wa_exp_ramp(&v->amp, 0.00001f, v->amp_decay_samples);
-    }
-    const float amp   = wa_param_tick(&v->amp);
-    const float ngain = wa_param_tick(&v->noise_gain);
-
-    /* Oscillator path: osc -> [saturation -> waveshaper] -> input.gain */
-    float osc = wa_osc_triangle(&v->osc, freq);
-    if(v->saturation > 0.0f)
-        osc = wa_shaper_tick(&v->shaper, osc * v->saturation * v->drive);
-    else if(v->drive != 1.0f)
-        osc *= v->drive;
-
-    /* Noise path: whiteNoise (+ osc2 when offset > 0) -> noiseInput.gain */
-    float noise_sum = _noise;
-    if(v->noise_lp > 0.0f)
-        noise_sum = wa_biquad_tick(&v->noise_filter, noise_sum);
-    if(v->osc2_level <= 0.0f && v->offset > 0.0f)
-        noise_sum += wa_osc_triangle(&v->osc2, freq);   /* stock: osc2 on the noise env */
-
-    /* Improved second oscillator: |offset| detune, on the AMP envelope, so it
-     * actually contributes body instead of vanishing with the noise burst. */
-    float body = 0.0f;
-    if(v->osc2_level > 0.0f)
-    {
-        const float det = v->offset < 0.0f ? -v->offset : v->offset;
-        const float f2  = freq * ((v->frequency + det) / (v->frequency > 1.0f ? v->frequency : 1.0f));
-        body = wa_osc_triangle(&v->osc2, f2) * v->osc2_level;
-    }
-
-    /* Both land on output.gain */
-    float y = (osc + body) * amp + noise_sum * ngain;
-    y *= v->out_gain;
-
-    if(v->has_filter)
-        y = wa_biquad_tick(&v->filter, y);
-
-    return y;
-}
-
-static float render_rim(er99_rim_t *r)
-{
-    if(r->mute_countdown <= 0.0) return 0.0f;
-    r->mute_countdown -= 1.0;
-
-    /* The 200-sample table is played once per hit (256-frame buffer, rest 0). */
-    float exc = 0.0f;
-    if(r->buf_pos < ER99_RIM_NOISE_LEN)
-        exc = er99_rim_noise[r->buf_pos];
-    if(r->buf_pos < 256) r->buf_pos++;
-
-    exc *= wa_param_tick(&r->noise_gain);
-
-    /*
-     * er-99 quirk: with filterTopology 'parallel', setupGenerator only wires
-     * noiseInput into filterNodes[0]; nodes 1 and 2 are connected to the
-     * output but nothing feeds them. So stock rim shot is the 220 Hz bandpass
-     * alone. Reproduced by default; all_bands=1 drives all three, which is
-     * closer to the real hardware's three-band ring.
-     */
-    float y = wa_biquad_tick(&r->bp[0], exc);
-    if(r->all_bands)
-        y += wa_biquad_tick(&r->bp[1], exc) + wa_biquad_tick(&r->bp[2], exc);
-
-    y = wa_shaper_tick(&r->shaper, y * r->saturation);
-    y = wa_biquad_tick(&r->hipass, y);
-    return y * r->out_gain;
-}
-
-static float render_clap(er99_engine_t *e, er99_clap_t *c, const float _noise)
-{
-    if(c->mute_countdown <= 0.0) return 0.0f;
-    c->mute_countdown -= 1.0;
-
-    const float sr = e->sample_rate;
-
-    /* Five amplitude taps, delay_const apart. There is no DelayNode in the
-     * original: the "spread" is purely these scheduled gain bursts. */
-    if(c->tap_index < 5)
-    {
-        if(c->next_tap_samples <= 0.0)
-        {
-            static const float tap_level[5] = { 0.1f, 0.8f, 0.5f, 0.3f, 0.2f };
-            const float dc        = c->delay_const * 0.001f;          /* seconds */
-            const float decay_val = c->decay / 250.0f * dc;
-            const float tc = (c->tap_index == 0) ? (dc / 3.0f + decay_val)
-                           : (c->tap_index <  4) ? (dc / 2.0f + decay_val)
-                                                 : (dc / 2.0f + c->decay / 2500.0f);
-            wa_set_value(&c->delay_out, tap_level[c->tap_index]);
-            wa_set_target(&c->delay_out, 0.000001f, tc * sr);
-            c->tap_index++;
-            c->next_tap_samples = ms_to_samples(c->delay_const, sr);
-        }
-        c->next_tap_samples -= 1.0;
-    }
-
-    /* delayInput.gain = 1.0 + 0.4 * sawtooth(40 Hz) */
-    const float mod = 1.0f + 0.4f * wa_osc_sawtooth(&c->modulator, 40.0f);
-
-    const float burst = _noise * mod * wa_param_tick(&c->delay_out);
-    float y = wa_biquad_tick(&c->bp, wa_biquad_tick(&c->hp, burst));
-
-    /* tone path: whiteNoise -> bandpass(2200, Q2) -> noiseInput.gain, summed
-     * straight into the saturation node (bypasses the HP/BP pair). */
-    y += wa_biquad_tick(&c->tone_bp, _noise) * wa_param_tick(&c->noise_gain);
-
-    y = wa_biquad_tick(&c->hipass, y);
-    return y * c->out_gain;
-}
 
 static float render_sampler(er99_sampler_t *s)
 {
@@ -764,16 +496,12 @@ void er99_engine_render(er99_engine_t *e, float *out, const int frames)
 
         float mix = 0.0f;
         for(int i=0; i<ER99_NUM_INSTRUMENTS; ++i)
-            if(!e->circuit_model)
-                mix += render_instrument(e, &e->inst[i], noise);
-            else if(i >= ER99_LT && i <= ER99_HT)
+            if(i >= ER99_LT && i <= ER99_HT)
                 mix += er99_tom909_render(&e->tom909[i - ER99_LT], &e->bt[i], noise);
             else
                 mix += er99_bt_render(&e->bt[i], noise);
-        mix += e->circuit_model ? er99_rim909_render(&e->rim909, noise)
-                                : render_rim(&e->rim);
-        mix += e->circuit_model ? er99_clap909_render(&e->clap909, noise)
-                                : render_clap(e, &e->clap, noise);
+        mix += er99_rim909_render(&e->rim909, noise);
+        mix += er99_clap909_render(&e->clap909, noise);
         for(int i=0; i<ER99_NUM_SAMPLERS; ++i)
             mix += render_sampler(&e->sampler[i]);
 
@@ -799,80 +527,27 @@ static const bt_field_t g_bt_fields[] = {
     BTF(tune), BTF(sweep_depth), BTF(sweep_time), BTF(decay), BTF(attack),
     BTF(click_tone), BTF(drive), BTF(level), BTF(dist_type),
     BTF(tune2), BTF(osc2_mix), BTF(snappy), BTF(noise_decay), BTF(noise_hp),
-    BTF(sub), BTF(tube), BTF(drift), BTF(pitch_mod),
+    BTF(pitch_mod),
 };
 #define ER99_BT_FIELD_COUNT (sizeof(g_bt_fields)/sizeof(g_bt_fields[0]))
 
 /* Everything else that must round-trip in a saved state. */
 static const char *const g_other_state_keys[] = {
-    "rs_decay", "rs_volume", "rs_saturation", "rs_all_bands",
+    "rs_decay", "rs_volume", "rs_saturation",
     "hc_decay", "hc_spread", "hc_volume", "hc_tone_decay",
     "ohh_decay", "ohh_volume", "ohh_pitch",
     "chh_decay", "chh_volume", "chh_pitch", "chh_drive",
     "rc_decay", "rc_volume", "rc_pitch",
     "cr_decay", "cr_volume", "cr_pitch",
-    "volume", "accent", "circuit_model", "master_dist", "master_comp",
+    "volume", "accent", "master_dist", "master_comp",
     "rs_dist_type", "hc_dist_type", "ohh_dist_type", "chh_dist_type",
     "rc_dist_type", "cr_dist_type",
 };
 #define ER99_OTHER_KEY_COUNT (sizeof(g_other_state_keys)/sizeof(g_other_state_keys[0]))
 
-#define IFIELD(n) { #n, offsetof(er99_instrument_t, n) }
-static const field_t g_inst_fields[] = {
-    IFIELD(frequency), IFIELD(decay), IFIELD(tone), IFIELD(tone_decay),
-    IFIELD(volume), IFIELD(env_amount), IFIELD(env_duration),
-    IFIELD(saturation), IFIELD(filter_freq), IFIELD(offset), IFIELD(drive),
-    IFIELD(osc2_level), IFIELD(filter_q), IFIELD(noise_lp),
-};
-
-static er99_instrument_t *find_instrument(er99_engine_t *e, const char *_key,
-                                          const char **_rest)
-{
-    for(int i=0; i<ER99_NUM_INSTRUMENTS; ++i)
-    {
-        const char *n = er99_trigger_names[i];
-        const size_t len = strlen(n);
-        if(!strncmp(_key, n, len) && _key[len] == '_')
-        {
-            /* "<v>_c_<field>" belongs to the circuit voice, not the stock one.
-             * Without this guard find_instrument claims the key, fails to find
-             * a stock field named "c_tune", and returns 0 — silently swallowing
-             * every circuit control. */
-            if(!strncmp(_key + len + 1, "c_", 2))
-                return NULL;
-            *_rest = _key + len + 1;
-            return &e->inst[i];
-        }
-    }
-    return NULL;
-}
-
 int er99_engine_set_raw(er99_engine_t *e, const char *key, const float value)
 {
-    const char *rest = NULL;
-    er99_instrument_t *v = find_instrument(e, key, &rest);
-    if(v)
-    {
-        for(size_t i=0; i<sizeof(g_inst_fields)/sizeof(g_inst_fields[0]); ++i)
-        {
-            if(!strcmp(rest, g_inst_fields[i].name))
-            {
-                *(float*)((char*)v + g_inst_fields[i].off) = value;
-                if(v->has_filter)
-                    wa_biquad_set(&v->filter, (wa_filter_type_t)v->filter_type,
-                                  v->filter_freq, v->filter_q, 0.0f, e->sample_rate);
-                if(v->noise_lp > 0.0f)
-                    wa_biquad_set(&v->noise_filter, WA_LOWPASS, v->noise_lp,
-                                  0.7071f, 0.0f, e->sample_rate);
-                return 1;
-            }
-        }
-        return 0;
-    }
-
-    if(!strcmp(key, "circuit_model")) { e->circuit_model = value > 0.5f; return 1; }
-    {
-        for(int i=0; i<ER99_NUM_INSTRUMENTS; ++i)
+    for(int i=0; i<ER99_NUM_INSTRUMENTS; ++i)
         {
             char pre[16];
             snprintf(pre, sizeof(pre), "%s_c_", er99_trigger_names[i]);
@@ -891,8 +566,6 @@ int er99_engine_set_raw(er99_engine_t *e, const char *key, const float value)
                 return 1;
             }
         }
-    }
-    if(e->circuit_model)
     {
         er99_rim909_t *r9 = &e->rim909; er99_clap909_t *c9 = &e->clap909;
         if(!strcmp(key,"rs_decay"))     { r9->decay = value; return 1; }
@@ -910,14 +583,6 @@ int er99_engine_set_raw(er99_engine_t *e, const char *key, const float value)
         if(!strcmp(key,"hc_tail"))      { c9->tail_level = value; return 1; }
         if(!strcmp(key,"hc_drive"))     { c9->drive = value; return 1; }
     }
-    if(!strcmp(key, "rs_decay"))      { e->rim.decay = value;  return 1; }
-    if(!strcmp(key, "rs_volume"))     { e->rim.volume = value; return 1; }
-    if(!strcmp(key, "rs_saturation")) { e->rim.saturation = value; return 1; }
-    if(!strcmp(key, "rs_all_bands"))  { e->rim.all_bands = value > 0.5f; return 1; }
-    if(!strcmp(key, "hc_decay"))      { e->clap.decay = value;  return 1; }
-    if(!strcmp(key, "hc_spread"))     { e->clap.delay_const = value; return 1; }
-    if(!strcmp(key, "hc_volume"))     { e->clap.volume = value; return 1; }
-    if(!strcmp(key, "hc_tone_decay")) { e->clap.tone_decay = value; return 1; }
 
     /* Patches saved before the closed hat became its own voice carry its decay
      * as ohh_decay_closed. Keep accepting it. */
@@ -954,15 +619,6 @@ int er99_engine_set_raw(er99_engine_t *e, const char *key, const float value)
 
 int er99_engine_get_raw(const er99_engine_t *e, const char *key, float *out)
 {
-    const char *rest = NULL;
-    er99_instrument_t *v = find_instrument((er99_engine_t*)e, key, &rest);
-    if(v)
-    {
-        for(size_t i=0; i<sizeof(g_inst_fields)/sizeof(g_inst_fields[0]); ++i)
-            if(!strcmp(rest, g_inst_fields[i].name))
-            { *out = *(const float*)((const char*)v + g_inst_fields[i].off); return 1; }
-        return 0;
-    }
     for(int i=0; i<ER99_NUM_INSTRUMENTS; ++i)
     {
         char pre[16];
@@ -973,12 +629,6 @@ int er99_engine_get_raw(const er99_engine_t *e, const char *key, float *out)
             if(!strcmp(key + plen, g_bt_fields[k].n))
             { *out = *(const float*)((const char*)&e->bt[i] + g_bt_fields[k].off); return 1; }
     }
-    if(!strcmp(key, "circuit_model")) { *out = (float)e->circuit_model; return 1; }
-    if(!strcmp(key, "rs_saturation")) { *out = e->rim.saturation; return 1; }
-    if(!strcmp(key, "rs_all_bands"))  { *out = (float)e->rim.all_bands; return 1; }
-    if(!strcmp(key, "hc_spread"))     { *out = e->clap.delay_const; return 1; }
-    if(!strcmp(key, "hc_volume"))     { *out = e->clap.volume; return 1; }
-    if(!strcmp(key, "hc_tone_decay")) { *out = e->clap.tone_decay; return 1; }
     {
         if(!strcmp(key, "ohh_decay_closed")) { *out = e->sampler[ER99_SAMP_CHH].decay; return 1; }
         static const char *sn[ER99_NUM_SAMPLERS] = { "ohh", "rc", "cr", "chh" };
@@ -1001,7 +651,6 @@ int er99_engine_get_raw(const er99_engine_t *e, const char *key, float *out)
     }
     if(!strcmp(key, "rs_dist_type")) { *out = e->rim909.dist_type; return 1; }
     if(!strcmp(key, "hc_dist_type")) { *out = e->clap909.dist_type; return 1; }
-    if(e->circuit_model)
     {
         const er99_rim909_t *r9 = &e->rim909; const er99_clap909_t *c9 = &e->clap909;
         if(!strcmp(key,"rs_decay"))     { *out = r9->decay; return 1; }
@@ -1019,9 +668,6 @@ int er99_engine_get_raw(const er99_engine_t *e, const char *key, float *out)
         if(!strcmp(key,"hc_tail"))      { *out = c9->tail_level; return 1; }
         if(!strcmp(key,"hc_drive"))     { *out = c9->drive; return 1; }
     }
-    if(!strcmp(key, "rs_decay"))  { *out = e->rim.decay;  return 1; }
-    if(!strcmp(key, "rs_volume")) { *out = e->rim.volume; return 1; }
-    if(!strcmp(key, "hc_decay"))  { *out = e->clap.decay; return 1; }
     if(!strcmp(key, "master_drive")) { *out = e->master.drive; return 1; }
     if(!strcmp(key, "master_dist"))  { *out = e->master.dist_mode; return 1; }
     if(!strcmp(key, "master_comp")) { *out = e->master.comp; return 1; }
@@ -1034,8 +680,7 @@ int er99_engine_get_raw(const er99_engine_t *e, const char *key, float *out)
 /* Keys that are switches/enums, not pots: passed through unscaled. */
 static int is_enum_key(const char *key)
 {
-    if(!strcmp(key, "circuit_model") || !strcmp(key, "rs_all_bands") ||
-       !strcmp(key, "master_dist")) return 1;
+    if(!strcmp(key, "master_dist")) return 1;
     const size_t n = strlen(key);
     return n > 10 && !strcmp(key + n - 10, "_dist_type");
 }

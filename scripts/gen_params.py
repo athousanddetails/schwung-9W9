@@ -35,9 +35,8 @@ def F(k,n,mn,mx,st):     return POT(k,n)
 
 cp=[]; levels={}
 # Root holds ONLY globals and navigation — no per-voice params leaking in.
-root=[{"key":"circuit_model","name":"Engine"},{"key":"note_map","name":"Note Map"}]
-cp+=[{"key":"note_map","name":"Note Map","type":"enum","options":["Drum Rack (36+)","General MIDI"]},
-     {"key":"circuit_model","name":"Engine","type":"enum","options":["Stock er-99","Circuit 909"]}]
+root=[{"key":"note_map","name":"Note Map"}]
+cp+=[{"key":"note_map","name":"Note Map","type":"enum","options":["Drum Rack (36+)","General MIDI"]}]
 
 # One page per voice, and only the controls the machine itself has.
 #
