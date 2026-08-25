@@ -412,7 +412,15 @@ void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const in
             sd->osc2_mix    = 0.40f;   /* ~28% of shell 1 at the output */
             sd->sweep_depth = 1.045f;  /* 206->198 Hz measured, not 8% */
             sd->sweep_time  = 30.0f;
-            sd->decay       = 420.0f;  /* fitted to the recording */
+            /* Shell ring time, measured directly off both references: tau
+             * 28 ms on Gus's 909 and 30 ms on the TR-909 plugin capture. 420
+             * gave 36 ms — the shells hung around too long. Note this is ONE
+             * envelope for both shells on purpose: the schematic gives them
+             * separate caps (C70 4.7n, C79 10n) and separate VCAs, but the
+             * instrument decays them together (tau ratio 0.99 and 0.95 in the
+             * two recordings), so the discharge resistors must compensate.
+             * Modelling the parts list here would contradict the drum. */
+            sd->decay       = 340.0f;
             sd->attack      = 0.0f;    /* the 909 SD has no click path */
             if(sd->noise_hp < 990.0f || sd->noise_hp > 1010.0f)
                 er99_engine_set_raw(e, "sd_c_noise_hp", 1000.0f);

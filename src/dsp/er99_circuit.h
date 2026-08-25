@@ -112,10 +112,12 @@ static inline float er99_diode_round(const float _x, const float _drive)
 
 /* Turn-on voltage of the single-transistor VCAs. Fitted, not assumed: at 0.027
  * the snare's shells were cut off entirely by 100 ms where the real drum still
- * has them at -30 dB and audible to 150. Overridable so the fitting rig can
- * sweep it (tools sweep -DER99_VCA_VT=...). */
+ * has them at -30 dB and audible to 150. Fitted again once the shell decay was
+ * measured directly (tau 28 ms, not 36): at 0.005 the tail still gated off
+ * before 150 ms where the references are at -39 dB and running to -46 at
+ * 200 ms. Overridable so the fitting rig can sweep it (-DER99_VCA_VT=...). */
 #ifndef ER99_VCA_VT
-#define ER99_VCA_VT    0.005f
+#define ER99_VCA_VT    0.001f
 #endif
 #define ER99_VCA_NORM  (1.0f / (1.0f - ER99_VCA_VT))
 
