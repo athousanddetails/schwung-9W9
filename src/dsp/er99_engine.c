@@ -337,12 +337,21 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
     e->master.knee_db      = 10.0f;
     e->master.ratio        = 12.0f;
     e->master.attack_s     = 0.0f;
-    e->master.release_s    = 0.25f;
+    /* 60 ms, not 250. This is a safety limiter on the sum, not a bus
+     * compressor: at 250 ms it never recovered between sixteenth notes, so it
+     * sat ducked and every voice's Level stopped doing anything past a point —
+     * turning one up could even measure QUIETER. A 909 has no such thing on
+     * its mix bus; the least we can do is let ours get out of the way. */
+    e->master.release_s    = 0.06f;
     e->master.env_db       = 0.0f;
     e->master.makeup       = 1.0f;
     e->master.drive        = 2.0f;   /* amount when a mode is chosen */
     e->master.dist_mode    = 0.0f;   /* Off by default */
-    e->master.volume       = 0.5f;   /* globalParams.volume  */
+    /* 0.35, not 0.5. With accent (x2) a single voice at its default Level was
+     * already sitting at 0 dBFS, so the top half of every Level pot did
+     * nothing but clip harder — the panel felt broken because it was. This
+     * leaves room for the pot to travel and for eleven voices to sum. */
+    e->master.volume       = 0.35f;  /* globalParams.volume  */
     e->master.accent       = 2.0f;   /* globalParams.globalAccent */
 
     /* Derive initial pot positions from the defaults above. */
@@ -663,10 +672,18 @@ static float master_compress(er99_master_t *m, const float _in, const float _sr)
             gain_db = -(over - over / m->ratio) + 0.0f;
     }
 
-    /* attack is 0 -> instant onset; release 0.25 s one-pole recovery */
+    /* Zero attack made this a WAVESHAPER, not a limiter: the gain followed the
+     * instantaneous sample, so every sample above the threshold was squashed by
+     * its own magnitude, flattening the waveform. Push a voice harder and the
+     * measured peak went DOWN — kick Level read 29994 at pot 80 and 18266 at
+     * 112, which is the "Level stops doing anything" on the panel.
+     *
+     * A real limiter smooths its detector. 1.5 ms is fast enough to catch a
+     * drum transient before it clips and slow enough not to trace the wave. */
+    const float atk = expf(-1.0f / (0.0015f * _sr));
     const float rel = expf(-1.0f / (m->release_s * _sr));
-    if(gain_db < m->env_db) m->env_db = gain_db;            /* attack 0 */
-    else                    m->env_db = gain_db + (m->env_db - gain_db) * rel;
+    const float coef = gain_db < m->env_db ? atk : rel;
+    m->env_db = gain_db + (m->env_db - gain_db) * coef;
 
     return _in * powf(10.0f, m->env_db / 20.0f);
 }

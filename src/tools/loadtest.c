@@ -245,6 +245,69 @@ int main(int argc, char**argv){
         CHECK(choked * 4 < ring, l);
     }
 
+    /* The output must be dead centre. The engine renders mono and writes the
+     * same sample to both channels, so any imbalance would be a bug here, not
+     * a mix decision — assert it sample-exact over a busy passage rather than
+     * trusting the code to keep doing it. */
+    {
+        static int16_t st[128*2];
+        long eL = 0, eR = 0; int mismatched = 0;
+        for(int v = 0; v < 11; ++v)
+        { uint8_t m2[3] = {0x90, (uint8_t)(36+v), 100}; api->on_midi(inst,m2,3,0); }
+        for(int b = 0; b < 200; ++b)
+        {
+            api->render_block(inst, st, 128);
+            for(int k = 0; k < 128; ++k)
+            {
+                if(st[k*2] != st[k*2+1]) mismatched++;
+                eL += st[k*2]   < 0 ? -st[k*2]   : st[k*2];
+                eR += st[k*2+1] < 0 ? -st[k*2+1] : st[k*2+1];
+            }
+        }
+        char l[128];
+        snprintf(l,sizeof(l),"output is centred: %d/25600 samples differ L vs R", mismatched);
+        CHECK(mismatched == 0, l);
+        snprintf(l,sizeof(l),"channel energy matches (L %ld, R %ld)", eL, eR);
+        CHECK(eL == eR && eL > 0, l);
+    }
+
+    /* Level must keep working all the way up. The master bus compresses hard
+     * above 0 dBFS, so a voice can reach a point where turning Level does
+     * nothing audible — report the curve so that ceiling is visible. */
+    {
+        static int16_t lv[128*2];
+        int peaks[5]; const char *pots[5] = { "16", "48", "80", "112", "127" };
+        for(int i = 0; i < 5; ++i)
+        {
+            api->set_param(inst, "bd_c_level", pots[i]);
+            /* Play it like a pattern, not a lab tone: four accented hits at
+             * sixteenth-note spacing, measuring the last. A limiter that
+             * cannot recover in that gap is exactly what makes Level feel
+             * dead on the device. */
+            for(int h = 0; h < 3; ++h)
+            {
+                uint8_t m2[3]={0x90,36,110}; api->on_midi(inst,m2,3,0);
+                for(int b = 0; b < 43; ++b) api->render_block(inst, lv, 128);
+            }
+            { uint8_t m2[3]={0x90,36,110}; api->on_midi(inst,m2,3,0); }
+            int pk = 0;
+            for(int b = 0; b < 43; ++b)
+            {
+                api->render_block(inst, lv, 128);
+                for(int k = 0; k < 256; ++k)
+                { int a2 = lv[k] < 0 ? -lv[k] : lv[k]; if(a2 > pk) pk = a2; }
+            }
+            peaks[i] = pk;
+        }
+        api->set_param(inst, "bd_c_level", "100");
+        char l[160];
+        snprintf(l,sizeof(l),"kick Level keeps rising: 16=%d 48=%d 80=%d 112=%d 127=%d",
+                 peaks[0],peaks[1],peaks[2],peaks[3],peaks[4]);
+        /* Each step must add at least 3%% — less than that is a dead knob. */
+        CHECK(peaks[1] > peaks[0]*103/100 && peaks[2] > peaks[1]*103/100 &&
+              peaks[3] > peaks[2]*103/100 && peaks[4] > peaks[3]*103/100, l);
+    }
+
     /* master distortion applies and is audible */
     api->set_param(inst, "master_dist", "2");
     api->get_param(inst, "master_dist", buf, sizeof(buf));
