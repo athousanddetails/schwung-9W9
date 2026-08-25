@@ -107,8 +107,15 @@ static inline float er99_diode_round(const float _x, const float _drive)
  * The value is no longer eyeballed from three time points: 9W9's own snare is
  * rendered over a grid of settings and scored against the recording as a
  * ten-point trajectory (shell and noise band at 5/20/50/100/150 ms, in dB).
- * Best fit is 2.5 dB RMS, and it puts the noise where noon needs it. */
-#define ER99_SNAPPY_MIX 2.17f
+ * Best fit is 2.5 dB RMS, and it puts the noise where noon needs it.
+ *
+ * Re-fitted once the shell decay was corrected (tau 28 ms): the optimum moved
+ * to 0.45 of the pot, so noon was about 10% hot. 1.95 puts the best fit back
+ * at noon. For reference, Roland's own TR-909 plugin rendered from Gus's saved
+ * preset is quieter still on the noise leg (0.12 against his hardware's 0.18
+ * at 5 ms) — its Snappy was evidently set below noon, so the hardware stays
+ * the reference. */
+#define ER99_SNAPPY_MIX 1.95f
 
 /* Turn-on voltage of the single-transistor VCAs. Fitted, not assumed: at 0.027
  * the snare's shells were cut off entirely by 100 ms where the real drum still
