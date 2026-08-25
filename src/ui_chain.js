@@ -34,16 +34,16 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
 
     /* raw pad note -> hierarchy level key (page-follow) */
     var PAD2LEVEL = { 68: "bd", 69: "sd", 70: "lt", 71: "mt",
-                      76: "ht", 77: "rim", 78: "clap", 79: "hat",
-                      84: "hat", 85: "cym", 86: "cym", 87: "root" };
+                      76: "ht", 77: "rim", 78: "clap", 79: "chh",
+                      84: "ohh", 85: "crash", 86: "ride", 87: "root" };
 
     /* raw pad note -> 9W9 trigger lane (Mute+Pad) */
     var PAD2LANE = { 68: 0, 69: 1, 70: 2, 71: 3, 76: 4, 77: 5, 78: 6,
                      79: 8, 84: 7, 85: 10, 86: 9 };
 
     /* level key -> lane whose mute the title indicator shows (-1 = none) */
-    var LEVEL2LANE = { bd: 0, sd: 1, lt: 2, mt: 3, ht: 4,
-                       rim: 5, clap: 6, hat: 7, cym: -1, root: -1 };
+    var LEVEL2LANE = { bd: 0, sd: 1, lt: 2, mt: 3, ht: 4, rim: 5, clap: 6,
+                       ohh: 7, chh: 8, ride: 9, crash: 10, root: -1 };
 
     var mySlot = -1;
     var padBlocked = false;

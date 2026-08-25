@@ -275,9 +275,10 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
     }
 
     /* ---- Samplers ---- */
-    static const float vols[ER99_NUM_SAMPLERS]   = { 0.5f, 0.2f, 0.3f };
-    static const float sdec[ER99_NUM_SAMPLERS]  = { 450.0f, 1800.0f, 1800.0f };
-    static const char *files[ER99_NUM_SAMPLERS]  = { "hh.wav", "ride.wav", "crash.wav" };
+    static const float vols[ER99_NUM_SAMPLERS]   = { 0.5f, 0.2f, 0.3f, 0.5f };
+    static const float sdec[ER99_NUM_SAMPLERS]  = { 450.0f, 1800.0f, 1800.0f, 110.0f };
+    /* The closed hat plays the open hat's buffer — same cymbals, shorter gate. */
+    static const char *files[ER99_NUM_SAMPLERS]  = { "hh.wav", "ride.wav", "crash.wav", NULL };
     for(int i=0; i<ER99_NUM_SAMPLERS; ++i)
     {
         er99_sampler_t *s = &e->sampler[i];
@@ -291,7 +292,14 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
         wa_param_init(&s->out, 0.0f);
         s->pos = -1.0;   /* idle */
 
-        if(_module_dir)
+        if(!files[i])
+        {
+            /* Shares the open hat's data: not loaded again, and not freed
+             * through this index either (see er99_engine_free). */
+            s->buffer = e->sample_data[ER99_SAMP_OHH];
+            s->length = e->sample_len[ER99_SAMP_OHH];
+        }
+        else if(_module_dir)
         {
             char path[1024];
             snprintf(path, sizeof(path), "%s/samples/%s", _module_dir, files[i]);
@@ -322,7 +330,7 @@ void er99_engine_free(er99_engine_t *e)
 {
     for(int i=0; i<ER99_NUM_SAMPLERS; ++i)
     {
-        free(e->sample_data[i]);
+        free(e->sample_data[i]);        /* NULL for the closed hat: borrowed */
         e->sample_data[i] = NULL;
         e->sampler[i].buffer = NULL;
     }
@@ -401,15 +409,28 @@ void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const in
     }
 
     case ER99_OHH: case ER99_CHH: case ER99_RC: case ER99_CR: {
-        const int idx = (_which == ER99_OHH || _which == ER99_CHH) ? 0
-                      : (_which == ER99_RC ? 1 : 2);
+        const int idx = _which == ER99_OHH ? ER99_SAMP_OHH
+                      : _which == ER99_CHH ? ER99_SAMP_CHH
+                      : _which == ER99_RC  ? ER99_SAMP_RC : ER99_SAMP_CR;
         er99_sampler_t *s = &e->sampler[idx];
-        const int closed = (_which == ER99_CHH);
-        const float decay = closed && s->decay_closed > 0.0f ? s->decay_closed : s->decay;
+
+        /* One pair of cymbals: closing the pedal stops the open hat ringing,
+         * and opening it cuts the closed sound short. Anything else lets two
+         * hats sound at once, which the hardware cannot do. */
+        if(idx == ER99_SAMP_OHH || idx == ER99_SAMP_CHH)
+        {
+            er99_sampler_t *other = &e->sampler[idx == ER99_SAMP_OHH
+                                                ? ER99_SAMP_CHH : ER99_SAMP_OHH];
+            /* A short fade, not a hard stop: cutting a ringing buffer mid-cycle
+             * is a click. 3 ms is under a hat's own attack. */
+            wa_exp_ramp(&other->out, 0.00001f, ms_to_samples(3.0f, sr));
+            other->mute_countdown = ms_to_samples(6.0f, sr);
+        }
+
         wa_set_value(&s->out, s->volume * accent);
-        wa_exp_ramp(&s->out, 0.00001f, ms_to_samples(decay, sr));
+        wa_exp_ramp(&s->out, 0.00001f, ms_to_samples(s->decay, sr));
         s->pos = 0.0;                          /* restart the buffer */
-        s->mute_countdown = ms_to_samples(decay, sr);
+        s->mute_countdown = ms_to_samples(s->decay, sr);
         break;
     }
 
@@ -633,11 +654,13 @@ static const bt_field_t g_bt_fields[] = {
 static const char *const g_other_state_keys[] = {
     "rs_decay", "rs_volume", "rs_saturation", "rs_all_bands",
     "hc_decay", "hc_spread", "hc_volume", "hc_tone_decay",
-    "ohh_decay", "ohh_volume", "ohh_pitch", "ohh_decay_closed",
+    "ohh_decay", "ohh_volume", "ohh_pitch",
+    "chh_decay", "chh_volume", "chh_pitch", "chh_drive",
     "rc_decay", "rc_volume", "rc_pitch",
     "cr_decay", "cr_volume", "cr_pitch",
     "volume", "accent", "circuit_model", "master_dist",
-    "rs_dist_type", "hc_dist_type", "ohh_dist_type", "rc_dist_type", "cr_dist_type",
+    "rs_dist_type", "hc_dist_type", "ohh_dist_type", "chh_dist_type",
+    "rc_dist_type", "cr_dist_type",
 };
 #define ER99_OTHER_KEY_COUNT (sizeof(g_other_state_keys)/sizeof(g_other_state_keys[0]))
 
@@ -743,7 +766,11 @@ int er99_engine_set_raw(er99_engine_t *e, const char *key, const float value)
     if(!strcmp(key, "hc_volume"))     { e->clap.volume = value; return 1; }
     if(!strcmp(key, "hc_tone_decay")) { e->clap.tone_decay = value; return 1; }
 
-    static const char *sn[ER99_NUM_SAMPLERS] = { "ohh", "rc", "cr" };
+    /* Patches saved before the closed hat became its own voice carry its decay
+     * as ohh_decay_closed. Keep accepting it. */
+    if(!strcmp(key, "ohh_decay_closed")) { e->sampler[ER99_SAMP_CHH].decay = value; return 1; }
+
+    static const char *sn[ER99_NUM_SAMPLERS] = { "ohh", "rc", "cr", "chh" };
     for(int i=0; i<ER99_NUM_SAMPLERS; ++i)
     {
         char buf[32];
@@ -799,7 +826,8 @@ int er99_engine_get_raw(const er99_engine_t *e, const char *key, float *out)
     if(!strcmp(key, "hc_volume"))     { *out = e->clap.volume; return 1; }
     if(!strcmp(key, "hc_tone_decay")) { *out = e->clap.tone_decay; return 1; }
     {
-        static const char *sn[ER99_NUM_SAMPLERS] = { "ohh", "rc", "cr" };
+        if(!strcmp(key, "ohh_decay_closed")) { *out = e->sampler[ER99_SAMP_CHH].decay; return 1; }
+        static const char *sn[ER99_NUM_SAMPLERS] = { "ohh", "rc", "cr", "chh" };
         for(int i=0; i<ER99_NUM_SAMPLERS; ++i)
         {
             char b[32];
@@ -928,8 +956,18 @@ int er99_engine_set_state(er99_engine_t *e, const char *blob)
 /* Pot layer — the external 0..127 parameter surface                      */
 /* ===================================================================== */
 
+/* Renames the pot layer honours, so a patch saved under an old key lands on the
+ * control that replaced it — pot position included, not just the engine field.
+ * ohh_decay_closed became chh_decay when the closed hat got its own voice. */
+static const char *pot_alias(const char *key)
+{
+    if(!strcmp(key, "ohh_decay_closed")) return "chh_decay";
+    return key;
+}
+
 static int pot_index(const char *key)
 {
+    key = pot_alias(key);
     for(int i=0; i<ER99_POT_COUNT; ++i)
         if(!strcmp(key, g_er99_pots[i].key)) return i;
     return -1;

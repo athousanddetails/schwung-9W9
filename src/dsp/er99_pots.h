@@ -110,10 +110,13 @@ static const er99_pot_t g_er99_pots[] = {
 
     /* --- Hats / cymbals --- */
     { "ohh_decay",         20.0f, 1200.0f, ER99_EXP },
-    { "ohh_decay_closed",  15.0f,  300.0f, ER99_EXP },
     { "ohh_pitch",          0.25f,   4.0f, ER99_EXP },
     { "ohh_volume",         0.0f,    2.0f, ER99_LIN },
     { "ohh_drive",          0.2f,    8.0f, ER99_EXP },
+    { "chh_decay",         15.0f,  300.0f, ER99_EXP },
+    { "chh_pitch",          0.25f,   4.0f, ER99_EXP },
+    { "chh_volume",         0.0f,    2.0f, ER99_LIN },
+    { "chh_drive",          0.2f,    8.0f, ER99_EXP },
     { "rc_decay",         100.0f, 3000.0f, ER99_EXP },
     { "rc_pitch",           0.25f,   4.0f, ER99_EXP },
     { "rc_volume",          0.0f,    2.0f, ER99_LIN },

@@ -88,6 +88,13 @@
   /* One row per voice, matching the device pages: only what the machine has.
      The engine still has a sub layer, tube stage, drift, click tone and second
      oscillator — they sit at their tuned defaults and are no longer knobs. */
+  /* Hats and cymbals: one page each, same five controls. */
+  function cymbal(id) {
+    return [ pot(id+"_decay","Decay"), pot(id+"_pitch","Tune"),
+             pot(id+"_drive","Drive"), en(id+"_dist_type","Dist",DIST),
+             pot(id+"_volume","Level") ];
+  }
+
   function tom(id) {
     return [ pot(id+"_c_tune","Tune"), pot(id+"_c_decay","Decay"),
              pot(id+"_c_attack","Attack"), pot(id+"_c_drive","Drive"),
@@ -119,18 +126,10 @@
         pot("hc_tone_decay","Burst"), pot("hc_decay","Tail"),
         pot("hc_tail","T.Mix"), pot("hc_drive","Drive"),
         en("hc_dist_type","Dist",DIST), pot("hc_volume","Level") ] },
-    { name: "HI-HAT", lane: 7, knobs: [
-        pot("ohh_decay","Open Dcy"), pot("ohh_decay_closed","Clsd Dcy"),
-        pot("ohh_pitch","Pitch"), pot("ohh_drive","Drive"),
-        en("ohh_dist_type","Dist",DIST), pot("ohh_volume","Level") ] },
-    { name: "RIDE", lane: 9, knobs: [
-        pot("rc_decay","Decay"), pot("rc_pitch","Pitch"),
-        pot("rc_drive","Drive"), en("rc_dist_type","Dist",DIST),
-        pot("rc_volume","Level") ] },
-    { name: "CRASH", lane: 10, knobs: [
-        pot("cr_decay","Decay"), pot("cr_pitch","Pitch"),
-        pot("cr_drive","Drive"), en("cr_dist_type","Dist",DIST),
-        pot("cr_volume","Level") ] },
+    { name: "CLOSED HAT", lane: 8, knobs: cymbal("chh") },
+    { name: "OPEN HAT",   lane: 7, knobs: cymbal("ohh") },
+    { name: "RIDE",       lane: 9, knobs: cymbal("rc") },
+    { name: "CRASH",      lane: 10, knobs: cymbal("cr") },
     { name: "MASTER", lane: -1, master: true, knobs: [
         en("master_dist","Dist",MDIST), pot("master_drive","Drive"),
         pot("volume","Volume"), pot("accent","Accent"),

@@ -304,69 +304,204 @@
       "rows": [
         [
           {
-            "key": "ohh_decay",
-            "short": "OPDCY",
-            "full": "Open Decay",
+            "key": "chh_decay",
+            "short": "CHDCY",
+            "full": "CH Decay",
             "type": "int",
             "min": 0,
             "max": 127
           },
           {
-            "key": "ohh_decay_closed",
-            "short": "CLDCY",
-            "full": "Closed Dcy",
+            "key": "chh_pitch",
+            "short": "CHTUN",
+            "full": "CH Tune",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "chh_drive",
+            "short": "CHDRV",
+            "full": "CH Drive",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "chh_dist_type",
+            "short": "CHDST",
+            "full": "CH Dist",
+            "type": "enum",
+            "options": [
+              "Diode",
+              "Clip",
+              "Fold",
+              "Crush"
+            ]
+          },
+          {
+            "key": "chh_volume",
+            "short": "CHLVL",
+            "full": "CH Level",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "key": "ohh_decay",
+            "short": "OHDCY",
+            "full": "OH Decay",
             "type": "int",
             "min": 0,
             "max": 127
           },
           {
             "key": "ohh_pitch",
-            "short": "HHPCH",
-            "full": "Hat Pitch",
+            "short": "OHTUN",
+            "full": "OH Tune",
             "type": "int",
             "min": 0,
             "max": 127
+          },
+          {
+            "key": "ohh_drive",
+            "short": "OHDRV",
+            "full": "OH Drive",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "ohh_dist_type",
+            "short": "OHDST",
+            "full": "OH Dist",
+            "type": "enum",
+            "options": [
+              "Diode",
+              "Clip",
+              "Fold",
+              "Crush"
+            ]
           },
           {
             "key": "ohh_volume",
-            "short": "HHLVL",
-            "full": "Hat Level",
+            "short": "OHLVL",
+            "full": "OH Level",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          null,
+          null,
+          null
+        ]
+      ]
+    },
+    {
+      "name": "Cymbals",
+      "rows": [
+        [
+          {
+            "key": "rc_decay",
+            "short": "RDDCY",
+            "full": "RD Decay",
             "type": "int",
             "min": 0,
             "max": 127
           },
           {
-            "key": "rc_decay",
-            "short": "RDDCY",
-            "full": "Ride Decay",
+            "key": "rc_pitch",
+            "short": "RDTUN",
+            "full": "RD Tune",
             "type": "int",
             "min": 0,
             "max": 127
+          },
+          {
+            "key": "rc_drive",
+            "short": "RDDRV",
+            "full": "RD Drive",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "rc_dist_type",
+            "short": "RDDST",
+            "full": "RD Dist",
+            "type": "enum",
+            "options": [
+              "Diode",
+              "Clip",
+              "Fold",
+              "Crush"
+            ]
           },
           {
             "key": "rc_volume",
             "short": "RDLVL",
-            "full": "Ride Level",
+            "full": "RD Level",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "key": "cr_decay",
+            "short": "CRDCY",
+            "full": "CR Decay",
             "type": "int",
             "min": 0,
             "max": 127
           },
           {
-            "key": "cr_decay",
-            "short": "CRDCY",
-            "full": "Crash Decay",
+            "key": "cr_pitch",
+            "short": "CRTUN",
+            "full": "CR Tune",
             "type": "int",
             "min": 0,
             "max": 127
+          },
+          {
+            "key": "cr_drive",
+            "short": "CRDRV",
+            "full": "CR Drive",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "cr_dist_type",
+            "short": "CRDST",
+            "full": "CR Dist",
+            "type": "enum",
+            "options": [
+              "Diode",
+              "Clip",
+              "Fold",
+              "Crush"
+            ]
           },
           {
             "key": "cr_volume",
             "short": "CRLVL",
-            "full": "Crash Level",
+            "full": "CR Level",
             "type": "int",
             "min": 0,
             "max": 127
-          }
+          },
+          null,
+          null,
+          null
         ]
       ]
     },

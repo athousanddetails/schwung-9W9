@@ -151,6 +151,47 @@ int main(int argc, char**argv){
         #undef DRIFT_BLOCKS
     }
 
+    /* Closed hat is its own voice: its own tuning/level, and the two hats choke
+     * each other because they are one pair of cymbals. */
+    {
+        static int16_t h[128*2];
+        api->set_param(inst,"chh_pitch","100");
+        api->get_param(inst,"chh_pitch",buf,sizeof(buf));
+        CHECK(atof(buf)==100.0, "chh_pitch is its own control");
+        api->set_param(inst,"ohh_pitch","20");
+        api->get_param(inst,"chh_pitch",buf,sizeof(buf));
+        CHECK(atof(buf)==100.0, "open hat tuning does not move the closed hat");
+
+        /* Old patches carry the closed hat's decay as ohh_decay_closed. */
+        api->set_param(inst,"ohh_decay_closed","90");
+        api->get_param(inst,"chh_decay",buf,sizeof(buf));
+        CHECK(atof(buf)==90.0, "ohh_decay_closed still reaches the closed hat");
+
+        /* Open hat ringing, then the pedal shuts: the ring must stop. The closed
+         * hat is muted for this, or its own sound would swamp what we measure. */
+        api->set_param(inst,"ohh_decay","127");        /* long open hat */
+        api->set_param(inst,"chh_volume","0");
+        long ring = 0, choked = 0;
+        for(int pass=0; pass<2; ++pass)
+        {
+            { uint8_t m2[3]={0x90,44,100}; api->on_midi(inst,m2,3,0); }   /* open */
+            for(int b=0;b<8;++b) api->render_block(inst,h,128);
+            /* Drum-rack map is sequential from 36: 43 is the closed hat, 44 the
+             * open one. (42 is the clap — in GM it would be the closed hat.) */
+            if(pass) { uint8_t m2[3]={0x90,43,100}; api->on_midi(inst,m2,3,0); }
+            for(int b=0;b<4;++b) api->render_block(inst,h,128);           /* let the choke settle */
+            long acc = 0;
+            for(int b=0;b<16;++b){ api->render_block(inst,h,128);
+                for(int k=0;k<256;++k){ long a2=h[k]<0?-h[k]:h[k]; acc+=a2; } }
+            if(pass) choked = acc; else ring = acc;
+            for(int b=0;b<400;++b) api->render_block(inst,h,128);
+        }
+        api->set_param(inst,"chh_volume","64");
+        char l[120]; snprintf(l,sizeof(l),
+            "closed hat chokes the open hat (%ld ringing vs %ld choked)", ring, choked);
+        CHECK(choked * 4 < ring, l);
+    }
+
     /* master distortion applies and is audible */
     api->set_param(inst, "master_dist", "2");
     api->get_param(inst, "master_dist", buf, sizeof(buf));

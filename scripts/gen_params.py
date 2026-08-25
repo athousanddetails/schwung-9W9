@@ -104,24 +104,31 @@ clap=[I("hc_tune","Tune",0,127), I("hc_spread","Spread",0,127),
       I("hc_tone_decay","Burst",0,127), I("hc_decay","Tail",0,127),
       I("hc_tail","Tail Mix",0,127), I("hc_drive","Drive",0,127),
       DIST_T("hc_dist_type"), I("hc_volume","Level",0,127)]
-hat=[I("ohh_decay","Open Decay",20,1200,"ms"), I("ohh_decay_closed","Closed Decay",15,300,"ms"),
-     F("ohh_pitch","Pitch",0.25,4,0.01), F("ohh_drive","Drive",0.2,8,0.1),
-     DIST_T("ohh_dist_type"), F("ohh_volume","Level",0,2,0.01)]
-# Ordered so the 8-knob page break lands between the cymbals' own controls and
-# their distortion selectors, instead of splitting the crash across two pages.
-cym=[I("rc_decay","Ride Decay",100,3000,"ms"), F("rc_pitch","Ride Pitch",0.25,4,0.01),
-     F("rc_drive","Ride Drive",0.2,8,0.1), F("rc_volume","Ride Level",0,2,0.01),
-     I("cr_decay","Crash Decay",100,3000,"ms"), F("cr_pitch","Crash Pitch",0.25,4,0.01),
-     F("cr_drive","Crash Drive",0.2,8,0.1), F("cr_volume","Crash Level",0,2,0.01),
-     DIST_T("rc_dist_type","Ride Dist"), DIST_T("cr_dist_type","Crash Dist")]
+# Closed and open hat are one pair of cymbals but two voices: each has its own
+# tuning, decay, drive and level, and triggering either chokes the other (the
+# pedal cannot be shut and open at once). Ride and crash likewise get a page
+# each rather than sharing one.
+ohat=[I("ohh_decay","Decay",20,1200,"ms"), F("ohh_pitch","Tune",0.25,4,0.01),
+      F("ohh_drive","Drive",0.2,8,0.1), DIST_T("ohh_dist_type"),
+      F("ohh_volume","Level",0,2,0.01)]
+chat=[I("chh_decay","Decay",15,300,"ms"), F("chh_pitch","Tune",0.25,4,0.01),
+      F("chh_drive","Drive",0.2,8,0.1), DIST_T("chh_dist_type"),
+      F("chh_volume","Level",0,2,0.01)]
+ride=[I("rc_decay","Decay",100,3000,"ms"), F("rc_pitch","Tune",0.25,4,0.01),
+      F("rc_drive","Drive",0.2,8,0.1), DIST_T("rc_dist_type"),
+      F("rc_volume","Level",0,2,0.01)]
+crash=[I("cr_decay","Decay",100,3000,"ms"), F("cr_pitch","Tune",0.25,4,0.01),
+       F("cr_drive","Drive",0.2,8,0.1), DIST_T("cr_dist_type"),
+       F("cr_volume","Level",0,2,0.01)]
 glob=[{"key":"master_dist","name":"Master Dist","type":"enum",
        "options":["Off","Diode (909)","Hard Clip","Wavefolder","Bitcrush"]},
       F("master_drive","Master Drive",0,127,1),
       F("volume","Volume",0,1,0.01), F("accent","Accent",1,4,0.05)]
-cp+=rim+clap+hat+cym+glob
+cp+=rim+clap+chat+ohat+ride+crash+glob
 
 for lid,label,ps in (("rim","Rim Shot",rim),("clap","Hand Clap",clap),
-                     ("hat","Hi-Hat",hat),("cym","Ride / Crash",cym)):
+                     ("chh","Closed Hat",chat),("ohh","Open Hat",ohat),
+                     ("ride","Ride",ride),("crash","Crash",crash)):
     levels[lid]={"name":label,"knobs":[x["key"] for x in ps[:8]],
                  "params":[{"key":x["key"],"name":x["name"]} for x in ps]}
     root.append({"level":lid,"label":label})

@@ -26,7 +26,15 @@ typedef enum {
 } er99_trigger_t;
 
 #define ER99_NUM_INSTRUMENTS 5   /* bd sd lt mt ht */
-#define ER99_NUM_SAMPLERS    3   /* hh ride crash  */
+/* Open hat, ride, crash, closed hat. The closed hat is its own sampler rather
+ * than a second decay on the open one, so it can have its own tuning, level and
+ * drive; it plays the same buffer, and the two choke each other (see
+ * er99_trigger) because they are one physical hat. */
+#define ER99_NUM_SAMPLERS    4   /* ohh ride crash chh */
+#define ER99_SAMP_OHH        0
+#define ER99_SAMP_RC         1
+#define ER99_SAMP_CR         2
+#define ER99_SAMP_CHH        3
 
 /* ---- Oscillator+noise voices: BD, SD, LT, MT, HT ---- */
 typedef struct {
