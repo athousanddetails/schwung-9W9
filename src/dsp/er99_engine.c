@@ -228,19 +228,19 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
             b->tune = 68.0f;
             b->sweep_depth = 1.12f; b->sweep_time = 200.0f;
             b->decay = 1700.0f; b->attack = 0.18f;
-            b->level = 0.8f;
+            b->level = 0.55f;  /* toms rang at 3/4 of the kick's RMS: overpowering */
             break;
         case 3: /* Med Tom */
             b->tune = 102.0f;
             b->sweep_depth = 1.12f; b->sweep_time = 180.0f;
             b->decay = 1050.0f; b->attack = 0.18f;
-            b->level = 0.8f;
+            b->level = 0.55f;  /* toms rang at 3/4 of the kick's RMS: overpowering */
             break;
         case 4: /* Hi Tom */
             b->tune = 132.0f;
             b->sweep_depth = 1.12f; b->sweep_time = 160.0f;
             b->decay = 1100.0f; b->attack = 0.18f;
-            b->level = 0.8f;
+            b->level = 0.55f;  /* toms rang at 3/4 of the kick's RMS: overpowering */
             break;
         default: break;
         }
@@ -313,7 +313,10 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
     }
 
     /* ---- Samplers ---- */
-    static const float vols[ER99_NUM_SAMPLERS]   = { 0.5f, 0.2f, 0.3f, 0.5f };
+    /* Balanced against the measured kit: at the old defaults the closed hat
+     * peaked 16 dB under the kick and the ride 17 — inaudible next to the
+     * (then overpowered) toms. ohh/rc/cr/chh. */
+    static const float vols[ER99_NUM_SAMPLERS]   = { 0.85f, 0.45f, 0.5f, 0.95f };
     static const float sdec[ER99_NUM_SAMPLERS]  = { 450.0f, 1800.0f, 1800.0f, 110.0f };
     /* The closed hat plays the open hat's buffer — same cymbals, shorter gate. */
     static const char *files[ER99_NUM_SAMPLERS]  = { "hh.wav", "ride.wav", "crash.wav", NULL };
@@ -717,8 +720,12 @@ static float master_glue(er99_master_t *m, const float _in, const float _sr)
      * voice accented stack reaches +15 with its body riding +5..+12. The
      * knob walks the threshold down through that range: at low amounts only
      * stacked hits get caught; at full, single hits breathe too. */
-    const float thr = 12.0f - 10.0f * a;
-    const float ratio = 2.0f + 2.0f * a;
+    /* Second calibration: the first only caught four-voice accented stacks,
+     * which no real pattern is — on the device it audibly did nothing. Now
+     * the threshold ends 6 dB under a single accented voice's peak, so at
+     * full knob every hit is worked. */
+    const float thr = 10.0f - 18.0f * a;
+    const float ratio = 2.0f + 3.0f * a;
     const float knee = 6.0f;
 
     /* Level-follow BEFORE the dB math. Detecting on the instantaneous sample
@@ -727,7 +734,7 @@ static float master_glue(er99_master_t *m, const float _in, const float _sr)
      * crushing everything between them (RMS fell to a third while peaks
      * passed). The follower rides the envelope instead. */
     const float mag = fabsf(_in);
-    const float drel = expf(-1.0f / (0.050f * _sr));
+    const float drel = expf(-1.0f / (0.035f * _sr));
     m->comp_det = mag > m->comp_det ? mag : m->comp_det * drel;
     const float in_db = m->comp_det > 1e-9f ? 20.0f * log10f(m->comp_det) : -120.0f;
     const float over = in_db - thr;
@@ -745,7 +752,7 @@ static float master_glue(er99_master_t *m, const float _in, const float _sr)
     const float coef = gr < m->comp_env_db ? atk : rel;
     m->comp_env_db = gr + (m->comp_env_db - gr) * coef;
 
-    const float makeup = a * 4.0f;   /* dB, tracks the deeper threshold */
+    const float makeup = a * 7.0f;   /* dB, tracks the deeper threshold */
     return _in * powf(10.0f, (m->comp_env_db + makeup) / 20.0f);
 }
 
