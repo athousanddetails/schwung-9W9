@@ -202,23 +202,28 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
             b->snappy = 0.5f; b->noise_decay = 160.0f; b->noise_hp = 1200.0f;
             b->drive = 1.8f;  b->level = 0.7f;
             break;
+        /* Tom tuning, glide and decay are fitted to measurements of a real
+         * 909 (Tom Lo/Mid/Hi Clean): f0 68.5 / 102 / 131.5 Hz, pitch gliding
+         * down ~10% over 200 ms (71 -> 64.5 on the low tom), t60 about
+         * 1.0 / 0.64 / 0.66 s. The old 2.2x sweep was a synth swoop the
+         * hardware does not make. */
         case 2: /* Low Tom */
-            b->tune = 82.0f;  b->tune2 = 123.0f; b->osc2_mix = 0.35f;
-            b->sweep_depth = 2.2f; b->sweep_time = 120.0f;
-            b->decay = 300.0f; b->attack = 0.18f; b->snappy = 0.05f;
-            b->noise_decay = 60.0f; b->noise_hp = 400.0f; b->level = 0.8f;
+            b->tune = 68.0f;
+            b->sweep_depth = 1.12f; b->sweep_time = 200.0f;
+            b->decay = 1700.0f; b->attack = 0.18f;
+            b->level = 0.8f;
             break;
         case 3: /* Med Tom */
-            b->tune = 124.0f; b->tune2 = 186.0f; b->osc2_mix = 0.35f;
-            b->sweep_depth = 2.2f; b->sweep_time = 105.0f;
-            b->decay = 260.0f; b->attack = 0.18f; b->snappy = 0.05f;
-            b->noise_decay = 60.0f; b->noise_hp = 500.0f; b->level = 0.8f;
+            b->tune = 102.0f;
+            b->sweep_depth = 1.12f; b->sweep_time = 180.0f;
+            b->decay = 1050.0f; b->attack = 0.18f;
+            b->level = 0.8f;
             break;
         case 4: /* Hi Tom */
-            b->tune = 186.0f; b->tune2 = 279.0f; b->osc2_mix = 0.35f;
-            b->sweep_depth = 2.2f; b->sweep_time = 90.0f;
-            b->decay = 220.0f; b->attack = 0.18f; b->snappy = 0.05f;
-            b->noise_decay = 60.0f; b->noise_hp = 600.0f; b->level = 0.8f;
+            b->tune = 132.0f;
+            b->sweep_depth = 1.12f; b->sweep_time = 160.0f;
+            b->decay = 1100.0f; b->attack = 0.18f;
+            b->level = 0.8f;
             break;
         default: break;
         }

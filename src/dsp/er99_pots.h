@@ -60,8 +60,8 @@ static const er99_pot_t g_er99_pots[] = {
     { "sd_c_noise_hp",    200.0f, 6000.0f, ER99_EXP },
 
     /* --- Toms --- */
-    { "lt_c_tune",         40.0f,  180.0f, ER99_EXP },
-    { "lt_c_decay",        30.0f,  700.0f, ER99_EXP },
+    { "lt_c_tune",           45.0f,  140.0f, ER99_EXP },
+    { "lt_c_decay",          80.0f, 2600.0f, ER99_EXP },
     { "lt_c_attack",        0.0f,    1.0f, ER99_LIN },
     { "lt_c_sweep_depth",   1.0f,    6.0f, ER99_LIN },
     { "lt_c_sweep_time",    1.0f,  250.0f, ER99_EXP },
@@ -70,8 +70,8 @@ static const er99_pot_t g_er99_pots[] = {
     { "lt_c_tune2",        20.0f,  300.0f, ER99_EXP },
     { "lt_c_osc2_mix",      0.0f,    1.0f, ER99_LIN },
 
-    { "mt_c_tune",         70.0f,  260.0f, ER99_EXP },
-    { "mt_c_decay",        30.0f,  600.0f, ER99_EXP },
+    { "mt_c_tune",           65.0f,  200.0f, ER99_EXP },
+    { "mt_c_decay",          70.0f, 2200.0f, ER99_EXP },
     { "mt_c_attack",        0.0f,    1.0f, ER99_LIN },
     { "mt_c_sweep_depth",   1.0f,    6.0f, ER99_LIN },
     { "mt_c_sweep_time",    1.0f,  250.0f, ER99_EXP },
@@ -80,8 +80,8 @@ static const er99_pot_t g_er99_pots[] = {
     { "mt_c_tune2",        30.0f,  400.0f, ER99_EXP },
     { "mt_c_osc2_mix",      0.0f,    1.0f, ER99_LIN },
 
-    { "ht_c_tune",        110.0f,  400.0f, ER99_EXP },
-    { "ht_c_decay",        30.0f,  500.0f, ER99_EXP },
+    { "ht_c_tune",           85.0f,  260.0f, ER99_EXP },
+    { "ht_c_decay",          60.0f, 2000.0f, ER99_EXP },
     { "ht_c_attack",        0.0f,    1.0f, ER99_LIN },
     { "ht_c_sweep_depth",   1.0f,    6.0f, ER99_LIN },
     { "ht_c_sweep_time",    1.0f,  250.0f, ER99_EXP },

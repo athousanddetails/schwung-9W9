@@ -77,6 +77,11 @@ static inline void er99_tom909_init(er99_tom_t *t, const float _sr)
     wa_param_init(&t->noise_env, 0.0f);
     wa_biquad_set(&t->noise_bp, WA_BANDPASS, 1200.0f, 1.2f, 0.0f, _sr);
     wa_biquad_set(&t->dc_block, WA_HIGHPASS, 20.0f, 0.7071f, 0.0f, _sr);
+    /* wa_biquad_set writes coefficients only. The engine happens to memset its
+     * whole struct, but this init must stand alone: undefined delay-line state
+     * is a NaN generator (found the hard way in a stack-allocated probe). */
+    wa_biquad_reset(&t->noise_bp);
+    wa_biquad_reset(&t->dc_block);
     t->out_gain = 0.0f;
     t->noise_level = 0.0f;
     t->mute_countdown = 0.0;
@@ -101,18 +106,20 @@ static inline void er99_tom909_trigger(er99_tom_t *t, const er99_bt_t *p,
     wa_set_value(&t->pitch, p->tune * p->sweep_depth);
     wa_exp_ramp(&t->pitch, p->tune, p->sweep_time * ms);
 
-    /* The Decay pot works on the two lower partials; the top one runs from a
-     * fixed RC (C22/R110 ~= 100 ms) and is only scaled a little, so a long
-     * Decay lengthens the body without turning the bark into a whistle. */
+    /* Measured against a real 909 (Tom Lo/Mid/Hi Clean): after ~60 ms the
+     * ring is very nearly a pure sine — the fundamental reads ~1150 on the
+     * Goertzel where every other partial is under ~170. The two upper VCOs
+     * are an ATTACK feature: they bark and get out of the way. So the Decay
+     * pot drives the fundamental alone, and the partials run from fixed short
+     * envelopes (their C22/R110-class RCs), which also means Decay no longer
+     * changes the timbre — it lengthens the body, like the hardware pot. */
     const float d1 = p->decay;
-    const float d2 = p->decay * 0.55f;
-    const float d3 = 100.0f + p->decay * 0.15f;
     wa_set_value(&t->env[0], 1.0f);
     wa_exp_ramp(&t->env[0], 0.00001f, d1 * ms);
-    wa_set_value(&t->env[1], 0.62f);
-    wa_exp_ramp(&t->env[1], 0.00001f, d2 * ms);
-    wa_set_value(&t->env[2], 0.34f);
-    wa_exp_ramp(&t->env[2], 0.00001f, d3 * ms);
+    wa_set_value(&t->env[1], 0.55f);
+    wa_exp_ramp(&t->env[1], 0.00001f, 110.0f * ms);
+    wa_set_value(&t->env[2], 0.45f);
+    wa_exp_ramp(&t->env[2], 0.00001f, 70.0f * ms);
 
     /* Stick attack off the noise bus. Short: it is a transient, not a layer. */
     t->noise_level = p->attack;
