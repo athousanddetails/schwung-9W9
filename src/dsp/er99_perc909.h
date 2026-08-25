@@ -90,18 +90,28 @@ static inline float er99_rim909_render(er99_rim909_t *v, const float _noise)
     if(v->mute_countdown <= 0.0) return 0.0f;
     v->mute_countdown -= 1.0;
 
-    /* Pulse + a touch of noise shock-excites both resonators. */
+    /* The trigger pulse shock-excites the network and then nothing drives it
+     * — it rings down on its own. Noise belongs IN the pulse (a strike is
+     * broadband for an instant), never after it: feeding noise continuously,
+     * as this did, turns the voice into two filters ringing on hiss for the
+     * whole envelope, which is audibly not a rim shot and shows up as HF the
+     * real drum does not have (1180 Hz measures 3 against 56 at 210 Hz). */
     float exc = 0.0f;
-    if(v->impulse > 0) { exc += 1.0f; v->impulse--; }
-    exc += _noise * v->noise_mix;
+    if(v->impulse > 0)
+    {
+        exc += 1.0f + _noise * v->noise_mix;
+        v->impulse--;
+    }
 
     const float a = wa_param_tick(&v->amp);
     /* Makeup: a high-Q bandpass fed a two-sample impulse puts out very little,
      * so the resonators need gain to sit level with the other voices. */
     /* Measured on a real 909 rim, the upper resonance sits at about half the
      * lower one (56 vs 29 at 2 ms). Equal-ish gains made the edge dominate. */
+    /* Rebalanced once the noise stopped driving the pair: the upper resonator
+     * had been living off that hiss, and lost most of its level when it went. */
     float y = wa_biquad_tick(&v->bp1, exc) * 60.0f
-            + wa_biquad_tick(&v->bp2, exc) * 13.0f;
+            + wa_biquad_tick(&v->bp2, exc) * 32.0f;
     y = er99_shape(y * a, v->drive, v->dist_type);
     y = wa_biquad_tick(&v->hp, y);
     return y * v->level * v->accent_gain_;

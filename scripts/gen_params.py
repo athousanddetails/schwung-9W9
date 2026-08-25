@@ -97,10 +97,10 @@ for vid,cfg in V.items():
 def DIST_T(k,n="Distortion"): return {"key":k,"name":n,"type":"enum","options":DIST}
 
 # The real 909 rim has ONE pot: Level. Its two resonances (210 and 480 Hz),
-# their Q and the noise in the trigger pulse are all fixed circuitry. Tune and
-# Decay are ours, and everything else stays at the measured circuit values —
-# see the pins in er99_engine_trigger.
-rim=[I("rs_tune","Tune",0,127), I("rs_decay","Decay",0,127),
+# their Q, the decay and the noise in the trigger pulse are all fixed
+# circuitry — see the pins in er99_engine_trigger. Tune is ours; Decay was
+# too, and went, because the ring length is the network's, not a setting.
+rim=[I("rs_tune","Tune",0,127),
      I("rs_saturation","Drive",0,127), DIST_T("rs_dist_type"),
      I("rs_volume","Level",0,127)]
 clap=[I("hc_tune","Tune",0,127), I("hc_spread","Spread",0,127),

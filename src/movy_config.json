@@ -227,14 +227,6 @@
             "max": 127
           },
           {
-            "key": "rs_decay",
-            "short": "RMDCY",
-            "full": "Rim Decay",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
             "key": "rs_saturation",
             "short": "RMDRV",
             "full": "Rim Drive",
@@ -262,6 +254,7 @@
             "min": 0,
             "max": 127
           },
+          null,
           null,
           null,
           null
