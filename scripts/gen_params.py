@@ -148,9 +148,13 @@ cp+=rim+clap+chat+ohat+ride+crash+glob
 # stays out of the wet path.
 rev=[F("rev_decay","Decay",0,1,0.01), F("rev_tone","Tone",0,1,0.01),
      I("rev_hpf","HPF",30,800,"Hz"), F("rev_level","Level",0,1.2,0.01)]
-dly=[I("dly_time","Time",60,800,"ms"), F("dly_fdbk","Fdbk",0,0.85,0.01),
+DIVS=["1/32","1/16T","1/16","1/8T","1/16.","1/8","1/4T","1/8.","1/4",
+      "1/2T","1/4.","1/2","1/2."]
+dly=[{"key":"dly_time","name":"Time","type":"enum","options":DIVS},
+     F("dly_fdbk","Fdbk",0,0.85,0.01),
      F("dly_tone","Tone",0,1,0.01), I("dly_hpf","HPF",30,800,"Hz"),
      F("dly_level","Level",0,1.2,0.01)]
+cp+=rev+dly   # without this the grid has no type/range for them and toggles
 
 for lid,label,ps in (("rim","Rim Shot",rim),("clap","Hand Clap",clap),
                      ("chh","Closed Hat",chat),("ohh","Open Hat",ohat),

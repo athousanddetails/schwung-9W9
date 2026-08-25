@@ -170,7 +170,6 @@ static const er99_pot_t g_er99_pots[] = {
     { "rev_tone",           0.0f,    1.0f, ER99_LIN },
     { "rev_hpf",           30.0f,  800.0f, ER99_EXP },
     { "rev_level",          0.0f,    1.2f, ER99_LIN },
-    { "dly_time",          60.0f,  800.0f, ER99_EXP },
     { "dly_fdbk",           0.0f,    0.85f, ER99_LIN },
     { "dly_tone",           0.0f,    1.0f, ER99_LIN },
     { "dly_hpf",           30.0f,  800.0f, ER99_EXP },

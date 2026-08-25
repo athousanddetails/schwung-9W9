@@ -3,7 +3,7 @@
  * dynamically from the DSP via get_param(). */
 #ifndef ER99_PARAMS_H
 #define ER99_PARAMS_H
-#define ER99_CHAIN_PARAMS_LEN 6950
+#define ER99_CHAIN_PARAMS_LEN 7659
 static const char er99_chain_params_json[] =
     "[{\"key\":\"note_map\",\"name\":\"Note Map\",\"type\":\"enum\",\"options\":[\"Drum Rack (36+)\",\"General MIDI\"]},{\"k"
     "ey\":\"bd_c_tune\",\"name\":\"Tune\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"bd_c_attack\",\"name\":\"Attack\",\""
@@ -74,7 +74,14 @@ static const char er99_chain_params_json[] =
     "ard Clip\",\"SAT\",\"BFZ\",\"PDIST\",\"Wavefolder\",\"Bitcrush\"]},{\"key\":\"master_drive\",\"name\":\"Master Drive\","
     "\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"master_comp\",\"name\":\"Comp\",\"type\":\"int\",\"min\":0,\"max\":127},{"
     "\"key\":\"volume\",\"name\":\"Volume\",\"type\":\"int\",\"min\":0,\"max\":127,\"viz\":{\"kind\":\"fader\"}},{\"key\":\"accent"
-    "\",\"name\":\"Accent\",\"type\":\"int\",\"min\":0,\"max\":127}]";
+    "\",\"name\":\"Accent\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"rev_decay\",\"name\":\"Decay\",\"type\":\"int\",\"mi"
+    "n\":0,\"max\":127},{\"key\":\"rev_tone\",\"name\":\"Tone\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"rev_hpf\",\"na"
+    "me\":\"HPF\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"rev_level\",\"name\":\"Level\",\"type\":\"int\",\"min\":0,\"ma"
+    "x\":127,\"viz\":{\"kind\":\"fader\"}},{\"key\":\"dly_time\",\"name\":\"Time\",\"type\":\"enum\",\"options\":[\"1/32\",\"1/16"
+    "T\",\"1/16\",\"1/8T\",\"1/16.\",\"1/8\",\"1/4T\",\"1/8.\",\"1/4\",\"1/2T\",\"1/4.\",\"1/2\",\"1/2.\"]},{\"key\":\"dly_fdbk\",\"n"
+    "ame\":\"Fdbk\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"dly_tone\",\"name\":\"Tone\",\"type\":\"int\",\"min\":0,\"ma"
+    "x\":127},{\"key\":\"dly_hpf\",\"name\":\"HPF\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"dly_level\",\"name\":\"Lev"
+    "el\",\"type\":\"int\",\"min\":0,\"max\":127,\"viz\":{\"kind\":\"fader\"}}]";
 #define ER99_UI_HIERARCHY_LEN 5685
 static const char er99_ui_hierarchy_json[] =
     "{\"levels\":{\"bd\":{\"name\":\"Bass Drum\",\"knobs\":[\"bd_c_tune\",\"bd_c_attack\",\"bd_c_decay\",\"bd_c_sweep_dept"

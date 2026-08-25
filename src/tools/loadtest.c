@@ -491,14 +491,15 @@ int main(int argc, char**argv){
         long e_on=0, e_off=0;
         for(int pass=0; pass<2; ++pass){
             api->set_param(inst, "rs_dly", pass ? "127" : "0");
+            api->set_param(inst, "dly_time", "5");   /* 1/8 = 250 ms at 120 BPM */
             for(int b=0;b<400;++b) api->render_block(inst,out,128);  /* drain */
             uint8_t hit[3] = { 0x90, 41, 110 };
             api->on_midi(inst, hit, 3, 0);
-            /* echo window: 250-330 ms; rim itself is dead by 220 ms */
+            /* echo window: 240-330 ms; rim itself is dead by 220 ms */
             long e=0;
             for(int b=0;b<114;++b){
                 api->render_block(inst,out,128);
-                if(b>=86){ for(int k=0;k<256;++k){ long a=out[k]<0?-out[k]:out[k]; e+=a; } }
+                if(b>=83){ for(int k=0;k<256;++k){ long a=out[k]<0?-out[k]:out[k]; e+=a; } }
             }
             if(pass) e_on=e; else e_off=e;
         }

@@ -21,6 +21,7 @@ static const host_api_v1_t *g_host = NULL;
 
 typedef struct {
     er99_engine_t engine;
+    float last_bpm;
     char          module_dir[512];
     /* Pad-follow state. Deliberately NOT updated while the transport runs —
      * otherwise every sequenced note yanks the editor to a different drum and
@@ -390,6 +391,19 @@ static void render_block(void *_instance, int16_t *_out_lr, const int _frames)
     if(!inst) { memset(_out_lr, 0, (size_t)_frames * 2 * sizeof(int16_t)); return; }
 
     inst->samples_rendered += (uint64_t)_frames;
+
+    /* Synced delay: feed the host tempo in. Cheap (one strcmp chain per
+     * block); the engine only recomputes when the value actually changes,
+     * and the delay's slewed read warps through tempo changes like tape. */
+    if(g_host && g_host->get_bpm)
+    {
+        const float bpm = g_host->get_bpm();
+        if(bpm > 20.0f && bpm != inst->last_bpm)
+        {
+            inst->last_bpm = bpm;
+            er99_engine_set_raw(&inst->engine, "dly_bpm", bpm);
+        }
+    }
 
     /* Advance the step sequencer. get_beat_position() < 0 or absent means no
      * transport — the sequencer idles and re-arms. 16th notes over one bar. */

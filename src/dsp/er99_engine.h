@@ -74,9 +74,12 @@ typedef struct {
  * clicking. Both take a highpass on the send input so low end stays out.
  * Sends default to zero: with them down the engine is bit-identical to one
  * that has no FX at all. The kick has no sends, deliberately. */
-#define ER99_DLY_MAX 36000            /* ~816 ms at 44.1k */
+#define ER99_DLY_MAX 88200            /* 2 s at 44.1k: a dotted half at 90 BPM */
+#define ER99_DLY_DIVS 13
 typedef struct {
     float time_ms, fdbk, tone, hpf_hz, level;
+    float divi;                       /* note division index, 0..12 */
+    float bpm;                        /* fed by the host each block */
     wa_biquad_t hp;
     float buf[ER99_DLY_MAX];
     int   w;

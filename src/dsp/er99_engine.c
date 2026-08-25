@@ -104,6 +104,8 @@ static float *load_wav_mono(const char *_path, uint32_t *_out_len)
 /* Init                                                                   */
 /* ===================================================================== */
 
+static void er99_dly_retime(er99_dly_t *d, float _sr);
+
 void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir)
 {
     memset(e, 0, sizeof(*e));
@@ -257,8 +259,11 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
     e->verb.hpf_hz = 150.0f; e->verb.level = 0.8f;
     wa_biquad_set(&e->verb.hp, WA_HIGHPASS, e->verb.hpf_hz, 0.7071f, 0.0f, _sr);
     wa_biquad_reset(&e->verb.hp);
-    e->dly.time_ms = 260.0f; e->dly.fdbk = 0.35f; e->dly.tone = 0.4f;
+    e->dly.divi = 7.0f;            /* dotted eighth */
+    e->dly.bpm  = 120.0f;
+    e->dly.fdbk = 0.35f; e->dly.tone = 0.4f;
     e->dly.hpf_hz = 150.0f; e->dly.level = 0.8f;
+    er99_dly_retime(&e->dly, _sr);
     e->dly.dcur = e->dly.time_ms * 0.001f * _sr;
     wa_biquad_set(&e->dly.hp, WA_HIGHPASS, e->dly.hpf_hz, 0.7071f, 0.0f, _sr);
     wa_biquad_reset(&e->dly.hp);
@@ -481,6 +486,26 @@ static float er99_verb_tick(er99_verb_t *r, const float _in)
     return y * r->level;
 }
 
+/* Note divisions, shortest to longest, in beats. Matches the dly_time enum:
+ * 1/32 1/16T 1/16 1/8T 1/16. 1/8 1/4T 1/8. 1/4 1/2T 1/4. 1/2 1/2. */
+static const float er99_dly_beats[ER99_DLY_DIVS] = {
+    0.125f, 1.0f/6.0f, 0.25f, 1.0f/3.0f, 0.375f, 0.5f, 2.0f/3.0f,
+    0.75f, 1.0f, 4.0f/3.0f, 1.5f, 2.0f, 3.0f
+};
+
+static void er99_dly_retime(er99_dly_t *d, float _sr)
+{
+    int i = (int)(d->divi + 0.5f);
+    if(i < 0) i = 0;
+    if(i >= ER99_DLY_DIVS) i = ER99_DLY_DIVS - 1;
+    const float bpm = d->bpm > 20.0f ? d->bpm : 120.0f;
+    float ms = er99_dly_beats[i] * 60000.0f / bpm;
+    /* The line is 2 s; longer divisions at slow tempos clamp to it. */
+    const float max_ms = (float)(ER99_DLY_MAX - 256) / _sr * 1000.0f;
+    if(ms > max_ms) ms = max_ms;
+    d->time_ms = ms;
+}
+
 static float er99_dly_tick(er99_dly_t *d, const float _in, const float _sr)
 {
     const float x = wa_biquad_tick(&d->hp, _in);
@@ -647,7 +672,7 @@ static const char *const g_other_state_keys[] = {
     "chh_decay", "chh_volume", "chh_pitch", "chh_drive",
     "rc_decay", "rc_volume", "rc_pitch",
     "cr_decay", "cr_volume", "cr_pitch",
-    "volume", "accent", "master_dist", "master_comp",
+    "volume", "accent", "master_dist", "master_comp", "dly_time",
     "rs_dist_type", "hc_dist_type", "ohh_dist_type", "chh_dist_type",
     "rc_dist_type", "cr_dist_type",
 };
@@ -686,7 +711,19 @@ int er99_engine_set_raw(er99_engine_t *e, const char *key, const float value)
         wa_biquad_set(&e->verb.hp, WA_HIGHPASS, value, 0.7071f, 0.0f, e->sample_rate);
         return 1;
     }
-    if(!strcmp(key, "dly_time"))  { e->dly.time_ms = value; return 1; }
+    if(!strcmp(key, "dly_time"))
+    {
+        e->dly.divi = value < 0.0f ? 0.0f
+                    : (value > ER99_DLY_DIVS - 1 ? ER99_DLY_DIVS - 1 : value);
+        er99_dly_retime(&e->dly, e->sample_rate);
+        return 1;
+    }
+    if(!strcmp(key, "dly_bpm"))
+    {
+        e->dly.bpm = value;
+        er99_dly_retime(&e->dly, e->sample_rate);
+        return 1;
+    }
     if(!strcmp(key, "dly_fdbk"))  { e->dly.fdbk = value; return 1; }
     if(!strcmp(key, "dly_tone"))  { e->dly.tone = value; return 1; }
     if(!strcmp(key, "dly_level")) { e->dly.level = value; return 1; }
@@ -780,7 +817,7 @@ int er99_engine_get_raw(const er99_engine_t *e, const char *key, float *out)
     if(!strcmp(key, "rev_tone"))  { *out = e->verb.tone; return 1; }
     if(!strcmp(key, "rev_level")) { *out = e->verb.level; return 1; }
     if(!strcmp(key, "rev_hpf"))   { *out = e->verb.hpf_hz; return 1; }
-    if(!strcmp(key, "dly_time"))  { *out = e->dly.time_ms; return 1; }
+    if(!strcmp(key, "dly_time"))  { *out = e->dly.divi; return 1; }
     if(!strcmp(key, "dly_fdbk"))  { *out = e->dly.fdbk; return 1; }
     if(!strcmp(key, "dly_tone"))  { *out = e->dly.tone; return 1; }
     if(!strcmp(key, "dly_level")) { *out = e->dly.level; return 1; }
@@ -848,6 +885,7 @@ int er99_engine_get_raw(const er99_engine_t *e, const char *key, float *out)
 static int is_enum_key(const char *key)
 {
     if(!strcmp(key, "master_dist")) return 1;
+    if(!strcmp(key, "dly_time")) return 1;     /* note division picker */
     const size_t n = strlen(key);
     return n > 10 && !strcmp(key + n - 10, "_dist_type");
 }

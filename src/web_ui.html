@@ -134,7 +134,9 @@
         pot("rev_decay","Decay"), pot("rev_tone","Tone"),
         pot("rev_hpf","HPF"), pot("rev_level","Level") ] },
     { name: "DELAY", lane: -1, master: true, knobs: [
-        pot("dly_time","Time"), pot("dly_fdbk","Fdbk"),
+        en("dly_time","Time",["1/32","1/16T","1/16","1/8T","1/16.","1/8",
+                              "1/4T","1/8.","1/4","1/2T","1/4.","1/2","1/2."]),
+        pot("dly_fdbk","Fdbk"),
         pot("dly_tone","Tone"), pot("dly_hpf","HPF"),
         pot("dly_level","Level") ] },
     { name: "MASTER", lane: -1, master: true, knobs: [

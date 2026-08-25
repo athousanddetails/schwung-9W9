@@ -35,7 +35,13 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
     /* raw pad note -> hierarchy level key (page-follow) */
     var PAD2LEVEL = { 68: "bd", 69: "sd", 70: "lt", 71: "mt",
                       76: "ht", 77: "rim", 78: "clap", 79: "chh",
-                      84: "ohh", 85: "crash", 86: "ride", 87: "root" };
+                      84: "ohh", 85: "crash", 86: "ride", 87: "root",
+                      94: "fxrev", 95: "fxdly" };
+
+    /* Pads with no voice behind them (master, reverb, delay): they switch
+     * the page and are swallowed — injecting them would move Move's pad
+     * selection onto an empty drum-rack slot. */
+    function isPageOnlyPad(n) { return n === 87 || n === 94 || n === 95; }
 
     /* raw pad note -> 9W9 trigger lane (Mute+Pad) */
     var PAD2LANE = { 68: 0, 69: 1, 70: 2, 71: 3, 76: 4, 77: 5, 78: 6,
@@ -43,7 +49,8 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
 
     /* level key -> lane whose mute the title indicator shows (-1 = none) */
     var LEVEL2LANE = { bd: 0, sd: 1, lt: 2, mt: 3, ht: 4, rim: 5, clap: 6,
-                       ohh: 7, chh: 8, ride: 9, crash: 10, root: -1 };
+                       ohh: 7, chh: 8, ride: 9, crash: 10, root: -1,
+                       fxrev: -1, fxdly: -1 };
 
     var mySlot = -1;
     var padBlocked = false;
@@ -256,7 +263,7 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
                 var lane = PAD2LANE[d1];
                 if (status === 0x90 && d2 > 0 && lane !== undefined)
                     toggleLaneMute(lane);
-                injectToMove(data);
+                if (!isPageOnlyPad(d1)) injectToMove(data);
                 return;
             }
 
@@ -264,7 +271,7 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
 
             /* Locked to Main: the pad plays, the page stays. */
             if (mainLocked() && !shiftHeld()) {
-                if (d1 !== 87) injectToMove(data);
+                if (!isPageOnlyPad(d1)) injectToMove(data);
                 return;
             }
 
@@ -275,20 +282,21 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
                  * press would be recorded; Gus does not use REC. */
                 if (status === 0x90 && d2 > 0) {
                     if (level !== undefined) goToLevel(level);
-                    ctlSetParam("synth:mute_ms", "60");
-                    injectToMove(data);
+                    if (!isPageOnlyPad(d1)) {
+                        ctlSetParam("synth:mute_ms", "60");
+                        injectToMove(data);
+                    }
                 } else {
-                    injectToMove(data);        /* matching release */
+                    if (!isPageOnlyPad(d1)) injectToMove(data);   /* release */
                 }
                 return;
             }
 
-            /* Plain pad: page follows what you play; Move plays/records. */
-            if (status === 0x90 && d2 > 0 && level !== undefined && d1 !== 87)
+            /* Plain pad: page follows what you play; Move plays/records.
+             * Page-only pads (master 87, reverb 94, delay 95) never sound. */
+            if (status === 0x90 && d2 > 0 && level !== undefined)
                 goToLevel(level);
-            if (status === 0x90 && d2 > 0 && d1 === 87)
-                goToLevel("root");             /* pad 16: master, never sounds */
-            if (d1 !== 87) injectToMove(data);
+            if (!isPageOnlyPad(d1)) injectToMove(data);
             return;
         }
 
