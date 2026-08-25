@@ -195,11 +195,17 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
              * a drum machine should repeat exactly unless asked not to. */
             b->drift = 0.0f;
             break;
+        /* Snare fitted to real 909 recordings (SD Clean E 01/03/10 — the same
+         * drum at three Snappy settings): shells at 205 and 325 Hz (ratio
+         * 1.585, NOT an octave), the second at ~28% of the first, shell t60
+         * about 0.19 s, pitch glide only ~2.5% and fast, and the NOISE rings
+         * longer than the shells (t60 0.34 s with Snappy up) — the shells are
+         * the front of the sound, the noise is the tail. */
         case 1: /* Snare Drum: two tuned shells + snappy noise */
-            b->tune = 238.0f; b->tune2 = 476.0f; b->osc2_mix = 0.7f;
-            b->sweep_depth = 1.6f; b->sweep_time = 8.0f;
-            b->decay = 95.0f;  b->attack = 0.15f;
-            b->snappy = 0.5f; b->noise_decay = 160.0f; b->noise_hp = 1200.0f;
+            b->tune = 205.0f; b->tune2 = 325.0f; b->osc2_mix = 0.28f;
+            b->sweep_depth = 1.08f; b->sweep_time = 25.0f;
+            b->decay = 320.0f; b->attack = 0.15f;
+            b->snappy = 0.5f; b->noise_decay = 480.0f; b->noise_hp = 1000.0f;
             b->drive = 1.8f;  b->level = 0.7f;
             break;
         /* Tom tuning, glide and decay are fitted to measurements of a real
@@ -711,6 +717,12 @@ static er99_instrument_t *find_instrument(er99_engine_t *e, const char *_key,
 
 int er99_engine_set_raw(er99_engine_t *e, const char *key, const float value)
 {
+    /* Both snare shells hang off ONE pitch CV on the board, so the Tune pot
+     * moves them together at a fixed interval (measured 205:325 = 1.585).
+     * tune2 is not a panel control any more; it follows. */
+    if(!strcmp(key, "sd_c_tune"))
+        e->bt[ER99_SD].tune2 = value * 1.585f;
+
     const char *rest = NULL;
     er99_instrument_t *v = find_instrument(e, key, &rest);
     if(v)

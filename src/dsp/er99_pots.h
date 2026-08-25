@@ -45,8 +45,8 @@ static const er99_pot_t g_er99_pots[] = {
     { "bd_c_osc2_mix",      0.0f,    1.0f, ER99_LIN },
 
     /* --- Snare --- */
-    { "sd_c_tune",        120.0f,  400.0f, ER99_EXP },
-    { "sd_c_decay",        15.0f,  300.0f, ER99_EXP },
+    { "sd_c_tune",         150.0f,  330.0f, ER99_EXP },
+    { "sd_c_decay",         60.0f,  700.0f, ER99_EXP },
     { "sd_c_attack",        0.0f,    1.0f, ER99_LIN },
     { "sd_c_sweep_depth",   1.0f,    6.0f, ER99_LIN },
     { "sd_c_sweep_time",    1.0f,   60.0f, ER99_EXP },
@@ -56,7 +56,7 @@ static const er99_pot_t g_er99_pots[] = {
     { "sd_c_tune2",       150.0f,  800.0f, ER99_EXP },
     { "sd_c_osc2_mix",      0.0f,    1.0f, ER99_LIN },
     { "sd_c_snappy",        0.0f,    1.0f, ER99_LIN },
-    { "sd_c_noise_decay",  10.0f,  400.0f, ER99_EXP },
+    { "sd_c_noise_decay",   60.0f,  900.0f, ER99_EXP },
     { "sd_c_noise_hp",    200.0f, 6000.0f, ER99_EXP },
 
     /* --- Toms --- */
