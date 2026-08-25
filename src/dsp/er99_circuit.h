@@ -93,6 +93,14 @@ static inline float er99_diode_round(const float _x, const float _drive)
 /* Turn-on voltage of the single-transistor VCAs, as a fraction of the ~15 V
  * envelope, and the gain that renormalises what is left so a full-scale
  * envelope still opens the VCA fully. */
+/* The Snappy pot is a level control into a summing amp whose resistors fix how
+ * the noise sits against the shells (R294 47K for the noise leg). Measured on a
+ * real 909 across three Snappy settings, noise-to-shell reaches 0.17 / 0.24 /
+ * 0.59 at 5 / 20 / 50 ms with the pot high; a raw 0..1 Snappy gave 0.39 / 0.51 /
+ * 1.72 and pushed the whole voice 61% louder into clipping. Turning the snares
+ * up on the hardware does not make the drum louder — it buries the hit. */
+#define ER99_SNAPPY_MIX 0.43f
+
 #define ER99_VCA_VT    0.027f
 #define ER99_VCA_NORM  (1.0f / (1.0f - ER99_VCA_VT))
 
@@ -320,7 +328,7 @@ static inline float er99_bt_render(er99_bt_t *v, const float _noise)
         }
         snare = wa_biquad_tick(&v->noise_lpf,
                     wa_biquad_tick(&v->noise_hpf, _noise))
-              * env * v->snappy;
+              * env * v->snappy * ER99_SNAPPY_MIX;
     }
 
     return (body + click + snare) * v->out_gain;
