@@ -7,10 +7,10 @@
 static const char er99_chain_params_json[] =
     "[{\"key\":\"note_map\",\"name\":\"Note Map\",\"type\":\"enum\",\"options\":[\"Drum Rack (36+)\",\"General MIDI\"]},{\"k"
     "ey\":\"circuit_model\",\"name\":\"Engine\",\"type\":\"enum\",\"options\":[\"Stock er-99\",\"Circuit 909\"]},{\"key\":\"b"
-    "d_c_tune\",\"name\":\"Pitch\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"bd_c_sweep_depth\",\"name\":\"P. Depth\""
-    ",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"bd_c_sweep_time\",\"name\":\"Tune\",\"type\":\"int\",\"min\":0,\"max\":1"
-    "27},{\"key\":\"bd_c_attack\",\"name\":\"Attack\",\"type\":\"int\",\"min\":0,\"max\":127,\"viz\":false},{\"key\":\"bd_c_de"
-    "cay\",\"name\":\"Decay\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"bd_c_drive\",\"name\":\"Drive\",\"type\":\"int\","
+    "d_c_sweep_time\",\"name\":\"Tune\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"bd_c_attack\",\"name\":\"Attack\",\""
+    "type\":\"int\",\"min\":0,\"max\":127,\"viz\":false},{\"key\":\"bd_c_decay\",\"name\":\"Decay\",\"type\":\"int\",\"min\":0,\""
+    "max\":127},{\"key\":\"bd_c_sweep_depth\",\"name\":\"P. Depth\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"bd_c_t"
+    "une\",\"name\":\"Pitch\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"bd_c_drive\",\"name\":\"Drive\",\"type\":\"int\","
     "\"min\":0,\"max\":127},{\"key\":\"bd_c_dist_type\",\"name\":\"Distortion\",\"type\":\"enum\",\"options\":[\"Diode (909)"
     "\",\"Hard Clip\",\"Wavefolder\",\"Bitcrush\"]},{\"key\":\"bd_c_level\",\"name\":\"Level\",\"type\":\"int\",\"min\":0,\"max"
     "\":127,\"viz\":{\"kind\":\"fader\"}},{\"key\":\"sd_c_tune\",\"name\":\"Tune\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key"
@@ -65,10 +65,10 @@ static const char er99_chain_params_json[] =
     "}]";
 #define ER99_UI_HIERARCHY_LEN 4445
 static const char er99_ui_hierarchy_json[] =
-    "{\"levels\":{\"bd\":{\"name\":\"Bass Drum\",\"knobs\":[\"bd_c_tune\",\"bd_c_sweep_depth\",\"bd_c_sweep_time\",\"bd_c_"
-    "attack\",\"bd_c_decay\",\"bd_c_drive\",\"bd_c_dist_type\",\"bd_c_level\"],\"params\":[{\"key\":\"bd_c_tune\",\"name\""
-    ":\"Pitch\"},{\"key\":\"bd_c_sweep_depth\",\"name\":\"P. Depth\"},{\"key\":\"bd_c_sweep_time\",\"name\":\"Tune\"},{\"key"
-    "\":\"bd_c_attack\",\"name\":\"Attack\"},{\"key\":\"bd_c_decay\",\"name\":\"Decay\"},{\"key\":\"bd_c_drive\",\"name\":\"Dri"
+    "{\"levels\":{\"bd\":{\"name\":\"Bass Drum\",\"knobs\":[\"bd_c_sweep_time\",\"bd_c_attack\",\"bd_c_decay\",\"bd_c_swee"
+    "p_depth\",\"bd_c_tune\",\"bd_c_drive\",\"bd_c_dist_type\",\"bd_c_level\"],\"params\":[{\"key\":\"bd_c_sweep_time\","
+    "\"name\":\"Tune\"},{\"key\":\"bd_c_attack\",\"name\":\"Attack\"},{\"key\":\"bd_c_decay\",\"name\":\"Decay\"},{\"key\":\"bd_"
+    "c_sweep_depth\",\"name\":\"P. Depth\"},{\"key\":\"bd_c_tune\",\"name\":\"Pitch\"},{\"key\":\"bd_c_drive\",\"name\":\"Dri"
     "ve\"},{\"key\":\"bd_c_dist_type\",\"name\":\"Distortion\"},{\"key\":\"bd_c_level\",\"name\":\"Level\"}]},\"sd\":{\"name\""
     ":\"Snare\",\"knobs\":[\"sd_c_tune\",\"sd_c_noise_decay\",\"sd_c_snappy\",\"sd_c_drive\",\"sd_c_dist_type\",\"sd_c_l"
     "evel\"],\"params\":[{\"key\":\"sd_c_tune\",\"name\":\"Tune\"},{\"key\":\"sd_c_noise_decay\",\"name\":\"Tone\"},{\"key\":\""

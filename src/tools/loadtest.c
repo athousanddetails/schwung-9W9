@@ -117,11 +117,11 @@ int main(int argc, char**argv){
         static int16_t hit[2][DRIFT_BLOCKS*128*2];
         api->set_param(inst,"bd_c_decay","64");
         api->set_param(inst,"bd_c_attack","0");      /* mute the beater noise */
-        long d_off = 0, d_on = 0, energy = 0;
-        for(int pass = 0; pass < 2; ++pass)
+        long d_off = 0, energy = 0;
         {
-            /* pass 0: default (drift off).  pass 1: drift at full. */
-            if(pass) api->set_param(inst,"bd_c_drift","127");
+            /* Drift is pinned off at trigger — a 909 repeats exactly, and the
+             * pin also defeats stale saved state. Only determinism is
+             * asserted; there is no knob left to vary the hit. */
             for(int h = 0; h < 2; ++h)
             {
                 uint8_t m2[3]={0x90,36,100}; api->on_midi(inst,m2,3,0);
@@ -132,22 +132,17 @@ int main(int argc, char**argv){
                 static int16_t tail[128*2];
                 for(int k=0;k<160;++k) api->render_block(inst, tail, 128);
             }
-            long d = 0;
             for(int k=0;k<DRIFT_BLOCKS*256;++k)
             {
                 long x = (long)hit[0][k] - (long)hit[1][k];
-                d += x < 0 ? -x : x;
-                if(!pass) { long a2 = hit[0][k]; energy += a2 < 0 ? -a2 : a2; }
+                d_off += x < 0 ? -x : x;
+                long a2 = hit[0][k]; energy += a2 < 0 ? -a2 : a2;
             }
-            if(!pass) d_off = d; else d_on = d;
         }
-        api->set_param(inst,"bd_c_drift","0");
         api->set_param(inst,"bd_c_attack","45");
-        char l1[128], l2[128];
+        char l1[128];
         snprintf(l1,sizeof(l1),"kick repeats identically by default (diff %ld vs energy %ld)",d_off,energy);
-        snprintf(l2,sizeof(l2),"drift knob still varies the hit when turned up (diff %ld)",d_on);
         CHECK(d_off * 1000 < energy, l1);
-        CHECK(d_on  * 100  > energy, l2);
         #undef DRIFT_BLOCKS
     }
 
@@ -316,18 +311,25 @@ int main(int argc, char**argv){
     api->get_param(inst, "master_drive", buf, sizeof(buf));
     CHECK(atof(buf)==90.0, "master_drive pot round-trips");
     {
-        static int16_t o2[128*2];
+        /* The reworked stages are level-normalised, so "louder" is no longer
+         * the evidence — compare the waveforms of the same (deterministic)
+         * kick with the stage off and on. */
+        static int16_t offw[60*128*2], onw[60*128*2];
         long eoff=0,eon=0;
         api->set_param(inst,"master_dist","0");
+        for(int b=0;b<400;++b) api->render_block(inst,offw,128);   /* ring out */
         { uint8_t m3[3]={0x90,36,110}; api->on_midi(inst,m3,3,0); }
-        for(int b=0;b<60;++b){ api->render_block(inst,o2,128);
-            for(int k2=0;k2<256;++k2){ long a=o2[k2]<0?-o2[k2]:o2[k2]; eoff+=a; } }
+        for(int b=0;b<60;++b) api->render_block(inst,offw+b*256,128);
         api->set_param(inst,"master_dist","2");
+        for(int b=0;b<400;++b) api->render_block(inst,onw,128);    /* ring out */
         { uint8_t m3[3]={0x90,36,110}; api->on_midi(inst,m3,3,0); }
-        for(int b=0;b<60;++b){ api->render_block(inst,o2,128);
-            for(int k2=0;k2<256;++k2){ long a=o2[k2]<0?-o2[k2]:o2[k2]; eon+=a; } }
-        char lbl2[96]; snprintf(lbl2,sizeof(lbl2),"master dist audibly changes output (%ld -> %ld)",eoff,eon);
-        CHECK(eon > eoff*12/10 || eoff > eon*12/10, lbl2);
+        for(int b=0;b<60;++b) api->render_block(inst,onw+b*256,128);
+        for(int k2=0;k2<60*256;++k2){
+            long d=(long)onw[k2]-(long)offw[k2]; eon+=d<0?-d:d;
+            long a=offw[k2]; eoff+=a<0?-a:a;
+        }
+        char lbl2[96]; snprintf(lbl2,sizeof(lbl2),"master dist audibly changes output (diff %ld vs ref %ld)",eon,eoff);
+        CHECK(eon > eoff/8, lbl2);
         api->set_param(inst,"master_dist","0");
     }
 

@@ -329,8 +329,14 @@ static inline float er99_bt_render(er99_bt_t *v, const float _noise)
     if(v->tune2 > 0.0f && v->osc2_mix > 0.0f)
         amp = amp > ER99_VCA_VT ? (amp - ER99_VCA_VT) * ER99_VCA_NORM : 0.0f;
 
-    /* Oscillator: triangle, rounded toward sine by the diode pair. */
+    /* Oscillator: triangle, rounded toward sine by the diode pair. The pair
+     * is ALWAYS in circuit (Whittle: conduction at ~0.5-0.6 V at the stock
+     * drive level; the Drive mod only pushes it harder) — this rounding is
+     * the voice's tone, not an effect. At Drive 0 the kick used to ship the
+     * raw triangle, which is buzzy in a way no 909 ever is. */
     float o = wa_osc_triangle(&v->osc, f);
+    if(!(v->tune2 > 0.0f && v->osc2_mix > 0.0f))
+        o = er99_diode_round(o, 2.0f);
     if(v->tune2 > 0.0f && v->osc2_mix > 0.0f)
     {
         /* Two-shell voice (snare). On the board EACH VCO has its own diode

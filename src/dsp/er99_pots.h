@@ -30,14 +30,17 @@ typedef struct {
 /* Order is the storage order for pot values and for the state blob. */
 static const er99_pot_t g_er99_pots[] = {
     /* --- Bass Drum --- */
-    { "bd_c_tune",         20.0f,  120.0f, ER99_EXP },
-    /* The old 15-400 ms could not reach a 909 kick at all: the real drum's
-     * amplitude time constant is ~120 ms (t60 760 ms), and 400 ms of this
-     * ramp is a tau of 35. Geometric centre of the new range is ~480 ms. */
-    { "bd_c_decay",        90.0f, 2600.0f, ER99_EXP },
+    { "bd_c_tune",         22.0f,  180.0f, ER99_EXP },
+    /* From the board: ENV1 is C8 0.33 uF discharging through VR5 1M(A) plus
+     * R58 47K — tau 15 ms with the pot closed, 345 ms wide open. This ramp's
+     * tau is nominal/11.5, so 100..4000 nominal covers exactly that span; the
+     * measured "Long" recording (tau ~120 ms, t60 760 ms) sits inside it.
+     * The old 15-400 ms range topped out at a 35 ms tau and could not reach
+     * a 909 kick at any setting. */
+    { "bd_c_decay",       100.0f, 4000.0f, ER99_EXP },
     { "bd_c_attack",        0.0f,    1.0f, ER99_LIN },
-    { "bd_c_sweep_depth",   1.0f,    6.0f, ER99_LIN },
-    { "bd_c_sweep_time",    1.0f,  120.0f, ER99_EXP },
+    { "bd_c_sweep_depth",   1.0f,    3.0f, ER99_LIN },
+    { "bd_c_sweep_time",     8.0f,  136.0f, ER99_EXP },
     { "bd_c_drive",         0.2f,    8.0f, ER99_EXP },
     /* Level tops out AT the output ceiling, not past it: 1.35 x accent (2.0)
      * x master volume (0.35) = 0.945 FS. Ranges that went to 2.0 (3.0 on the

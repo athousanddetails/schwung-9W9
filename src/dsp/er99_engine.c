@@ -184,21 +184,25 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
         switch(i)
         {
         case 0: /* Bass Drum */
-            b->tune = 55.0f;  b->sweep_depth = 3.2f; b->sweep_time = 22.0f;
-            /* Measured on BD 909 Clean Long A: amplitude tau ~120 ms and
-             * t60 760 ms. This ramp runs to -100 dB over `decay`, so tau is
-             * decay/11.5 — 190 ms gave a 16 ms tau and a kick with no body at
-             * all (t60 120 ms against the real 760). */
+            /* From BD 909 Clean Long A and the mods doc: settles at ~50 Hz,
+             * starts 1.9x sharp — the STOCK sweep amount, fitted against the
+             * recording's own pitch track (the smeared 35 ms analysis window
+             * under-reads the true start; 1.9/34 ms reproduces the measured
+             * 66/55/50/50 Hz curve within 2 Hz). P.Depth 0 disables the sweep
+             * entirely, at which point Tune audibly does nothing, exactly
+             * like the hardware — the pitch envelope decays in ~34 ms
+             * and the amplitude holds ~40 ms then falls with a ~120 ms time
+             * constant (this ramp reaches -100 dB over `decay`, so tau is
+             * decay/11.5). Click on the clean recording is nearly absent
+             * (HF/body 0.002), so Attack defaults low. Drive at its floor is
+             * the stock diode pair, now applied unconditionally in the render;
+             * sub/tube/drift were our inventions and are pinned off at
+             * trigger — a 909 has none of them. */
+            b->tune = 50.0f;  b->sweep_depth = 1.9f; b->sweep_time = 34.0f;
             b->decay = 1380.0f; b->amp_hold = 40.0f;
-            b->attack = 0.35f; b->click_tone = 2500.0f;
-            b->drive = 2.2f;  b->level = 1.0f;
-            b->sub = 0.35f; b->tube = 1.2f;
-            /* Drift OFF by default. Per-hit pitch/level jitter is a real
-             * analog behaviour and the knob is still there for anyone who
-             * wants it, but a kick that lands on a different pitch every bar
-             * is the single most complained-about thing about this engine —
-             * a drum machine should repeat exactly unless asked not to. */
-            b->drift = 0.0f;
+            b->attack = 0.10f; b->click_tone = 2500.0f;
+            b->drive = 0.2f;  b->level = 1.0f;
+            b->sub = 0.0f; b->tube = 0.0f; b->drift = 0.0f;
             break;
         /* Snare fitted to real 909 recordings (SD Clean E 01/03/10 — the same
          * drum at three Snappy settings): shells at 205 and 325 Hz (ratio
@@ -410,6 +414,17 @@ void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const in
          * moment they matter, so no stale saved state can detune the pair,
          * re-arm the old 1.6x pitch swoop, or shorten the shells — the blob
          * still restores those fields, and this overrules it. */
+        /* Same for the kick: everything not on its panel is fixed circuitry.
+         * The sub layer, tube stage and drift were our additions — no 909 has
+         * them — and the diode pair provides the tone now. */
+        if(_which == ER99_BD)
+        {
+            er99_bt_t *bd = &e->bt[ER99_BD];
+            bd->sub = 0.0f; bd->tube = 0.0f; bd->drift = 0.0f;
+            bd->tune2 = 0.0f; bd->osc2_mix = 0.0f;
+            bd->click_tone = 2500.0f;
+            bd->amp_hold = 40.0f;
+        }
         if(_which == ER99_SD)
         {
             er99_bt_t *sd = &e->bt[ER99_SD];
