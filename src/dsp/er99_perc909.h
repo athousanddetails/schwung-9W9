@@ -56,8 +56,12 @@ static inline void er99_rim909_init(er99_rim909_t *v, const float _sr)
     v->sample_rate = _sr;
     wa_biquad_set(&v->bp1, WA_BANDPASS, v->tune  > 0 ? v->tune  : 220.0f,
                   v->res > 0 ? v->res : 12.0f, 0.0f, _sr);
-    wa_biquad_set(&v->bp2, WA_BANDPASS, v->tune2 > 0 ? v->tune2 : 1300.0f,
-                  v->res > 0 ? v->res * 0.7f : 8.0f, 0.0f, _sr);
+    /* Both resonances measure Q ~10-11 on a real rim (ring times 15.5 ms at
+     * 210 Hz and 7.5 ms at 480 Hz — the upper one dies sooner because it is
+     * higher, not because it is damped harder). The 0.7 factor here made it
+     * die too slowly relative to the body. */
+    wa_biquad_set(&v->bp2, WA_BANDPASS, v->tune2 > 0 ? v->tune2 : 480.0f,
+                  v->res > 0 ? v->res * 1.1f : 11.0f, 0.0f, _sr);
     wa_biquad_set(&v->hp, WA_HIGHPASS, 120.0f, 0.7071f, 0.0f, _sr);
     wa_param_init(&v->amp, 0.0f);
     v->impulse = 0;
@@ -68,7 +72,7 @@ static inline void er99_rim909_init(er99_rim909_t *v, const float _sr)
 static inline void er99_rim909_retune(er99_rim909_t *v)
 {
     wa_biquad_set(&v->bp1, WA_BANDPASS, v->tune, v->res, 0.0f, v->sample_rate);
-    wa_biquad_set(&v->bp2, WA_BANDPASS, v->tune2, v->res * 0.7f, 0.0f, v->sample_rate);
+    wa_biquad_set(&v->bp2, WA_BANDPASS, v->tune2, v->res * 1.1f, 0.0f, v->sample_rate);
 }
 
 static inline void er99_rim909_trigger(er99_rim909_t *v, const float _accent)
@@ -94,8 +98,10 @@ static inline float er99_rim909_render(er99_rim909_t *v, const float _noise)
     const float a = wa_param_tick(&v->amp);
     /* Makeup: a high-Q bandpass fed a two-sample impulse puts out very little,
      * so the resonators need gain to sit level with the other voices. */
-    float y = wa_biquad_tick(&v->bp1, exc) * 7.0f
-            + wa_biquad_tick(&v->bp2, exc) * 5.0f;
+    /* Measured on a real 909 rim, the upper resonance sits at about half the
+     * lower one (56 vs 29 at 2 ms). Equal-ish gains made the edge dominate. */
+    float y = wa_biquad_tick(&v->bp1, exc) * 60.0f
+            + wa_biquad_tick(&v->bp2, exc) * 13.0f;
     y = er99_shape(y * a, v->drive, v->dist_type);
     y = wa_biquad_tick(&v->hp, y);
     return y * v->level * v->accent_gain_;

@@ -94,10 +94,10 @@ static const er99_pot_t g_er99_pots[] = {
     { "ht_c_osc2_mix",      0.0f,    1.0f, ER99_LIN },
 
     /* --- Rim (909 model) --- */
-    { "rs_tune",          120.0f,  600.0f, ER99_EXP },
-    { "rs_tune2",         600.0f, 3000.0f, ER99_EXP },
-    { "rs_res",             2.0f,   24.0f, ER99_EXP },
-    { "rs_decay",           5.0f,  150.0f, ER99_EXP },
+    { "rs_tune",          150.0f,  300.0f, ER99_EXP },
+    { "rs_tune2",         340.0f,  680.0f, ER99_EXP },
+    { "rs_res",             4.0f,   20.0f, ER99_EXP },
+    { "rs_decay",          40.0f,  700.0f, ER99_EXP },
     { "rs_noise",           0.0f,    1.0f, ER99_LIN },
     { "rs_saturation",      0.2f,    8.0f, ER99_EXP },
     { "rs_volume",          0.0f,    3.0f, ER99_LIN },

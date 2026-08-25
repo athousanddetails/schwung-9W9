@@ -272,9 +272,20 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
     {
         er99_rim909_t *r9 = &e->rim909;
         memset(r9, 0, sizeof(*r9));
-        r9->tune = 235.0f; r9->tune2 = 1350.0f; r9->res = 12.0f;
-        r9->decay = 42.0f; r9->noise_mix = 0.25f;
-        r9->drive = 2.4f;  r9->dist_type = 0.0f; r9->level = 1.1f;
+        /* Measured on a real 909 rim: the two resonances are 210 and 480 Hz —
+         * a ratio of 2.3, not the near-decade this had. The 1350 Hz "tick" was
+         * invented; the real edge lives at 480 with its own harmonics above.
+         * Second resonance sits at about half the first (56 vs 29 at 2 ms),
+         * and the whole thing is down 30 dB by 30 ms — the shortest voice in
+         * the machine. */
+        r9->tune = 210.0f; r9->tune2 = 480.0f; r9->res = 10.0f;
+        /* decay is the envelope's time to -100 dB, so -30 dB (where the real
+         * rim lands at 30 ms) arrives at roughly an eighth of it. Drive down
+         * from 2.4: the shaper was distorting the pair hard enough to invert
+         * their balance — 480 Hz came out 2.5x the 210 where the hardware has
+         * it at half. Distortion stays available on the knob. */
+        r9->decay = 95.0f; r9->noise_mix = 0.18f;
+        r9->drive = 0.9f;  r9->dist_type = 0.0f; r9->level = 1.1f;
         er99_rim909_init(r9, _sr);
 
         er99_clap909_t *c9 = &e->clap909;
