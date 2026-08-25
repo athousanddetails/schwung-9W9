@@ -165,13 +165,13 @@ static inline float er99_diode_round(const float _x, const float _drive)
  *   3 Bitcrush  — amplitude quantise PLUS sample-rate decimation (the part
  *                 that makes a crush musical needs two floats of state; a
  *                 caller with no state gets quantise only).
- *   4 Saturate  — warm parallel drive, Heat/Karacter territory: rational
+ *   4 SAT       — warm parallel drive: rational
  *                 soft-knee with a touch of even harmonics, blended with the
  *                 dry so the transient survives.
- *   5 Boum      — fuzz, OTO territory: high gain into a rational clipper
+ *   5 BFZ       — fuzz: high gain into a rational clipper
  *                 (fatter approach than tanh) with a bias shift; collapses to
  *                 a thick square-ish wall when pushed.
- *   6 Decap     — punchy tube-style stage, Decapitator territory: biased
+ *   6 PDIST     — punchy tube-style stage: biased
  *                 cubic soft clip, hard-limited past its knee — strong odd
  *                 harmonics with the bias's even ones, reads as "crunch".
  *
@@ -217,7 +217,7 @@ static inline float er99_shape_st(const float _x, const float _drive,
         }
         return q;
     }
-    case 4: {   /* saturate — warm, parallel, keeps the transient */
+    case 4: {   /* SAT — warm, parallel, keeps the transient */
         const float u = _x * k + 0.08f * k * _x * _x;
         const float wet = u / (1.0f + fabsf(u));
         const float m = k < 1.0f ? k : 1.0f;    /* dry blend below unity */
@@ -225,7 +225,7 @@ static inline float er99_shape_st(const float _x, const float _drive,
                       + 0.65f * m * wet * 1.35f;
         return k < 1.0f ? v / k : v;
     }
-    case 5: {   /* boum — thick fuzz wall */
+    case 5: {   /* BFZ — thick fuzz wall */
         /* The 2.5x pre-gain fuzzes even at minimum drive, so the fuzz is
          * crossfaded in between 0.85 and 2 — below that the stage passes dry
          * (Drive-at-zero-is-transparent holds for this type too). */
@@ -237,7 +237,7 @@ static inline float er99_shape_st(const float _x, const float _drive,
         if(m > 1.0f) m = 1.0f;
         return (1.0f - m) * _x + m * wet;
     }
-    case 6: {   /* decap — biased cubic crunch */
+    case 6: {   /* PDIST — biased cubic crunch */
         float u = _x * k + 0.12f;
         if(u >  1.0f) u =  1.0f;
         if(u < -1.0f) u = -1.0f;
