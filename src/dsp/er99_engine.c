@@ -252,6 +252,18 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
         }
     }
 
+    /* ---- Send FX ---- */
+    e->verb.decay = 0.62f; e->verb.tone = 0.45f;
+    e->verb.hpf_hz = 150.0f; e->verb.level = 0.8f;
+    wa_biquad_set(&e->verb.hp, WA_HIGHPASS, e->verb.hpf_hz, 0.7071f, 0.0f, _sr);
+    wa_biquad_reset(&e->verb.hp);
+    e->dly.time_ms = 260.0f; e->dly.fdbk = 0.35f; e->dly.tone = 0.4f;
+    e->dly.hpf_hz = 150.0f; e->dly.level = 0.8f;
+    e->dly.dcur = e->dly.time_ms * 0.001f * _sr;
+    wa_biquad_set(&e->dly.hp, WA_HIGHPASS, e->dly.hpf_hz, 0.7071f, 0.0f, _sr);
+    wa_biquad_reset(&e->dly.hp);
+    /* sends stay 0 from the memset: the kit is bit-identical until used */
+
     /* ---- Master ---- */
     e->master.comp         = 0.0f;
     e->master.comp_env_db  = 0.0f;
@@ -431,6 +443,73 @@ static float render_sampler(er99_sampler_t *s)
 }
 
 
+static const int ER99_VERB_CL[4] = { 1116, 1188, 1277, 1356 };
+static const int ER99_VERB_AL[2] = { 556, 441 };
+
+static float er99_verb_tick(er99_verb_t *r, const float _in)
+{
+    const float x = wa_biquad_tick(&r->hp, _in);
+    /* Tone: bright opens the loop's damping, dark closes it. */
+    const float damp = 0.75f - r->tone * 0.55f;
+    const float fb   = r->decay;
+    float acc = 0.0f;
+    for(int i = 0; i < 4; ++i)
+    {
+        float *b = r->comb[i];
+        const int n = ER99_VERB_CL[i];
+        const float y = b[r->cpos[i]];
+        acc += y;
+        r->cdmp[i] = y + (r->cdmp[i] - y) * damp;
+        float st = x + r->cdmp[i] * fb;
+        /* The early-rack character: the loop runs at 12 bits. Truncate
+         * toward zero — floor injects -0.5 LSB of DC per pass, and a DC-fed
+         * comb loop settles into a -70 dB hum that never stops. */
+        st = truncf(st * 2048.0f) * (1.0f / 2048.0f);
+        b[r->cpos[i]] = st;
+        if(++r->cpos[i] >= n) r->cpos[i] = 0;
+    }
+    float y = acc * 0.25f;
+    for(int j = 0; j < 2; ++j)
+    {
+        float *b = r->apb[j];
+        const int n = ER99_VERB_AL[j];
+        const float bo = b[r->apos[j]];
+        b[r->apos[j]] = y + bo * 0.5f;
+        y = bo - y * 0.5f;
+        if(++r->apos[j] >= n) r->apos[j] = 0;
+    }
+    return y * r->level;
+}
+
+static float er99_dly_tick(er99_dly_t *d, const float _in, const float _sr)
+{
+    const float x = wa_biquad_tick(&d->hp, _in);
+    const float target = d->time_ms * 0.001f * _sr;
+    /* Slewed, so turning Time warps the echo like the old units instead of
+     * clicking. ~30 ms to settle. */
+    d->dcur += (target - d->dcur) * 0.0008f;
+    float rp = (float)d->w - d->dcur;
+    while(rp < 0.0f) rp += (float)ER99_DLY_MAX;
+    int i0 = (int)rp;
+    const float fr = rp - (float)i0;
+    /* float spacing at 36000 is 1/256: a read a hair under the wrap point
+     * rounds UP to exactly ER99_DLY_MAX and indexes past the buffer. */
+    if(i0 >= ER99_DLY_MAX) i0 -= ER99_DLY_MAX;
+    const int   i1 = i0 + 1 >= ER99_DLY_MAX ? 0 : i0 + 1;
+    const float y  = d->buf[i0] + (d->buf[i1] - d->buf[i0]) * fr;
+
+    /* Feedback through a one-pole: every repeat gets darker, like tape and
+     * the early digitals both did. 12-bit write for the grain. */
+    const float tc = 0.06f + d->tone * 0.6f;
+    d->lp += (y * d->fdbk - d->lp) * tc;
+    if(fabsf(d->lp) < 1e-20f) d->lp = 0.0f;   /* no denormal tail */
+    float st = x + d->lp;
+    st = truncf(st * 2048.0f) * (1.0f / 2048.0f);   /* toward zero: no DC */
+    d->buf[d->w] = st;
+    if(++d->w >= ER99_DLY_MAX) d->w = 0;
+    return y * d->level;
+}
+
 /* One-knob glue. The knob lowers the threshold (-8 to -26 dB), raises the
  * ratio (2:1 to 5:1) and applies makeup scaled to the deeper threshold, so
  * loudness stays in the same ballpark while the kit pulls together. Detector
@@ -498,16 +577,41 @@ void er99_engine_render(er99_engine_t *e, float *out, const int frames)
     {
         const float noise = wa_noise_tick(&e->noise);
 
-        float mix = 0.0f;
+        float mix = 0.0f, rbus = 0.0f, dbus = 0.0f;
         for(int i=0; i<ER99_NUM_INSTRUMENTS; ++i)
+        {
+            float v;
             if(i >= ER99_LT && i <= ER99_HT)
-                mix += er99_tom909_render(&e->tom909[i - ER99_LT], &e->bt[i], noise);
+                v = er99_tom909_render(&e->tom909[i - ER99_LT], &e->bt[i], noise);
             else
-                mix += er99_bt_render(&e->bt[i], noise);
-        mix += er99_rim909_render(&e->rim909, noise);
-        mix += er99_clap909_render(&e->clap909, noise);
-        for(int i=0; i<ER99_NUM_SAMPLERS; ++i)
-            mix += render_sampler(&e->sampler[i]);
+                v = er99_bt_render(&e->bt[i], noise);
+            mix += v;
+            rbus += v * e->send_rev[i];
+            dbus += v * e->send_dly[i];
+        }
+        {
+            const float v = er99_rim909_render(&e->rim909, noise);
+            mix += v; rbus += v * e->send_rev[ER99_RS]; dbus += v * e->send_dly[ER99_RS];
+        }
+        {
+            const float v = er99_clap909_render(&e->clap909, noise);
+            mix += v; rbus += v * e->send_rev[ER99_HC]; dbus += v * e->send_dly[ER99_HC];
+        }
+        {
+            static const int strig[ER99_NUM_SAMPLERS] = { ER99_OHH, ER99_RC, ER99_CR, ER99_CHH };
+            for(int i=0; i<ER99_NUM_SAMPLERS; ++i)
+            {
+                const float v = render_sampler(&e->sampler[i]);
+                mix += v;
+                rbus += v * e->send_rev[strig[i]];
+                dbus += v * e->send_dly[strig[i]];
+            }
+        }
+
+        /* FX returns join the bus before the master stages, so master
+         * distortion and the Comp work on the wet signal too. */
+        mix += er99_verb_tick(&e->verb, rbus);
+        mix += er99_dly_tick(&e->dly, dbus, e->sample_rate);
 
         if(e->master.dist_mode >= 0.5f)
             mix = er99_shape_st(mix * e->master.drive, e->master.drive,
@@ -549,8 +653,50 @@ static const char *const g_other_state_keys[] = {
 };
 #define ER99_OTHER_KEY_COUNT (sizeof(g_other_state_keys)/sizeof(g_other_state_keys[0]))
 
+/* Per-voice FX sends. The kick has none, deliberately. */
+static const struct { const char *k; unsigned char voice, dly; } g_send_keys[] = {
+    {"sd_c_rev",1,0},{"sd_c_dly",1,1},
+    {"lt_c_rev",2,0},{"lt_c_dly",2,1},
+    {"mt_c_rev",3,0},{"mt_c_dly",3,1},
+    {"ht_c_rev",4,0},{"ht_c_dly",4,1},
+    {"rs_rev",5,0},{"rs_dly",5,1},
+    {"hc_rev",6,0},{"hc_dly",6,1},
+    {"ohh_rev",7,0},{"ohh_dly",7,1},
+    {"chh_rev",8,0},{"chh_dly",8,1},
+    {"rc_rev",9,0},{"rc_dly",9,1},
+    {"cr_rev",10,0},{"cr_dly",10,1},
+};
+#define ER99_SEND_KEYS ((int)(sizeof(g_send_keys)/sizeof(g_send_keys[0])))
+
 int er99_engine_set_raw(er99_engine_t *e, const char *key, const float value)
 {
+    for(int i=0; i<ER99_SEND_KEYS; ++i)
+        if(!strcmp(key, g_send_keys[i].k))
+        {
+            float *a = g_send_keys[i].dly ? e->send_dly : e->send_rev;
+            a[g_send_keys[i].voice] = value < 0.0f ? 0.0f : (value > 1.0f ? 1.0f : value);
+            return 1;
+        }
+    if(!strcmp(key, "rev_decay")) { e->verb.decay = value; return 1; }
+    if(!strcmp(key, "rev_tone"))  { e->verb.tone = value; return 1; }
+    if(!strcmp(key, "rev_level")) { e->verb.level = value; return 1; }
+    if(!strcmp(key, "rev_hpf"))
+    {
+        e->verb.hpf_hz = value;
+        wa_biquad_set(&e->verb.hp, WA_HIGHPASS, value, 0.7071f, 0.0f, e->sample_rate);
+        return 1;
+    }
+    if(!strcmp(key, "dly_time"))  { e->dly.time_ms = value; return 1; }
+    if(!strcmp(key, "dly_fdbk"))  { e->dly.fdbk = value; return 1; }
+    if(!strcmp(key, "dly_tone"))  { e->dly.tone = value; return 1; }
+    if(!strcmp(key, "dly_level")) { e->dly.level = value; return 1; }
+    if(!strcmp(key, "dly_hpf"))
+    {
+        e->dly.hpf_hz = value;
+        wa_biquad_set(&e->dly.hp, WA_HIGHPASS, value, 0.7071f, 0.0f, e->sample_rate);
+        return 1;
+    }
+
     for(int i=0; i<ER99_NUM_INSTRUMENTS; ++i)
         {
             char pre[16];
@@ -623,6 +769,23 @@ int er99_engine_set_raw(er99_engine_t *e, const char *key, const float value)
 
 int er99_engine_get_raw(const er99_engine_t *e, const char *key, float *out)
 {
+    for(int i=0; i<ER99_SEND_KEYS; ++i)
+        if(!strcmp(key, g_send_keys[i].k))
+        {
+            const float *a = g_send_keys[i].dly ? e->send_dly : e->send_rev;
+            *out = a[g_send_keys[i].voice];
+            return 1;
+        }
+    if(!strcmp(key, "rev_decay")) { *out = e->verb.decay; return 1; }
+    if(!strcmp(key, "rev_tone"))  { *out = e->verb.tone; return 1; }
+    if(!strcmp(key, "rev_level")) { *out = e->verb.level; return 1; }
+    if(!strcmp(key, "rev_hpf"))   { *out = e->verb.hpf_hz; return 1; }
+    if(!strcmp(key, "dly_time"))  { *out = e->dly.time_ms; return 1; }
+    if(!strcmp(key, "dly_fdbk"))  { *out = e->dly.fdbk; return 1; }
+    if(!strcmp(key, "dly_tone"))  { *out = e->dly.tone; return 1; }
+    if(!strcmp(key, "dly_level")) { *out = e->dly.level; return 1; }
+    if(!strcmp(key, "dly_hpf"))   { *out = e->dly.hpf_hz; return 1; }
+
     for(int i=0; i<ER99_NUM_INSTRUMENTS; ++i)
     {
         char pre[16];

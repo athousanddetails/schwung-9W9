@@ -33,6 +33,9 @@ def POT(k,n):
 def I(k,n,mn,mx,u=None): return POT(k,n)
 def F(k,n,mn,mx,st):     return POT(k,n)
 
+# FX sends: every voice except the kick. Kick has none, deliberately.
+def SENDS(pre): return [F(pre+"_rev","Rev",0,1,0.01), F(pre+"_dly","Dly",0,1,0.01)]
+
 cp=[]; levels={}
 # Root holds ONLY globals and navigation — no per-voice params leaking in.
 root=[{"key":"note_map","name":"Note Map"}]
@@ -84,14 +87,14 @@ for vid,cfg in V.items():
             F("sd_c_snappy","Snappy",0,1,0.01),
             F("sd_c_drive","Drive",0.2,8,0.1),
             {"key":"sd_c_dist_type","name":"Distortion","type":"enum","options":DIST},
-            F("sd_c_level","Level",0,2,0.01)]
+            F("sd_c_level","Level",0,2,0.01)]+SENDS("sd_c")
     else:
         ps=[I(f"{vid}_c_tune","Tune",tl,th,"Hz"),
             I(f"{vid}_c_decay","Decay",dl,dh,"ms"),
             F(f"{vid}_c_attack","Attack",0,1,0.01),
             F(f"{vid}_c_drive","Drive",0.2,8,0.1),
             {"key":f"{vid}_c_dist_type","name":"Distortion","type":"enum","options":DIST},
-            F(f"{vid}_c_level","Level",0,2,0.01)]
+            F(f"{vid}_c_level","Level",0,2,0.01)]+SENDS(f"{vid}_c")
     cp+=ps
     levels[vid]={"name":cfg["name"],
         "knobs":[x["key"] for x in ps[:8]],
@@ -105,34 +108,35 @@ for vid,cfg in V.items():
 # Movy or any other tool reading the parameter list.
 def DIST_T(k,n="Distortion"): return {"key":k,"name":n,"type":"enum","options":DIST}
 
+
 # The real 909 rim has ONE pot: Level. Its two resonances (210 and 480 Hz),
 # their Q, the decay and the noise in the trigger pulse are all fixed
 # circuitry — see the pins in er99_engine_trigger. Tune is ours; Decay was
 # too, and went, because the ring length is the network's, not a setting.
 rim=[I("rs_tune","Tune",0,127),
      I("rs_saturation","Drive",0,127), DIST_T("rs_dist_type"),
-     I("rs_volume","Level",0,127)]
+     I("rs_volume","Level",0,127)]+SENDS("rs")
 # The real 909 clap has ONE pot: Level. Tune and Tail stay because Gus likes
 # them; spread, echo decay and tail share are the circuit's, pinned at trigger.
 clap=[I("hc_tune","Tune",0,127), I("hc_decay","Tail",0,127),
       I("hc_drive","Drive",0,127), DIST_T("hc_dist_type"),
-      I("hc_volume","Level",0,127)]
+      I("hc_volume","Level",0,127)]+SENDS("hc")
 # Closed and open hat are one pair of cymbals but two voices: each has its own
 # tuning, decay, drive and level, and triggering either chokes the other (the
 # pedal cannot be shut and open at once). Ride and crash likewise get a page
 # each rather than sharing one.
 ohat=[I("ohh_decay","Decay",20,1200,"ms"), F("ohh_pitch","Tune",0.25,4,0.01),
       F("ohh_drive","Drive",0.2,8,0.1), DIST_T("ohh_dist_type"),
-      F("ohh_volume","Level",0,2,0.01)]
+      F("ohh_volume","Level",0,2,0.01)]+SENDS("ohh")
 chat=[I("chh_decay","Decay",15,300,"ms"), F("chh_pitch","Tune",0.25,4,0.01),
       F("chh_drive","Drive",0.2,8,0.1), DIST_T("chh_dist_type"),
-      F("chh_volume","Level",0,2,0.01)]
+      F("chh_volume","Level",0,2,0.01)]+SENDS("chh")
 ride=[I("rc_decay","Decay",100,3000,"ms"), F("rc_pitch","Tune",0.25,4,0.01),
       F("rc_drive","Drive",0.2,8,0.1), DIST_T("rc_dist_type"),
-      F("rc_volume","Level",0,2,0.01)]
+      F("rc_volume","Level",0,2,0.01)]+SENDS("rc")
 crash=[I("cr_decay","Decay",100,3000,"ms"), F("cr_pitch","Tune",0.25,4,0.01),
        F("cr_drive","Drive",0.2,8,0.1), DIST_T("cr_dist_type"),
-       F("cr_volume","Level",0,2,0.01)]
+       F("cr_volume","Level",0,2,0.01)]+SENDS("cr")
 glob=[{"key":"master_dist","name":"Master Dist","type":"enum",
        "options":["Off","Diode (909)","Hard Clip","SAT","BFZ","PDIST","Wavefolder","Bitcrush"]},
       F("master_drive","Master Drive",0,127,1),
@@ -140,9 +144,18 @@ glob=[{"key":"master_dist","name":"Master Dist","type":"enum",
       F("volume","Volume",0,1,0.01), F("accent","Accent",1,4,0.05)]
 cp+=rim+clap+chat+ohat+ride+crash+glob
 
+# The send FX pages: simple on purpose, an input HPF on each so low end
+# stays out of the wet path.
+rev=[F("rev_decay","Decay",0,1,0.01), F("rev_tone","Tone",0,1,0.01),
+     I("rev_hpf","HPF",30,800,"Hz"), F("rev_level","Level",0,1.2,0.01)]
+dly=[I("dly_time","Time",60,800,"ms"), F("dly_fdbk","Fdbk",0,0.85,0.01),
+     F("dly_tone","Tone",0,1,0.01), I("dly_hpf","HPF",30,800,"Hz"),
+     F("dly_level","Level",0,1.2,0.01)]
+
 for lid,label,ps in (("rim","Rim Shot",rim),("clap","Hand Clap",clap),
                      ("chh","Closed Hat",chat),("ohh","Open Hat",ohat),
-                     ("ride","Ride",ride),("crash","Crash",crash)):
+                     ("ride","Ride",ride),("crash","Crash",crash),
+                     ("fxrev","Reverb",rev),("fxdly","Delay",dly)):
     levels[lid]={"name":label,"knobs":[x["key"] for x in ps[:8]],
                  "params":[{"key":x["key"],"name":x["name"]} for x in ps]}
     root.append({"level":lid,"label":label})

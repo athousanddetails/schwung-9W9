@@ -597,6 +597,94 @@
           null
         ]
       ]
+    },
+    {
+      "name": "FX",
+      "rows": [
+        [
+          {
+            "key": "rev_decay",
+            "short": "RDCY",
+            "full": "Rev Decay",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "rev_tone",
+            "short": "RTON",
+            "full": "Rev Tone",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "rev_hpf",
+            "short": "RHPF",
+            "full": "Rev HPF",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "rev_level",
+            "short": "RLVL",
+            "full": "Rev Level",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          null,
+          null,
+          null,
+          null
+        ],
+        [
+          {
+            "key": "dly_time",
+            "short": "DTIM",
+            "full": "Dly Time",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "dly_fdbk",
+            "short": "DFBK",
+            "full": "Dly Fdbk",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "dly_tone",
+            "short": "DTON",
+            "full": "Dly Tone",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "dly_hpf",
+            "short": "DHPF",
+            "full": "Dly HPF",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "dly_level",
+            "short": "DLVL",
+            "full": "Dly Level",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          null,
+          null,
+          null
+        ]
+      ]
     }
   ]
 }

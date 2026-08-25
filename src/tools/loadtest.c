@@ -484,6 +484,50 @@ int main(int argc, char**argv){
     api->set_param(inst, "ohh_dist_type", "0");
     api->set_param(inst, "rc_drive", "0");
 
+    /* FX sends: rim into the delay must produce an echo at 260 ms that is
+     * absent with the send at zero; snare into the reverb must leave tail
+     * energy where the dry voice is already dead. */
+    {
+        long e_on=0, e_off=0;
+        for(int pass=0; pass<2; ++pass){
+            api->set_param(inst, "rs_dly", pass ? "127" : "0");
+            for(int b=0;b<400;++b) api->render_block(inst,out,128);  /* drain */
+            uint8_t hit[3] = { 0x90, 41, 110 };
+            api->on_midi(inst, hit, 3, 0);
+            /* echo window: 250-330 ms; rim itself is dead by 220 ms */
+            long e=0;
+            for(int b=0;b<114;++b){
+                api->render_block(inst,out,128);
+                if(b>=86){ for(int k=0;k<256;++k){ long a=out[k]<0?-out[k]:out[k]; e+=a; } }
+            }
+            if(pass) e_on=e; else e_off=e;
+        }
+        char l[96];
+        snprintf(l,sizeof l,"delay send: echo window %ld with send, %ld without",e_on,e_off);
+        CHECK(e_on > 2000 && e_off < e_on/20, l);
+        api->set_param(inst, "rs_dly", "0");
+        long v_on=0, v_off=0;
+        api->set_param(inst, "rev_decay", "127");   /* long tail so the window is unambiguous */
+        for(int pass=0; pass<2; ++pass){
+            api->set_param(inst, "sd_c_rev", pass ? "127" : "0");
+            for(int b=0;b<1400;++b) api->render_block(inst,out,128);  /* drain both FX */
+            uint8_t hit[3] = { 0x90, 37, 110 };
+            api->on_midi(inst, hit, 3, 0);
+            /* tail window: 0.6-1.0 s; the dry snare is long dead there */
+            long e=0;
+            for(int b=0;b<344;++b){
+                api->render_block(inst,out,128);
+                if(b>=207){ for(int k=0;k<256;++k){ long a=out[k]<0?-out[k]:out[k]; e+=a; } }
+            }
+            if(pass) v_on=e; else v_off=e;
+        }
+        char l2[96];
+        snprintf(l2,sizeof l2,"reverb send: tail %ld with send, %ld without",v_on,v_off);
+        CHECK(v_on > 2000 && v_off < v_on/20, l2);
+        api->set_param(inst, "sd_c_rev", "0");
+        api->set_param(inst, "rev_decay", "73");    /* back to the default pot */
+    }
+
     /* Silence when idle. Must outlast the longest voice: ride/crash decay is
      * 2000 ms, so render 6 s before asserting, and report when it actually
      * went quiet so a stuck voice is distinguishable from a short window. */

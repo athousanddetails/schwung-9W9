@@ -92,13 +92,16 @@
   function cymbal(id) {
     return [ pot(id+"_decay","Decay"), pot(id+"_pitch","Tune"),
              pot(id+"_drive","Drive"), en(id+"_dist_type","Dist",DIST),
-             pot(id+"_volume","Level") ];
+             pot(id+"_volume","Level"),
+             pot(id+"_rev","Rev"), pot(id+"_dly","Dly") ];
   }
+  function sends(pre) { return [ pot(pre+"_rev","Rev"), pot(pre+"_dly","Dly") ]; }
 
   function tom(id) {
     return [ pot(id+"_c_tune","Tune"), pot(id+"_c_decay","Decay"),
              pot(id+"_c_attack","Attack"), pot(id+"_c_drive","Drive"),
-             en(id+"_c_dist_type","Dist",DIST), pot(id+"_c_level","Level") ];
+             en(id+"_c_dist_type","Dist",DIST), pot(id+"_c_level","Level"),
+             pot(id+"_c_rev","Rev"), pot(id+"_c_dly","Dly") ];
   }
 
   /* lane = bit in synth:mutes; -1 = no mute button */
@@ -111,22 +114,29 @@
     { name: "SNARE DRUM", lane: 1, knobs: [
         pot("sd_c_tune","Tune"), pot("sd_c_noise_decay","Tone"),
         pot("sd_c_snappy","Snappy"), pot("sd_c_drive","Drive"),
-        en("sd_c_dist_type","Dist",DIST), pot("sd_c_level","Level") ] },
+        en("sd_c_dist_type","Dist",DIST), pot("sd_c_level","Level") ].concat(sends("sd_c")) },
     { name: "LOW TOM", lane: 2, knobs: tom("lt") },
     { name: "MID TOM", lane: 3, knobs: tom("mt") },
     { name: "HI TOM",  lane: 4, knobs: tom("ht") },
     { name: "RIM SHOT", lane: 5, knobs: [
         pot("rs_tune","Tune"),
         pot("rs_saturation","Drive"), en("rs_dist_type","Dist",DIST),
-        pot("rs_volume","Level") ] },
+        pot("rs_volume","Level") ].concat(sends("rs")) },
     { name: "HAND CLAP", lane: 6, knobs: [
         pot("hc_tune","Tune"), pot("hc_decay","Tail"),
         pot("hc_drive","Drive"), en("hc_dist_type","Dist",DIST),
-        pot("hc_volume","Level") ] },
+        pot("hc_volume","Level") ].concat(sends("hc")) },
     { name: "CLOSED HAT", lane: 8, knobs: cymbal("chh") },
     { name: "OPEN HAT",   lane: 7, knobs: cymbal("ohh") },
     { name: "RIDE",       lane: 9, knobs: cymbal("rc") },
     { name: "CRASH",      lane: 10, knobs: cymbal("cr") },
+    { name: "REVERB", lane: -1, master: true, knobs: [
+        pot("rev_decay","Decay"), pot("rev_tone","Tone"),
+        pot("rev_hpf","HPF"), pot("rev_level","Level") ] },
+    { name: "DELAY", lane: -1, master: true, knobs: [
+        pot("dly_time","Time"), pot("dly_fdbk","Fdbk"),
+        pot("dly_tone","Tone"), pot("dly_hpf","HPF"),
+        pot("dly_level","Level") ] },
     { name: "MASTER", lane: -1, master: true, knobs: [
         en("master_dist","Dist",MDIST), pot("master_drive","Drive"),
         pot("master_comp","Comp"),

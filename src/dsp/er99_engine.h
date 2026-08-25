@@ -64,6 +64,36 @@ typedef struct {
     double       mute_countdown;
 } er99_sampler_t;
 
+/* ---- Send FX: one reverb, one delay, fed by per-voice sends ----
+ *
+ * Old-school on purpose. The reverb is a small early-digital topology (four
+ * combs, two allpasses) with 12-BIT QUANTISATION IN THE FEEDBACK PATH — that
+ * is where the character of the early rack units lives — and damping in the
+ * loop. The delay is a 90s rack digital: mono, feedback through a darkening
+ * one-pole, 12-bit write, and the time knob SLEWS so it warps instead of
+ * clicking. Both take a highpass on the send input so low end stays out.
+ * Sends default to zero: with them down the engine is bit-identical to one
+ * that has no FX at all. The kick has no sends, deliberately. */
+#define ER99_DLY_MAX 36000            /* ~816 ms at 44.1k */
+typedef struct {
+    float time_ms, fdbk, tone, hpf_hz, level;
+    wa_biquad_t hp;
+    float buf[ER99_DLY_MAX];
+    int   w;
+    float dcur;                       /* slewed delay, samples */
+    float lp;                         /* loop damping state    */
+} er99_dly_t;
+
+typedef struct {
+    float decay, tone, hpf_hz, level;
+    wa_biquad_t hp;
+    float comb[4][1356];
+    int   cpos[4];
+    float cdmp[4];                    /* per-comb damping state */
+    float apb[2][556];
+    int   apos[2];
+} er99_verb_t;
+
 /* ---- Master bus ---- */
 typedef struct {
     /* No compressor and no limiter. er-99 inherited a Web Audio
@@ -102,6 +132,11 @@ typedef struct {
     er99_rim909_t     rim909;   /* circuit models (default)      */
     er99_clap909_t    clap909;
     er99_sampler_t    sampler[ER99_NUM_SAMPLERS];
+
+    er99_verb_t   verb;
+    er99_dly_t    dly;
+    float         send_rev[ER99_NUM_TRIGGERS];
+    float         send_dly[ER99_NUM_TRIGGERS];
 
     er99_master_t master;
     wa_noise_t    noise;
