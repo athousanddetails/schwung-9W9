@@ -102,10 +102,21 @@ static inline float er99_diode_round(const float _x, const float _drive)
  * balance came from a maxed pot — at noon it left the noise four to six times
  * too quiet with the shells barking through, which is what Gus heard. Noon now
  * lands on the hardware and the top of the pot goes past it, as a pot with
- * travel left should. */
-#define ER99_SNAPPY_MIX 1.55f
+ * travel left should.
+ *
+ * The value is no longer eyeballed from three time points: 9W9's own snare is
+ * rendered over a grid of settings and scored against the recording as a
+ * ten-point trajectory (shell and noise band at 5/20/50/100/150 ms, in dB).
+ * Best fit is 2.5 dB RMS, and it puts the noise where noon needs it. */
+#define ER99_SNAPPY_MIX 2.17f
 
-#define ER99_VCA_VT    0.027f
+/* Turn-on voltage of the single-transistor VCAs. Fitted, not assumed: at 0.027
+ * the snare's shells were cut off entirely by 100 ms where the real drum still
+ * has them at -30 dB and audible to 150. Overridable so the fitting rig can
+ * sweep it (tools sweep -DER99_VCA_VT=...). */
+#ifndef ER99_VCA_VT
+#define ER99_VCA_VT    0.005f
+#endif
 #define ER99_VCA_NORM  (1.0f / (1.0f - ER99_VCA_VT))
 
 static inline float er99_shape(const float _x, const float _drive, const float _type)

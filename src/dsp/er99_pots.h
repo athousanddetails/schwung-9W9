@@ -60,7 +60,7 @@ static const er99_pot_t g_er99_pots[] = {
     { "sd_c_tune2",       150.0f,  800.0f, ER99_EXP },
     { "sd_c_osc2_mix",      0.0f,    1.0f, ER99_LIN },
     { "sd_c_snappy",        0.0f,    1.0f, ER99_LIN },
-    { "sd_c_noise_decay",  120.0f, 2400.0f, ER99_EXP },
+    { "sd_c_noise_decay",  300.0f, 4000.0f, ER99_EXP },
     { "sd_c_noise_hp",    200.0f, 6000.0f, ER99_EXP },
 
     /* --- Toms --- */
