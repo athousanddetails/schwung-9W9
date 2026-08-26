@@ -3,7 +3,7 @@
  * dynamically from the DSP via get_param(). */
 #ifndef ER99_PARAMS_H
 #define ER99_PARAMS_H
-#define ER99_CHAIN_PARAMS_LEN 7659
+#define ER99_CHAIN_PARAMS_LEN 7728
 static const char er99_chain_params_json[] =
     "[{\"key\":\"note_map\",\"name\":\"Note Map\",\"type\":\"enum\",\"options\":[\"Drum Rack (36+)\",\"General MIDI\"]},{\"k"
     "ey\":\"bd_c_tune\",\"name\":\"Tune\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"bd_c_attack\",\"name\":\"Attack\",\""
@@ -74,15 +74,16 @@ static const char er99_chain_params_json[] =
     "ard Clip\",\"SAT\",\"BFZ\",\"PDIST\",\"Wavefolder\",\"Bitcrush\"]},{\"key\":\"master_drive\",\"name\":\"Master Drive\","
     "\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"master_comp\",\"name\":\"Comp\",\"type\":\"int\",\"min\":0,\"max\":127},{"
     "\"key\":\"volume\",\"name\":\"Volume\",\"type\":\"int\",\"min\":0,\"max\":127,\"viz\":{\"kind\":\"fader\"}},{\"key\":\"accent"
-    "\",\"name\":\"Accent\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"rev_decay\",\"name\":\"Decay\",\"type\":\"int\",\"mi"
-    "n\":0,\"max\":127},{\"key\":\"rev_tone\",\"name\":\"Tone\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"rev_hpf\",\"na"
-    "me\":\"HPF\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"rev_level\",\"name\":\"Level\",\"type\":\"int\",\"min\":0,\"ma"
-    "x\":127,\"viz\":{\"kind\":\"fader\"}},{\"key\":\"dly_time\",\"name\":\"Time\",\"type\":\"enum\",\"options\":[\"1/32\",\"1/16"
-    "T\",\"1/16\",\"1/8T\",\"1/16.\",\"1/8\",\"1/4T\",\"1/8.\",\"1/4\",\"1/2T\",\"1/4.\",\"1/2\",\"1/2.\"]},{\"key\":\"dly_fdbk\",\"n"
-    "ame\":\"Fdbk\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"dly_tone\",\"name\":\"Tone\",\"type\":\"int\",\"min\":0,\"ma"
-    "x\":127},{\"key\":\"dly_hpf\",\"name\":\"HPF\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"dly_level\",\"name\":\"Lev"
-    "el\",\"type\":\"int\",\"min\":0,\"max\":127,\"viz\":{\"kind\":\"fader\"}}]";
-#define ER99_UI_HIERARCHY_LEN 5685
+    "\",\"name\":\"Accent\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"vel_depth\",\"name\":\"Velocity\",\"type\":\"int\","
+    "\"min\":0,\"max\":127},{\"key\":\"rev_decay\",\"name\":\"Decay\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"rev_ton"
+    "e\",\"name\":\"Tone\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"rev_hpf\",\"name\":\"HPF\",\"type\":\"int\",\"min\":0,"
+    "\"max\":127},{\"key\":\"rev_level\",\"name\":\"Level\",\"type\":\"int\",\"min\":0,\"max\":127,\"viz\":{\"kind\":\"fader\"}},"
+    "{\"key\":\"dly_time\",\"name\":\"Time\",\"type\":\"enum\",\"options\":[\"1/32\",\"1/16T\",\"1/16\",\"1/8T\",\"1/16.\",\"1/8\","
+    "\"1/4T\",\"1/8.\",\"1/4\",\"1/2T\",\"1/4.\",\"1/2\",\"1/2.\"]},{\"key\":\"dly_fdbk\",\"name\":\"Fdbk\",\"type\":\"int\",\"min\":"
+    "0,\"max\":127},{\"key\":\"dly_tone\",\"name\":\"Tone\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"dly_hpf\",\"name\""
+    ":\"HPF\",\"type\":\"int\",\"min\":0,\"max\":127},{\"key\":\"dly_level\",\"name\":\"Level\",\"type\":\"int\",\"min\":0,\"max\":"
+    "127,\"viz\":{\"kind\":\"fader\"}}]";
+#define ER99_UI_HIERARCHY_LEN 5735
 static const char er99_ui_hierarchy_json[] =
     "{\"levels\":{\"bd\":{\"name\":\"Bass Drum\",\"knobs\":[\"bd_c_tune\",\"bd_c_attack\",\"bd_c_decay\",\"bd_c_sweep_dept"
     "h\",\"bd_c_pitch_mod\",\"bd_c_drive\",\"bd_c_dist_type\",\"bd_c_level\"],\"params\":[{\"key\":\"bd_c_tune\",\"name\":"
@@ -134,11 +135,12 @@ static const char er99_ui_hierarchy_json[] =
     "dly_tone\",\"dly_hpf\",\"dly_level\"],\"params\":[{\"key\":\"dly_time\",\"name\":\"Time\"},{\"key\":\"dly_fdbk\",\"name\""
     ":\"Fdbk\"},{\"key\":\"dly_tone\",\"name\":\"Tone\"},{\"key\":\"dly_hpf\",\"name\":\"HPF\"},{\"key\":\"dly_level\",\"name\":\""
     "Level\"}]},\"root\":{\"name\":\"9W9\",\"knobs\":[\"master_dist\",\"master_drive\",\"master_comp\",\"volume\",\"accent\""
-    "],\"params\":[{\"key\":\"note_map\",\"name\":\"Note Map\"},{\"level\":\"bd\",\"label\":\"Bass Drum\"},{\"level\":\"sd\",\"l"
-    "abel\":\"Snare\"},{\"level\":\"lt\",\"label\":\"Low Tom\"},{\"level\":\"mt\",\"label\":\"Med Tom\"},{\"level\":\"ht\",\"labe"
-    "l\":\"Hi Tom\"},{\"level\":\"rim\",\"label\":\"Rim Shot\"},{\"level\":\"clap\",\"label\":\"Hand Clap\"},{\"level\":\"chh\","
-    "\"label\":\"Closed Hat\"},{\"level\":\"ohh\",\"label\":\"Open Hat\"},{\"level\":\"ride\",\"label\":\"Ride\"},{\"level\":\"c"
-    "rash\",\"label\":\"Crash\"},{\"level\":\"fxrev\",\"label\":\"Reverb\"},{\"level\":\"fxdly\",\"label\":\"Delay\"},{\"key\":\""
-    "master_dist\",\"name\":\"Master Dist\"},{\"key\":\"master_drive\",\"name\":\"Master Drive\"},{\"key\":\"master_comp\""
-    ",\"name\":\"Comp\"},{\"key\":\"volume\",\"name\":\"Volume\"},{\"key\":\"accent\",\"name\":\"Accent\"}]}}}";
+    ",\"vel_depth\"],\"params\":[{\"key\":\"note_map\",\"name\":\"Note Map\"},{\"level\":\"bd\",\"label\":\"Bass Drum\"},{\"le"
+    "vel\":\"sd\",\"label\":\"Snare\"},{\"level\":\"lt\",\"label\":\"Low Tom\"},{\"level\":\"mt\",\"label\":\"Med Tom\"},{\"level"
+    "\":\"ht\",\"label\":\"Hi Tom\"},{\"level\":\"rim\",\"label\":\"Rim Shot\"},{\"level\":\"clap\",\"label\":\"Hand Clap\"},{\"l"
+    "evel\":\"chh\",\"label\":\"Closed Hat\"},{\"level\":\"ohh\",\"label\":\"Open Hat\"},{\"level\":\"ride\",\"label\":\"Ride\"}"
+    ",{\"level\":\"crash\",\"label\":\"Crash\"},{\"level\":\"fxrev\",\"label\":\"Reverb\"},{\"level\":\"fxdly\",\"label\":\"Dela"
+    "y\"},{\"key\":\"master_dist\",\"name\":\"Master Dist\"},{\"key\":\"master_drive\",\"name\":\"Master Drive\"},{\"key\":\""
+    "master_comp\",\"name\":\"Comp\"},{\"key\":\"volume\",\"name\":\"Volume\"},{\"key\":\"accent\",\"name\":\"Accent\"},{\"key\""
+    ":\"vel_depth\",\"name\":\"Velocity\"}]}}}";
 #endif

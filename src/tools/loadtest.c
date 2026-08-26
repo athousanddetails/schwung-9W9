@@ -484,6 +484,40 @@ int main(int argc, char**argv){
     api->set_param(inst, "ohh_dist_type", "0");
     api->set_param(inst, "rc_drive", "0");
 
+    /* Velocity. Below the accent point it must scale the voice; at or above it
+     * the accent gain is untouched at any depth, so no existing pattern gets
+     * quieter. Depth 0 restores the old switch: every sub-accent velocity the
+     * same level. */
+    {
+        long p30=0, p90=0, p110=0, f30=0, f90=0, f110=0;
+        for(int pass=0; pass<2; ++pass){
+            api->set_param(inst, "vel_depth", pass ? "0" : "127");
+            const int vv[3] = { 30, 90, 110 };
+            long out3[3] = {0,0,0};
+            for(int i=0;i<3;++i){
+                for(int b=0;b<200;++b) api->render_block(inst,out,128);   /* drain */
+                uint8_t hit[3] = { 0x90, 43, (uint8_t)vv[i] };            /* closed hat */
+                api->on_midi(inst, hit, 3, 0);
+                long pk=0;
+                for(int b=0;b<80;++b){
+                    api->render_block(inst,out,128);
+                    for(int k=0;k<256;++k){ long a=out[k]<0?-out[k]:out[k]; if(a>pk)pk=a; }
+                }
+                out3[i]=pk;
+            }
+            if(pass){ f30=out3[0]; f90=out3[1]; f110=out3[2]; }
+            else    { p30=out3[0]; p90=out3[1]; p110=out3[2]; }
+        }
+        api->set_param(inst, "vel_depth", "127");
+        char l[128];
+        snprintf(l,sizeof l,"velocity scales below accent (v30 %ld < v90 %ld)",p30,p90);
+        CHECK(p30 > 0 && p30 * 10 < p90 * 7, l);
+        snprintf(l,sizeof l,"accented hit identical at any depth (%ld vs %ld)",p110,f110);
+        CHECK(p110 == f110 && p110 > 0, l);
+        snprintf(l,sizeof l,"depth 0 restores the switch (v30 %ld == v90 %ld)",f30,f90);
+        CHECK(f30 == f90 && f30 > 0, l);
+    }
+
     /* FX sends: rim into the delay must produce an echo at 260 ms that is
      * absent with the send at zero; snare into the reverb must leave tail
      * energy where the dry voice is already dead. */

@@ -592,7 +592,14 @@
             "min": 0,
             "max": 127
           },
-          null,
+          {
+            "key": "vel_depth",
+            "short": "VEL",
+            "full": "Velocity",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
           null,
           null
         ]

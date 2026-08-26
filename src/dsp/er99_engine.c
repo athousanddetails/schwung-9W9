@@ -281,6 +281,7 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
      * leaves room for the pot to travel and for eleven voices to sum. */
     e->master.volume       = 0.35f;  /* globalParams.volume  */
     e->master.accent       = 2.0f;   /* globalParams.globalAccent */
+    e->master.vel_depth    = 1.0f;   /* velocity live by default */
 
     /* Derive initial pot positions from the defaults above. */
     er99_engine_seed_pots(e);
@@ -303,7 +304,27 @@ void er99_engine_free(er99_engine_t *e)
 void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const int _velocity)
 {
 
-    const float accent = _velocity >= ER99_ACCENT_VELOCITY ? e->master.accent : 1.0f;
+    /* Accent, and the velocity under it.
+     *
+     * The switch is the 909's: at or above ER99_ACCENT_VELOCITY the accent bus
+     * lifts the voice, below it every note is the same level. That "below it
+     * every note is the same" is what made velocity look broken from Move —
+     * a hat at 30 and a hat at 90 came out identical.
+     *
+     * vel_depth blends in a continuous law for the sub-accent range only:
+     * gain = velocity / ER99_ACCENT_VELOCITY, so a note at 99 stays where it
+     * was (0.99) and the dynamics open up underneath it. Accented notes keep
+     * the accent gain exactly, at every depth — no existing pattern gets
+     * quieter, and the accent still snaps the way the hardware does. */
+    float accent;
+    if(_velocity >= ER99_ACCENT_VELOCITY)
+        accent = e->master.accent;
+    else
+    {
+        const float v = (float)(_velocity < 0 ? 0 : _velocity)
+                      * (1.0f / (float)ER99_ACCENT_VELOCITY);
+        accent = 1.0f + (v - 1.0f) * e->master.vel_depth;
+    }
     const float sr = e->sample_rate;
 
     switch(_which)
@@ -672,7 +693,7 @@ static const char *const g_other_state_keys[] = {
     "chh_decay", "chh_volume", "chh_pitch", "chh_drive",
     "rc_decay", "rc_volume", "rc_pitch",
     "cr_decay", "cr_volume", "cr_pitch",
-    "volume", "accent", "master_dist", "master_comp", "dly_time",
+    "volume", "accent", "vel_depth", "master_dist", "master_comp", "dly_time",
     "rs_dist_type", "hc_dist_type", "ohh_dist_type", "chh_dist_type",
     "rc_dist_type", "cr_dist_type",
 };
@@ -801,6 +822,11 @@ int er99_engine_set_raw(er99_engine_t *e, const char *key, const float value)
     if(!strcmp(key, "master_comp")) { e->master.comp = value < 0.0f ? 0.0f : (value > 1.0f ? 1.0f : value); return 1; }
     if(!strcmp(key, "volume")) { e->master.volume = value; return 1; }
     if(!strcmp(key, "accent")) { e->master.accent = value; return 1; }
+    if(!strcmp(key, "vel_depth"))
+    {
+        e->master.vel_depth = value < 0.0f ? 0.0f : (value > 1.0f ? 1.0f : value);
+        return 1;
+    }
     return 0;
 }
 
@@ -877,6 +903,7 @@ int er99_engine_get_raw(const er99_engine_t *e, const char *key, float *out)
     if(!strcmp(key, "master_comp")) { *out = e->master.comp; return 1; }
     if(!strcmp(key, "volume"))    { *out = e->master.volume; return 1; }
     if(!strcmp(key, "accent"))    { *out = e->master.accent; return 1; }
+    if(!strcmp(key, "vel_depth")) { *out = e->master.vel_depth; return 1; }
     return 0;
 }
 

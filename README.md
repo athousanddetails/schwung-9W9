@@ -59,8 +59,16 @@ Each has an input **HPF** so low end can be kept out of the wet path.
 
 **Master Dist** and **Drive** across the kit, a one-knob **Comp** for glue
 (hard bypass at zero, with AutoGain fitted so loudness stays flat as you turn
-it up), **Volume**, **Accent**, and the **Note Map** switch. There is no
-always-on compressor or limiter anywhere else in the signal path.
+it up), **Volume**, **Accent**, **Velocity**, and the **Note Map** switch.
+There is no always-on compressor or limiter anywhere else in the signal path.
+
+**Velocity** sets how much incoming note velocity scales the drums. The real
+909's accent is a per-step *switch* — one bus, one level — so a note at 30 and
+a note at 90 came out identical, which made velocity look broken from Move's
+sequencer. This knob blends in a continuous law below the accent point, which
+is where hi-hat ghost notes live. Accented notes (velocity 100 and up) keep the
+accent gain exactly, at any setting, so nothing you already programmed gets
+quieter. At **0** the strict 909 switch is back.
 
 ## Workflow on the Move
 

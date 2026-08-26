@@ -114,6 +114,15 @@ typedef struct {
     float volume;
     float accent;       /* globalParams.globalAccent = 2.0 */
 
+    /* Velocity sensitivity, 0..1. The 909's accent is a per-step SWITCH — one
+     * bus, one level — so this engine did the same: every note under
+     * ER99_ACCENT_VELOCITY sounded identical and every note over it sounded
+     * identical. Move's sequencer sends continuous velocity, and hi-hat
+     * grooves are unplayable without it. At 0 the strict switch is back,
+     * bit-identical; above it, velocities BELOW the accent point scale the
+     * voice continuously. Accented notes are untouched at any depth. */
+    float vel_depth;
+
     /* One-knob bus glue — OURS, requested as a feature, not 909 circuitry,
      * and unlike the compressor this module once inherited it is honest
      * about it: at zero the stage is bypassed entirely (bit-identical), and
