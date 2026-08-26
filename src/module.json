@@ -4,7 +4,7 @@
     "abbrev": "9W9",
     "version": "2.0.0",
     "description": "TR-909 style drum machine - circuit-modelled kick, snare, toms, rim and clap; sampled hats and cymbals",
-    "author": "athousanddetails; after ER-99 (Matthew Cieplak) and niner (hyperfocusdsp)",
+    "author": "athousanddetails; after ER-99 (Matthew Cieplak)",
     "dsp": "dsp.so",
     "api_version": 2,
     "capabilities": {
