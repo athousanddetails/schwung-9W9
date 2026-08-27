@@ -525,6 +525,14 @@ int main(int argc, char**argv){
         int flat = 1;
         for(int i=1;i<6;++i) if(off[i] != off[0]) flat = 0;
         CHECK(flat && off[0] > 0, l);
+
+        /* The knob must only ever carve downwards: a full-velocity hit is the
+         * voice's own level whatever Velocity is set to. An earlier cut hung
+         * the top of the curve on the accent pot and turning Velocity up made
+         * hard hits 6 dB LOUDER, moving the kit's balance with it. */
+        snprintf(l,sizeof l,"velocity never boosts (v127 %ld at full == %ld at zero)",
+                 full[5], off[5]);
+        CHECK(full[5] == off[5], l);
     }
 
     /* FX sends: rim into the delay must produce an echo at 260 ms that is

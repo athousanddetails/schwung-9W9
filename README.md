@@ -59,21 +59,21 @@ Each has an input **HPF** so low end can be kept out of the wet path.
 
 **Master Dist** and **Drive** across the kit, a one-knob **Comp** for glue
 (hard bypass at zero, with AutoGain fitted so loudness stays flat as you turn
-it up), **Volume**, **Accent**, **Velocity**, and the **Note Map** switch.
-There is no always-on compressor or limiter anywhere else in the signal path.
+it up), **Volume**, **Velocity**, and the **Note Map** switch. There is no
+always-on compressor or limiter anywhere else in the signal path.
 
-**Velocity** sets how much incoming note velocity moves the level, and it is
-one straight line — no threshold, no switch. At **0** velocity is ignored
-completely and every hit comes out the same. Turn it up and the range opens:
-about 3.5 dB from softest to hardest at a quarter, 7 dB at half, 15 dB wide
-open. Velocity 127 reaches the **Accent** gain, and velocity 64 lands on unity,
-where an unaccented hit always sat.
+**Velocity** sets how much incoming note velocity moves the level. A
+full-velocity hit is always the voice's own Level, whatever this is set to —
+the knob only carves the softer hits down, so it never changes the kit's
+loudness or its balance, only its dynamics. At **0** velocity is ignored
+entirely and everything plays straight. Turn it up and the range opens: about
+2 dB from softest to hardest at a quarter, 4.6 dB at half, 15.4 dB wide open.
 
-(The hardware accents with a per-step switch — one level under its threshold,
-another over it. Modelling that literally left a 6 dB cliff between velocity 99
-and 100 with flat shelves either side, which is not how anything driving this
-from a sequencer expects to behave. **Accent** now simply sets the level a
-full-velocity hit reaches.)
+(The hardware accents with a per-step *switch* — one level under a threshold,
+another over it — and modelling that literally left a 6 dB cliff between
+velocity 99 and 100 with flat shelves either side. That is not how anything
+driven from a sequencer expects to behave, so the threshold is gone, and with
+it the Accent pot that used to set the top of it.)
 
 ## Workflow on the Move
 

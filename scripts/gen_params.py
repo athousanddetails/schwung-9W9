@@ -141,7 +141,7 @@ glob=[{"key":"master_dist","name":"Master Dist","type":"enum",
        "options":["Off","Diode (909)","Hard Clip","SAT","BFZ","PDIST","Wavefolder","Bitcrush"]},
       F("master_drive","Master Drive",0,127,1),
       F("master_comp","Comp",0,1,0.01),
-      F("volume","Volume",0,1,0.01), F("accent","Accent",1,4,0.05),
+      F("volume","Volume",0,1,0.01),
       F("vel_depth","Velocity",0,1,0.01)]
 cp+=rim+clap+chat+ohat+ride+crash+glob
 
@@ -167,9 +167,44 @@ for lid,label,ps in (("rim","Rim Shot",rim),("clap","Hand Clap",clap),
 
 root+=[{"key":"master_dist","name":"Master Dist"},{"key":"master_drive","name":"Master Drive"},
        {"key":"master_comp","name":"Comp"},
-       {"key":"volume","name":"Volume"},{"key":"accent","name":"Accent"},
+       {"key":"volume","name":"Volume"},
        {"key":"vel_depth","name":"Velocity"}]
-levels["root"]={"name":"9W9","knobs":["master_dist","master_drive","master_comp","volume","accent","vel_depth"],"params":root}
+levels["root"]={"name":"9W9","knobs":["master_dist","master_drive","master_comp","volume","vel_depth"],"params":root}
+
+# Two audiences, two spellings of the same control.
+#
+# The knob grid draws a param under a page that already says CLOSED HAT, so
+# there it wants to read "Decay". Schwung's LFO target picker draws one FLAT
+# list across the whole module, where eleven voices each contribute a "Decay"
+# and nothing says which pad you are about to automate.
+#
+# param_meta.mjs merges the two sources as {...inlineHierarchy, ...chainParams}
+# and then resolves `meta.label || meta.name`. chain_params spells the display
+# string `name`, inline hierarchy entries spell it `label` — so a `label` on
+# the hierarchy entry survives the merge AND wins the fallback. That is the
+# seam: prefix `name` for the picker, keep `label` bare for the page.
+# (validate_contract.mjs checks `<level>.<key>.label`, so this is also what the
+# contract asked for all along; these entries had been emitting `name`.)
+PREFIX = [("bd_c_","BD"), ("sd_c_","SD"), ("lt_c_","LT"), ("mt_c_","MT"),
+          ("ht_c_","HT"), ("rs_","Rim"), ("hc_","Clap"), ("chh_","CH"),
+          ("ohh_","OH"), ("rc_","Ride"), ("cr_","Crash"),
+          ("rev_","Rev"), ("dly_","Dly")]
+
+def qualify(key, name):
+    """Voice-qualified name for the flat list; globals are already unique."""
+    for pre, tag in PREFIX:
+        if key.startswith(pre):
+            return f"{tag} {name}"
+    return name
+
+for e in cp:
+    e["name"] = qualify(e["key"], e["name"])
+
+# Hierarchy params carry the bare label, so the pages stay readable.
+for lvl in levels.values():
+    for pentry in lvl.get("params", []):
+        if "name" in pentry and "key" in pentry:
+            pentry["label"] = pentry.pop("name")
 
 cpj=json.dumps(cp,separators=(",",":")); uhj=json.dumps({"levels":levels},separators=(",",":"))
 def cstr(s):

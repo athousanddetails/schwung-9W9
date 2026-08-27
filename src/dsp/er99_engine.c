@@ -280,7 +280,6 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
      * nothing but clip harder — the panel felt broken because it was. This
      * leaves room for the pot to travel and for eleven voices to sum. */
     e->master.volume       = 0.35f;  /* globalParams.volume  */
-    e->master.accent       = 2.0f;   /* globalParams.globalAccent */
     e->master.vel_depth    = 1.0f;   /* velocity live by default */
 
     /* Derive initial pot positions from the defaults above. */
@@ -304,22 +303,23 @@ void er99_engine_free(er99_engine_t *e)
 void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const int _velocity)
 {
 
-    /* How loud this hit is, from its velocity. One straight line, no switch.
+    /* How loud this hit is, from its velocity.
      *
-     * The 909 accents by a per-step SWITCH: under its threshold every note is
-     * one level, over it every note is another. Modelling that literally gave
-     * a 6 dB cliff between velocity 99 and 100 and two flat shelves either
-     * side of it — which is not what anyone driving this from a sequencer
-     * expects, and it made the Velocity knob impossible to reason about. The
-     * threshold is gone. Level follows velocity all the way up, reaching the
-     * Accent gain at 127; velocity 64 still lands on unity, where an
-     * unaccented hit always sat.
+     * Full velocity is the voice's own level, and softer hits come down from
+     * there — velocity attenuates, it never boosts. The Velocity knob is how
+     * far down the softest hit falls: at 0 nothing moves and the kit plays
+     * straight, at 127 velocity 1 is ~42 dB under velocity 127.
      *
-     * Velocity sets how much of that line applies. At 0 the response is flat
-     * and velocity is ignored completely; at 127 it is the full range. */
-    const float v = (float)(_velocity < 0 ? 0 : (_velocity > 127 ? 127 : _velocity))
-                  * (1.0f / 127.0f);
-    const float accent = 1.0f + (e->master.accent * v - 1.0f) * e->master.vel_depth;
+     * Two earlier cuts got this wrong in ways worth not repeating. The first
+     * reproduced the 909's accent SWITCH literally, which from a sequencer is
+     * a 6 dB cliff between velocity 99 and 100 with a flat shelf either side.
+     * The second made it one line but hung the top of that line on the Accent
+     * pot, so turning Velocity up made hard hits ~6 dB LOUDER than they play
+     * at Velocity 0 — the knob moved the kit's loudness and its balance, not
+     * just its dynamics. Anchoring at 127 means the knob only ever carves
+     * downwards, and the accent pot has nothing left to do. */
+    const int   vi = _velocity < 0 ? 0 : (_velocity > 127 ? 127 : _velocity);
+    const float vgain = 1.0f - e->master.vel_depth * (1.0f - (float)vi * (1.0f/127.0f));
     const float sr = e->sample_rate;
 
     switch(_which)
@@ -380,9 +380,9 @@ void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const in
          * envelopes plus a noise attack (er99_tom909.h). They read the same
          * panel values as the two-oscillator voice, so nothing else changes. */
         if(_which >= ER99_LT && _which <= ER99_HT)
-            er99_tom909_trigger(&e->tom909[_which - ER99_LT], &e->bt[_which], accent);
+            er99_tom909_trigger(&e->tom909[_which - ER99_LT], &e->bt[_which], vgain);
         else
-            er99_bt_trigger(&e->bt[_which], accent);
+            er99_bt_trigger(&e->bt[_which], vgain);
         break;
 
     case ER99_RS: {
@@ -397,13 +397,13 @@ void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const in
             { r9->tune2 = t2; r9->res = q; er99_rim909_retune(r9); }
             r9->noise_mix = 0.35f;   /* inside the 2-sample pulse only */
             r9->decay     = 200.0f;  /* -30 dB at ~30 ms, as measured */
-            er99_rim909_trigger(r9, accent);
+            er99_rim909_trigger(r9, vgain);
             break;
         }
     }
 
     case ER99_HC: {
-        er99_clap909_trigger(&e->clap909, accent);
+        er99_clap909_trigger(&e->clap909, vgain);
         break;
     }
 
@@ -426,7 +426,7 @@ void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const in
             other->mute_countdown = ms_to_samples(6.0f, sr);
         }
 
-        wa_set_value(&s->out, s->volume * accent);
+        wa_set_value(&s->out, s->volume * vgain);
         wa_exp_ramp(&s->out, 0.00001f, ms_to_samples(s->decay, sr));
         s->pos = 0.0;                          /* restart the buffer */
         s->mute_countdown = ms_to_samples(s->decay, sr);
@@ -688,7 +688,7 @@ static const char *const g_other_state_keys[] = {
     "chh_decay", "chh_volume", "chh_pitch", "chh_drive",
     "rc_decay", "rc_volume", "rc_pitch",
     "cr_decay", "cr_volume", "cr_pitch",
-    "volume", "accent", "vel_depth", "master_dist", "master_comp", "dly_time",
+    "volume", "vel_depth", "master_dist", "master_comp", "dly_time",
     "rs_dist_type", "hc_dist_type", "ohh_dist_type", "chh_dist_type",
     "rc_dist_type", "cr_dist_type",
 };
@@ -816,7 +816,6 @@ int er99_engine_set_raw(er99_engine_t *e, const char *key, const float value)
     if(!strcmp(key, "master_dist"))  { e->master.dist_mode = value < 0 ? 0 : (value > 7 ? 7 : value); return 1; }
     if(!strcmp(key, "master_comp")) { e->master.comp = value < 0.0f ? 0.0f : (value > 1.0f ? 1.0f : value); return 1; }
     if(!strcmp(key, "volume")) { e->master.volume = value; return 1; }
-    if(!strcmp(key, "accent")) { e->master.accent = value; return 1; }
     if(!strcmp(key, "vel_depth"))
     {
         e->master.vel_depth = value < 0.0f ? 0.0f : (value > 1.0f ? 1.0f : value);
@@ -897,7 +896,6 @@ int er99_engine_get_raw(const er99_engine_t *e, const char *key, float *out)
     if(!strcmp(key, "master_dist"))  { *out = e->master.dist_mode; return 1; }
     if(!strcmp(key, "master_comp")) { *out = e->master.comp; return 1; }
     if(!strcmp(key, "volume"))    { *out = e->master.volume; return 1; }
-    if(!strcmp(key, "accent"))    { *out = e->master.accent; return 1; }
     if(!strcmp(key, "vel_depth")) { *out = e->master.vel_depth; return 1; }
     return 0;
 }

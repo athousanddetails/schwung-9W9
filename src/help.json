@@ -54,18 +54,17 @@
         "Main > Velocity sets",
         "how much note",
         "velocity moves the",
-        "level. One straight",
-        "line, no switch.",
+        "level.",
+        "",
+        "Full velocity is",
+        "always the voice's",
+        "own Level; the knob",
+        "only carves the",
+        "softer hits down.",
         "",
         "0: velocity ignored,",
-        "every hit the same.",
-        "Turn it up and the",
-        "range opens: 15 dB",
-        "wide open.",
-        "",
-        "Accent sets what a",
-        "full-velocity hit",
-        "reaches."
+        "everything plays",
+        "straight."
       ]
     },
     {
