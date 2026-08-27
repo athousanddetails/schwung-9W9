@@ -185,9 +185,11 @@ levels["root"]={"name":"9W9","knobs":["master_dist","master_drive","master_comp"
 # seam: prefix `name` for the picker, keep `label` bare for the page.
 # (validate_contract.mjs checks `<level>.<key>.label`, so this is also what the
 # contract asked for all along; these entries had been emitting `name`.)
-PREFIX = [("bd_c_","BD"), ("sd_c_","SD"), ("lt_c_","LT"), ("mt_c_","MT"),
-          ("ht_c_","HT"), ("rs_","Rim"), ("hc_","Clap"), ("chh_","CH"),
-          ("ohh_","OH"), ("rc_","Ride"), ("cr_","Crash"),
+# The 909's own panel abbreviations, two letters each: rc_ is the RIDE cymbal
+# and cr_ is the CRASH cymbal, so they read RD and CY, not the other way round.
+PREFIX = [("bd_c_","BD"), ("sd_c_","SN"), ("lt_c_","LT"), ("mt_c_","MT"),
+          ("ht_c_","HT"), ("rs_","RM"),   ("hc_","CP"),   ("chh_","CH"),
+          ("ohh_","OH"), ("rc_","RD"),    ("cr_","CY"),
           ("rev_","Rev"), ("dly_","Dly")]
 
 def qualify(key, name):
