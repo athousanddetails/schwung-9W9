@@ -304,27 +304,25 @@ void er99_engine_free(er99_engine_t *e)
 void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const int _velocity)
 {
 
-    /* Accent, and the velocity under it.
+    /* How loud this hit is, from its velocity.
      *
-     * The switch is the 909's: at or above ER99_ACCENT_VELOCITY the accent bus
-     * lifts the voice, below it every note is the same level. That "below it
-     * every note is the same" is what made velocity look broken from Move —
-     * a hat at 30 and a hat at 90 came out identical.
+     * At full response the law is the 909's, extended downwards: at or above
+     * ER99_ACCENT_VELOCITY the accent bus lifts the voice, and below it the
+     * level follows velocity/ER99_ACCENT_VELOCITY, so a note at 99 sits where
+     * an unaccented note always did (0.99) and the dynamics open up under it.
      *
-     * vel_depth blends in a continuous law for the sub-accent range only:
-     * gain = velocity / ER99_ACCENT_VELOCITY, so a note at 99 stays where it
-     * was (0.99) and the dynamics open up underneath it. Accented notes keep
-     * the accent gain exactly, at every depth — no existing pattern gets
-     * quieter, and the accent still snaps the way the hardware does. */
-    float accent;
-    if(_velocity >= ER99_ACCENT_VELOCITY)
-        accent = e->master.accent;
-    else
-    {
-        const float v = (float)(_velocity < 0 ? 0 : _velocity)
-                      * (1.0f / (float)ER99_ACCENT_VELOCITY);
-        accent = 1.0f + (v - 1.0f) * e->master.vel_depth;
-    }
+     * The Velocity knob scales that whole law towards "no response at all",
+     * because that is what the control says it does. The first cut only faded
+     * the sub-accent half and left the accent switch live at every setting —
+     * so at Velocity 0 a hit at 127 (what Move's Full Velocity sends) was
+     * still 6 dB over a hit at 80, which is exactly the thing the knob was
+     * supposed to be able to turn off. Now 0 means every hit is the same
+     * level, whatever velocity arrives, and 127 is the full law. */
+    const float full = _velocity >= ER99_ACCENT_VELOCITY
+                     ? e->master.accent
+                     : (float)(_velocity < 0 ? 0 : _velocity)
+                       * (1.0f / (float)ER99_ACCENT_VELOCITY);
+    const float accent = 1.0f + (full - 1.0f) * e->master.vel_depth;
     const float sr = e->sample_rate;
 
     switch(_which)

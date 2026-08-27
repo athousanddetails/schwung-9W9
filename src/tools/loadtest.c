@@ -512,10 +512,13 @@ int main(int argc, char**argv){
         char l[128];
         snprintf(l,sizeof l,"velocity scales below accent (v30 %ld < v90 %ld)",p30,p90);
         CHECK(p30 > 0 && p30 * 10 < p90 * 7, l);
-        snprintf(l,sizeof l,"accented hit identical at any depth (%ld vs %ld)",p110,f110);
-        CHECK(p110 == f110 && p110 > 0, l);
-        snprintf(l,sizeof l,"depth 0 restores the switch (v30 %ld == v90 %ld)",f30,f90);
-        CHECK(f30 == f90 && f30 > 0, l);
+        snprintf(l,sizeof l,"accent lifts the hit at full depth (v110 %ld > v90 %ld)",p110,p90);
+        CHECK(p110 > p90 * 13 / 10, l);
+        /* Velocity 0 must mean velocity 0: every velocity the same level,
+         * accented ones included. Move's Full Velocity sends 127, and with the
+         * first cut that still jumped 6 dB over a hand-played hit. */
+        snprintf(l,sizeof l,"Velocity 0 = no response at all (v30 %ld, v90 %ld, v110 %ld)",f30,f90,f110);
+        CHECK(f30 == f90 && f90 == f110 && f30 > 0, l);
     }
 
     /* FX sends: rim into the delay must produce an echo at 260 ms that is

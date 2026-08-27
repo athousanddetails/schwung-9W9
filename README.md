@@ -62,13 +62,12 @@ Each has an input **HPF** so low end can be kept out of the wet path.
 it up), **Volume**, **Accent**, **Velocity**, and the **Note Map** switch.
 There is no always-on compressor or limiter anywhere else in the signal path.
 
-**Velocity** sets how much incoming note velocity scales the drums. The real
-909's accent is a per-step *switch* — one bus, one level — so a note at 30 and
-a note at 90 came out identical, which made velocity look broken from Move's
-sequencer. This knob blends in a continuous law below the accent point, which
-is where hi-hat ghost notes live. Accented notes (velocity 100 and up) keep the
-accent gain exactly, at any setting, so nothing you already programmed gets
-quieter. At **0** the strict 909 switch is back.
+**Velocity** sets how much incoming note velocity scales the drums, from none
+to full. At **0** velocity is ignored completely and every hit is the same
+level, whatever arrives. At **127** the law is the 909's, extended downwards:
+velocity 100 and up gets the accent gain, and below that the level follows
+velocity — which is where hi-hat ghost notes live. Everything between scales
+the whole response proportionally.
 
 ## Workflow on the Move
 
