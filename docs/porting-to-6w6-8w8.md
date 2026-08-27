@@ -1,0 +1,341 @@
+# Porting 9W9's distortion stage, Main-page lock and send FX to 6W6 / 8W8
+
+Written for the agent working in **schwung-6W6** or **schwung-8W8**. Everything
+below has already been built, measured and approved on hardware in 9W9; your
+job is to move it across without changing how the existing kit sounds.
+
+**Reference implementation:** `/Users/gustavolima/Developer/909-schwung/schwung-er99`
+(`main`, v2.2.0+). Read it directly and copy the maths — this document tells
+you *what* to copy, *what will bite you*, and *what to prove before committing*.
+
+**Scope split — read this first.** Gus wants, in this order:
+
+1. **The seven-type distortion stage** — do it now.
+2. **The Main-page jog lock** — do it now.
+3. **Velocity** (§4) — do it now; it is a bug in both kits today.
+4. **Voice-qualified LFO names** (§5) — do it now; small and self-contained.
+5. **The send FX (reverb + delay)** — port the **DSP only**. Do **not** design
+   the pages, pad mapping or panel layout. Gus wants to change the UI/UX
+   himself first and will say when to wire it up.
+
+---
+
+## 0. Ground rules
+
+**The existing kit must not change.** 6W6 and 8W8 were fitted against hardware
+(`tools/fit_defaults.cpp`, `tools/kit_check.cpp`). The proof expected is an A/B
+checksum: build the current `HEAD` and your tree from the same probe, render
+the whole kit plus a pattern, hash the floats, compare. Identical, or a
+difference with a measured number and a reason attached. "It sounds the same"
+is not a proof.
+
+```c
+/* render every voice for 1 s at default pots, hash the floats */
+for(int v=0; v<NUM_VOICES; ++v){
+    engine_init(&e, 44100, SAMPLE_DIR); engine_seed_pots(&e);
+    engine_trigger(&e, v, 110);
+    engine_render(&e, o, 44100);
+    for(int i=0;i<44100;++i){ union{float f;unsigned u;}b; b.f=o[i];
+                              h = (h ^ b.u) * 16777619u; }
+}
+```
+
+Print a **per-voice running hash**, not just the final one. When 9W9's FX port
+diverged, the per-voice split named the first affected voice in one run.
+
+Build probes natively on the VPS (`ssh vps`, repos in `~/schwung-dev/<proj>`),
+not in the ARM container.
+
+**Process traps that cost real time:**
+
+- `rsync` skips files whose mtime looks unchanged and ninja then builds stale
+  sources. Always `find src -type f -exec touch {} +` before building.
+- Build the "old" side from `git archive <tag>`, and build **both sides with
+  identical flags in the same shell**. A phantom 5% difference once turned out
+  to be a months-old scratch copy plus a differing `-D`.
+- Heredocs and `git commit -m` do not mix with backticks: `` `label` `` in a
+  message is command substitution and the word vanishes from the commit.
+
+---
+
+## 1. The seven-type distortion stage
+
+The current 4 types (Diode, Clip, Fold, Crush) become 7, in menu order:
+
+| # | Name | Character |
+|---|---|---|
+| 0 | Diode | the machine's own back-to-back diode rounding (unchanged) |
+| 1 | Clip | asymmetric soft clip, even harmonics |
+| 2 | SAT | warm parallel saturation, keeps the transient |
+| 3 | BFZ | thick fuzz wall |
+| 4 | PDIST | biased cubic crunch |
+| 5 | Fold | wavefolder (was #2) |
+| 6 | Crush | quantise **and** decimate (was #3) |
+
+Copy the maths verbatim from `src/dsp/er99_circuit.h`, `er99_shape_st()`. Do
+not re-derive it — Gus has approved how these sound and asked explicitly that
+nobody go looking for other references.
+
+Two structural changes come with it:
+
+- **`_st` state parameter.** Crush decimates as well as quantises, so it needs
+  two floats of state per shaper instance (held sample, decimator phase). Add
+  `float crush_st[2]` to the per-voice runtime struct (`VoiceRt`) and one for
+  the master stage. Keep a stateless wrapper passing null so existing call
+  sites still compile.
+- **Option text is sized for the grid's enum box:** two lines of three
+  characters. "SAT", "BFZ", "PDIST" were picked partly for that. Do not rename.
+
+### The dead-zone fix, and the trap under it
+
+Gus's complaint was *"Distortion only kinda kicks in around 53"*. The drive pot
+is `(0.2, 8) EXP`, so unity sits at **pot 55** and the bottom 43% of the knob
+only attenuates. 9W9 uses `(0.85, 12) EXP`, unity at pot ~7.8.
+
+**This breaks saved patches if you rush it.** In 6W6/8W8 the state blob stores
+pot positions and enum selections **by table index**
+(`{"v":1,"pots":[...],"enums":[...]}`, see `sd606_serialize`). Changing a pot's
+range silently changes what every stored position means; growing an enum's
+option count silently changes every stored selection.
+
+So the port **must** include a migration:
+
+1. Bump `SD606_STATE_VERSION` / `SC808_STATE_VERSION` to `2`.
+2. **Read the `"v"` field in `deserialize` — the current code parses the blob
+   and ignores the version.** Add that first.
+3. When `v == 1`:
+   - **Drive pots:** recover `0.2 * (8/0.2)^(pot/127)`, then re-solve
+     `127 * ln(value/0.85) / ln(12/0.85)`, clamped 0..127. Old pot 55
+     (value 0.988) maps to new pot ~7, preserving the sound. Old positions
+     below ~52 were attenuating settings the new range cannot express; they
+     clamp to 0, which matches 9W9.
+   - **`*_dist_type`:** 0→0, 1→1, **2→5** (Fold), **3→6** (Crush).
+   - **`master_dist`:** 0→0 (Off), 1→1, 2→2, **3→6**, **4→7**.
+4. Enum counts: `*_dist_type` 4→7, `master_dist` 5→8. `deserialize` clamps
+   `v >= count` to `count-1`, so without step 3 every old "Crush" patch comes
+   back as something else.
+
+### Defaults
+
+Set each drive pot's default to the position nearest unity (**pot 8** = 1.0043
+on the new range). Measure what that 0.43% does at defaults and report the
+number. If Gus wants bit-exact defaults, the min can be nudged to 0.84617 so
+unity lands exactly on pot 8 — ask first, it makes the curve differ slightly
+from 9W9's.
+
+### Also update
+
+`scripts/gen_params.py` (the `DIST` list and `DRIVE()` range — it is the single
+source of truth, regenerate `*_params.h`, never hand-edit), `src/web_ui.html`,
+`src/movy_config.json`.
+
+---
+
+## 2. The Main-page jog lock
+
+Self-contained, entirely in `src/ui_chain.js`. 6W6's and 8W8's chain UI are
+structurally the same file as 9W9's, so this is close to a copy.
+
+**Behaviour:** a jog **click while already on the Main/root page** toggles a
+lock. While locked, pads still play and still record, but the page stops
+following them — so the master knobs stay under your hands while you jam.
+`Shift+Pad` still navigates (an explicit "take me there"). Another click
+unlocks. The title bar shows `[L]`.
+
+Port from 9W9's `src/ui_chain.js`:
+
+- `mainLocked()` — reads `globalThis.__9w9_main_lock`. **It must live on
+  `globalThis`**, renamed per module (`__6w6_main_lock`). The host re-evaluates
+  this file every time the editor opens, so module-level state resets and the
+  lock would appear to drop itself.
+- `onMainPage()` — true when `page.level === "root" || page.level == null`.
+- In `title()` — append `" [L]"` when locked, before the existing `[M]` logic.
+- In the pad handler, **after** the Mute+Pad branch and **before** Shift:
+
+```js
+if (mainLocked() && !shiftHeld()) {
+    if (!isPageOnlyPad(d1)) injectToMove(data);
+    return;
+}
+```
+
+- In the "everything else" branch, intercept the click **before**
+  `applyInput`, or the section picker eats it:
+
+```js
+if (intent.type === "click" && !controller.pickerOpen && onMainPage()) {
+    globalThis.__6w6_main_lock = !globalThis.__6w6_main_lock;
+    return;
+}
+```
+
+- Add a line to the first-run hint.
+
+**Verification.** 9W9 has a headless harness that loads a sed-rewritten copy of
+`ui_chain.js` against a stubbed host and asserts the lock arms, blocks page
+changes, shows `[L]`, honours Shift+Pad, and unlocks. 6W6 already has
+`test/ui_chain.test.mjs` to extend.
+
+---
+
+## 3. Send FX — DSP only, UI deferred
+
+**Build the engine, not the pages.** Do not add these to the page hierarchy,
+the pad map, the web panel or the Movy config yet.
+
+Two send buses, summed per sample from each voice through a per-voice send
+amount, returned into the mix **before** the master distortion and Comp so
+those work on the wet signal too.
+
+**Every voice except the kick gets sends.** The kick stays dry — Gus's explicit
+call in 9W9. Flag it for these kits rather than assuming.
+
+Copy `er99_verb_t` / `er99_dly_t` and their ticks from `src/dsp/er99_engine.h`
+and `er99_engine.c`:
+
+- **Reverb:** 4 combs (1116, 1188, 1277, 1356) into 2 allpasses (556, 441),
+  loop quantised to 12 bits. Params: Decay, Tone (loop damping), HPF, Level.
+- **Delay:** one line, `ER99_DLY_MAX 88200` (2 s at 44.1 k), slewed read so time
+  changes warp the echo instead of clicking, one-pole darkening in the
+  feedback, 12-bit writes. Params: Time, Fdbk, Tone, HPF, Level.
+
+### Delay Time is a note division, not milliseconds
+
+13 divisions — 1/32, 1/16T, 1/16, 1/8T, 1/16., 1/8, 1/4T, 1/8., 1/4, 1/2T,
+1/4., 1/2, 1/2. — in beats:
+
+```c
+{ 0.125, 1/6.f, 0.25, 1/3.f, 0.375, 0.5, 2/3.f, 0.75, 1.0, 4/3.f, 1.5, 2.0, 3.0 }
+```
+
+`dly_time` is therefore an **enum**, not a pot — it must be in the enum table
+and in `is_enum_key()`, or the pot layer rescales it into nonsense.
+
+The plugin feeds tempo per block from `g_host->get_bpm()`, writing a `dly_bpm`
+raw key only when the value changes; the engine recomputes from
+`beats * 60000 / bpm`, clamped to the line length. Default is the dotted eighth.
+
+### Three bugs already hit — do not re-introduce
+
+1. **The delay read can index one past the buffer.** The read pointer is a
+   float; at 36000 the float spacing is 1/256, so a read a hair under the wrap
+   point rounds **up** to exactly `DLY_MAX` and reads out of bounds, leaking
+   the write counter into the audio as denormals. Clamp after the cast:
+   `if(i0 >= DLY_MAX) i0 -= DLY_MAX;`
+2. **`floorf` in a 12-bit feedback loop injects DC** — it biases every pass by
+   -0.5 LSB, and a DC-fed comb loop settles into a -70 dB hum that never
+   decays. Use `truncf`: same grain, always shrinks magnitude.
+3. **Flush denormal feedback state to zero** (`if(fabsf(lp) < 1e-20f) lp = 0;`)
+   or the tail never truly ends.
+
+### Params and proof
+
+Add the send pots (`<voice>_rev`, `<voice>_dly`, 0..1 LIN) and the nine FX
+params by **appending** to the tables. Appending is safe; inserting or
+reordering breaks every saved patch, because the blob is positional.
+
+- **Sends at zero must be bit-identical to `HEAD`.** This is the proof Gus
+  cares about most.
+- Echo lands at the right millisecond for the division and tempo (9W9: 1/8 at
+  120 BPM = 250.1 ms; 1/4 at 140 BPM = 428.6 ms, theory 428.6).
+- Reverb leaves tail energy where the dry voice is dead, and decays to silence.
+- Both HPFs measurably cut lows on the wet path.
+
+---
+
+## 4. Velocity — check this even if you port nothing else
+
+Look at what `<engine>_trigger()` does with its velocity argument. In 9W9 it was
+
+```c
+const float accent = velocity >= ACCENT_VELOCITY ? master.accent : 1.0f;
+```
+
+— the 909's accent *switch*, modelled faithfully. Driven from Move's sequencer
+that means every velocity from 1 to 99 is one level and everything from 100 up
+is another: two flat shelves with a 6 dB cliff between. Users report it as
+"velocity does nothing", and they are right. **Check whether 6W6/8W8 do the
+same thing** — if so it is the same bug.
+
+The law that survived, after three wrong ones:
+
+```c
+const int   vi = velocity < 0 ? 0 : (velocity > 127 ? 127 : velocity);
+const float vgain = master.accent
+                  * (1.0f - master.vel_depth
+                            * (1.0f - (float)vi * (1.0f/127.0f)));
+```
+
+Accent is the **top**: a full-velocity hit reaches it whatever Velocity is set
+to, and Velocity is how far below it a soft hit falls.
+
+Four properties, each worth a loadtest check, because each was a separate bug:
+
+1. **`vel_depth` 0 is a flat response** — every velocity, including whatever
+   Move's Full Velocity sends, gives the identical sample. The first cut faded
+   only the sub-threshold half and left the switch live, so 0 still jumped 6 dB.
+2. **Velocity never boosts.** A full-velocity hit is the same at every depth.
+   The second cut pivoted mid-range, so turning Velocity up made hard hits 6 dB
+   *louder* — moving the kit's loudness, not just its dynamics.
+3. **Anchor at Accent, not at 1.0.** The third cut anchored at 1.0 and deleted
+   the Accent pot. That looks tidy and quietly drops the whole kit 6 dB,
+   because 1.0 is the *unaccented* level and a sequencer pattern had always
+   been playing at the accented one. Keeping Accent as the top means
+   `vel_depth = 0` is **bit-identical** to the pre-velocity release for any
+   velocity at or above the old threshold — worth asserting.
+4. **Monotonic, with no step** at the old threshold.
+
+Check where the gain is applied. In 9W9 every circuit voice uses it as a
+post-distortion output gain, so it changes level only. If a voice applies it
+before its shaper (9W9's samplers do), velocity also nudges the timbre — under
+a dB, arguably more musical, but know which you have.
+
+---
+
+## 5. Voice-qualified names, but only where they help
+
+Schwung's LFO target picker lists a module's params as one flat list. Eight or
+eleven voices each contributing a "Decay" leaves the user unable to tell which
+pad they are about to automate. The fix is to prefix the names — but naively
+prefixing everything also clutters the knob grid, which draws the param under a
+page header that already says CLOSED HAT.
+
+There is a seam. `shared/param_pages/param_meta.mjs` merges the two sources as
+`{...inlineHierarchyMeta, ...chainParamsMeta}` and then resolves
+`meta.label = meta.label || meta.name || prettify(key)`. chain_params spells the
+display string **name**; inline hierarchy entries spell it **label**. So a
+label on the hierarchy entry both survives the merge and wins the fallback:
+
+- **chain_params name** — voice-qualified: "CH Decay", "OH Decay". This is what
+  the LFO picker shows.
+- **hierarchy label** — bare: "Decay". This is what the page draws.
+
+`validate_contract.mjs` checks `<level>.<key>.label`, so this is what the
+contract asked for anyway; 9W9's generator had been emitting name there.
+
+Do it as a post-processing pass in `gen_params.py` over the finished lists, not
+by threading a prefix through every helper. Assert afterwards that no two
+chain_params names collide — that assertion is the point of the change.
+
+To verify without driving the device UI, copy `param_meta.mjs` and
+`param_format.mjs` off the device and run
+`buildMetaIndex({hierarchy, chainParams})` in node against your generated JSON.
+It resolves the labels with the real code and prints what each page will draw.
+
+---
+
+## 6. Deployment gotchas
+
+- Never `scp` over a live `dsp.so` — the shim has it `dlopen`ed, and
+  overwriting mutates the running process's mapped pages and takes down the
+  firmware. Upload to `.new`, then `mv`. `deploy.sh` already does this; do not
+  "simplify" it.
+- **Check that `deploy.sh` copies `web_ui.html` and `help.json`.** In 9W9 it did
+  not, for months — every deploy shipped new DSP beside a remote panel from
+  whenever the module was last installed from a tarball, so the browser editor
+  kept showing controls the engine no longer had. Verify with `ls -la` on the
+  device that the timestamps move.
+- The Move's DHCP address changes on reboot. Re-resolve with `ping move.local`
+  and update the `movedevice` entry in `~/.ssh/config`.
+- Run the on-device loadtest after deploying, and add checks for what you
+  added — it dlopens the real `.so` exactly as the chain host does.

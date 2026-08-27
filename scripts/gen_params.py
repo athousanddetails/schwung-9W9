@@ -141,7 +141,7 @@ glob=[{"key":"master_dist","name":"Master Dist","type":"enum",
        "options":["Off","Diode (909)","Hard Clip","SAT","BFZ","PDIST","Wavefolder","Bitcrush"]},
       F("master_drive","Master Drive",0,127,1),
       F("master_comp","Comp",0,1,0.01),
-      F("volume","Volume",0,1,0.01),
+      F("volume","Volume",0,1,0.01), F("accent","Accent",1,4,0.05),
       F("vel_depth","Velocity",0,1,0.01)]
 cp+=rim+clap+chat+ohat+ride+crash+glob
 
@@ -167,9 +167,9 @@ for lid,label,ps in (("rim","Rim Shot",rim),("clap","Hand Clap",clap),
 
 root+=[{"key":"master_dist","name":"Master Dist"},{"key":"master_drive","name":"Master Drive"},
        {"key":"master_comp","name":"Comp"},
-       {"key":"volume","name":"Volume"},
+       {"key":"volume","name":"Volume"},{"key":"accent","name":"Accent"},
        {"key":"vel_depth","name":"Velocity"}]
-levels["root"]={"name":"9W9","knobs":["master_dist","master_drive","master_comp","volume","vel_depth"],"params":root}
+levels["root"]={"name":"9W9","knobs":["master_dist","master_drive","master_comp","volume","accent","vel_depth"],"params":root}
 
 # Two audiences, two spellings of the same control.
 #

@@ -176,6 +176,7 @@ static const er99_pot_t g_er99_pots[] = {
     { "dly_level",          0.0f,    1.2f, ER99_LIN },
     { "master_drive",       0.85f,   12.0f, ER99_EXP },
     { "master_comp",        0.0f,    1.0f, ER99_LIN },
+    { "accent",             1.0f,    4.0f, ER99_LIN },
     { "vel_depth",          0.0f,    1.0f, ER99_LIN },
     { "volume",             0.0f,    1.0f, ER99_LIN },
 };

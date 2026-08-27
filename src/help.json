@@ -51,20 +51,19 @@
     {
       "title": "Velocity",
       "lines": [
-        "Main > Velocity sets",
-        "how much note",
-        "velocity moves the",
-        "level.",
+        "Accent is the level",
+        "a full-velocity hit",
+        "reaches.",
         "",
-        "Full velocity is",
-        "always the voice's",
-        "own Level; the knob",
-        "only carves the",
-        "softer hits down.",
+        "Velocity is how far",
+        "BELOW Accent a soft",
+        "hit falls. It only",
+        "carves down, never",
+        "up.",
         "",
         "0: velocity ignored,",
         "everything plays",
-        "straight."
+        "straight at Accent."
       ]
     },
     {

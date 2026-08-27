@@ -280,6 +280,7 @@ void er99_engine_init(er99_engine_t *e, const float _sr, const char *_module_dir
      * nothing but clip harder — the panel felt broken because it was. This
      * leaves room for the pot to travel and for eleven voices to sum. */
     e->master.volume       = 0.35f;  /* globalParams.volume  */
+    e->master.accent       = 2.0f;   /* full-velocity gain, as it always was */
     e->master.vel_depth    = 1.0f;   /* velocity live by default */
 
     /* Derive initial pot positions from the defaults above. */
@@ -305,21 +306,27 @@ void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const in
 
     /* How loud this hit is, from its velocity.
      *
-     * Full velocity is the voice's own level, and softer hits come down from
-     * there — velocity attenuates, it never boosts. The Velocity knob is how
-     * far down the softest hit falls: at 0 nothing moves and the kit plays
-     * straight, at 127 velocity 1 is ~42 dB under velocity 127.
+     * Accent is the top: a full-velocity hit reaches it whatever Velocity is
+     * set to, and softer hits come down from there. Velocity is how far down
+     * — 0 means every hit plays at Accent, which is what this kit sounded
+     * like before velocity existed at all.
      *
-     * Two earlier cuts got this wrong in ways worth not repeating. The first
-     * reproduced the 909's accent SWITCH literally, which from a sequencer is
-     * a 6 dB cliff between velocity 99 and 100 with a flat shelf either side.
-     * The second made it one line but hung the top of that line on the Accent
-     * pot, so turning Velocity up made hard hits ~6 dB LOUDER than they play
-     * at Velocity 0 — the knob moved the kit's loudness and its balance, not
-     * just its dynamics. Anchoring at 127 means the knob only ever carves
-     * downwards, and the accent pot has nothing left to do. */
+     * Three earlier cuts got this wrong, each worth not repeating:
+     *   1. The 909's accent SWITCH, reproduced literally. From a sequencer
+     *      that is a 6 dB cliff between velocity 99 and 100 with a flat shelf
+     *      either side, and velocity looks broken.
+     *   2. One line, but pivoting mid-range, so turning Velocity UP made hard
+     *      hits ~6 dB louder — the knob moved the kit's loudness, not just its
+     *      dynamics.
+     *   3. Anchored at 1.0 with Accent deleted. That looks tidy and quietly
+     *      drops the whole kit 6 dB, because 1.0 is the UNACCENTED level and
+     *      a sequencer pattern had always been playing at the accented one.
+     * Anchoring at Accent keeps the reference level exactly where it has
+     * always been, and the knob only ever carves downwards from it. */
     const int   vi = _velocity < 0 ? 0 : (_velocity > 127 ? 127 : _velocity);
-    const float vgain = 1.0f - e->master.vel_depth * (1.0f - (float)vi * (1.0f/127.0f));
+    const float vgain = e->master.accent
+                      * (1.0f - e->master.vel_depth
+                                * (1.0f - (float)vi * (1.0f/127.0f)));
     const float sr = e->sample_rate;
 
     switch(_which)
@@ -688,7 +695,7 @@ static const char *const g_other_state_keys[] = {
     "chh_decay", "chh_volume", "chh_pitch", "chh_drive",
     "rc_decay", "rc_volume", "rc_pitch",
     "cr_decay", "cr_volume", "cr_pitch",
-    "volume", "vel_depth", "master_dist", "master_comp", "dly_time",
+    "volume", "accent", "vel_depth", "master_dist", "master_comp", "dly_time",
     "rs_dist_type", "hc_dist_type", "ohh_dist_type", "chh_dist_type",
     "rc_dist_type", "cr_dist_type",
 };
@@ -816,6 +823,7 @@ int er99_engine_set_raw(er99_engine_t *e, const char *key, const float value)
     if(!strcmp(key, "master_dist"))  { e->master.dist_mode = value < 0 ? 0 : (value > 7 ? 7 : value); return 1; }
     if(!strcmp(key, "master_comp")) { e->master.comp = value < 0.0f ? 0.0f : (value > 1.0f ? 1.0f : value); return 1; }
     if(!strcmp(key, "volume")) { e->master.volume = value; return 1; }
+    if(!strcmp(key, "accent")) { e->master.accent = value; return 1; }
     if(!strcmp(key, "vel_depth"))
     {
         e->master.vel_depth = value < 0.0f ? 0.0f : (value > 1.0f ? 1.0f : value);
@@ -896,6 +904,7 @@ int er99_engine_get_raw(const er99_engine_t *e, const char *key, float *out)
     if(!strcmp(key, "master_dist"))  { *out = e->master.dist_mode; return 1; }
     if(!strcmp(key, "master_comp")) { *out = e->master.comp; return 1; }
     if(!strcmp(key, "volume"))    { *out = e->master.volume; return 1; }
+    if(!strcmp(key, "accent"))    { *out = e->master.accent; return 1; }
     if(!strcmp(key, "vel_depth")) { *out = e->master.vel_depth; return 1; }
     return 0;
 }

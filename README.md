@@ -59,21 +59,23 @@ Each has an input **HPF** so low end can be kept out of the wet path.
 
 **Master Dist** and **Drive** across the kit, a one-knob **Comp** for glue
 (hard bypass at zero, with AutoGain fitted so loudness stays flat as you turn
-it up), **Volume**, **Velocity**, and the **Note Map** switch. There is no
-always-on compressor or limiter anywhere else in the signal path.
+it up), **Volume**, **Accent**, **Velocity**, and the **Note Map** switch.
+There is no always-on compressor or limiter anywhere else in the signal path.
 
-**Velocity** sets how much incoming note velocity moves the level. A
-full-velocity hit is always the voice's own Level, whatever this is set to —
-the knob only carves the softer hits down, so it never changes the kit's
-loudness or its balance, only its dynamics. At **0** velocity is ignored
-entirely and everything plays straight. Turn it up and the range opens: about
-2 dB from softest to hardest at a quarter, 4.6 dB at half, 15.4 dB wide open.
+**Accent** is the level a full-velocity hit reaches — the 909's accent bus, and
+the level this kit plays at from a sequencer. **Velocity** is how far *below*
+Accent a softer hit falls. The knob only ever carves downwards, so turning it
+up changes the kit's dynamics and never its loudness or balance. At **0**
+velocity is ignored entirely and everything plays straight at Accent. Turn it
+up and the range opens: about 2 dB softest-to-hardest at a quarter, 4.6 dB at
+half, 15.4 dB wide open.
 
 (The hardware accents with a per-step *switch* — one level under a threshold,
 another over it — and modelling that literally left a 6 dB cliff between
-velocity 99 and 100 with flat shelves either side. That is not how anything
-driven from a sequencer expects to behave, so the threshold is gone, and with
-it the Accent pot that used to set the top of it.)
+velocity 99 and 100 with flat shelves either side, which is not how anything
+driven from a sequencer expects to behave. The threshold is gone; Accent
+remains as the top of the range, so with Velocity at 0 the kit is bit-identical
+to how it played before velocity existed.)
 
 ## Workflow on the Move
 

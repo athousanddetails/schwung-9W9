@@ -584,7 +584,14 @@
             "min": 0,
             "max": 127
           },
-          null,
+          {
+            "key": "accent",
+            "short": "ACC",
+            "full": "Accent",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
           {
             "key": "vel_depth",
             "short": "VEL",

@@ -113,10 +113,16 @@ typedef struct {
     float dist_mode;
     float volume;
 
-    /* Velocity sensitivity, 0..1. Velocity 127 is always the voice's own level;
-     * this is how far below it a soft hit falls. 0 ignores velocity entirely
-     * and the kit plays straight. It only ever attenuates — turning it up must
-     * not make anything louder than it plays at 0. */
+    /* Gain a FULL-velocity hit reaches — the 909's accent bus, and the level
+     * this kit has always played at from a sequencer (Move sends 100+, which
+     * the old accent switch put here). Velocity scales down from it, never
+     * above it, so this stays the kit's reference level. */
+    float accent;
+
+    /* Velocity sensitivity, 0..1 — how far below Accent a soft hit falls.
+     * 0 ignores velocity entirely and every hit plays at Accent, which is
+     * exactly how the kit sounded before velocity existed. It only ever
+     * attenuates: nothing gets louder than it plays at 0. */
     float vel_depth;
 
     /* One-knob bus glue — OURS, requested as a feature, not 909 circuitry,
