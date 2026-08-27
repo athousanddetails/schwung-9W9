@@ -8,7 +8,7 @@
   },
   "banks": [
     {
-      "name": "Kick",
+      "name": "Bass Drum",
       "rows": [
         [
           {
@@ -21,7 +21,7 @@
           },
           {
             "key": "bd_c_attack",
-            "short": "ATTK",
+            "short": "ATCK",
             "full": "Attack",
             "type": "int",
             "min": 0,
@@ -29,7 +29,7 @@
           },
           {
             "key": "bd_c_decay",
-            "short": "DECAY",
+            "short": "DECY",
             "full": "Decay",
             "type": "int",
             "min": 0,
@@ -37,7 +37,7 @@
           },
           {
             "key": "bd_c_sweep_depth",
-            "short": "PDEP",
+            "short": "PDPT",
             "full": "P. Depth",
             "type": "int",
             "min": 0,
@@ -45,7 +45,7 @@
           },
           {
             "key": "bd_c_pitch_mod",
-            "short": "PITCH",
+            "short": "PTCH",
             "full": "Pitch",
             "type": "int",
             "min": 0,
@@ -53,7 +53,7 @@
           },
           {
             "key": "bd_c_drive",
-            "short": "DRIVE",
+            "short": "DRIV",
             "full": "Drive",
             "type": "int",
             "min": 0,
@@ -65,18 +65,18 @@
             "full": "Distortion",
             "type": "enum",
             "options": [
-              "Diode",
-              "Clip",
+              "Diode (909)",
+              "Hard Clip",
               "SAT",
               "BFZ",
               "PDIST",
-              "Fold",
-              "Crush"
+              "Wavefolder",
+              "Bitcrush"
             ]
           },
           {
             "key": "bd_c_level",
-            "short": "LEVEL",
+            "short": "LEVL",
             "full": "Level",
             "type": "int",
             "min": 0,
@@ -107,7 +107,7 @@
           },
           {
             "key": "sd_c_snappy",
-            "short": "SNAPY",
+            "short": "SNAP",
             "full": "Snappy",
             "type": "int",
             "min": 0,
@@ -115,7 +115,7 @@
           },
           {
             "key": "sd_c_drive",
-            "short": "DRIVE",
+            "short": "DRIV",
             "full": "Drive",
             "type": "int",
             "min": 0,
@@ -127,92 +127,35 @@
             "full": "Distortion",
             "type": "enum",
             "options": [
-              "Diode",
-              "Clip",
+              "Diode (909)",
+              "Hard Clip",
               "SAT",
               "BFZ",
               "PDIST",
-              "Fold",
-              "Crush"
+              "Wavefolder",
+              "Bitcrush"
             ]
           },
           {
             "key": "sd_c_level",
-            "short": "LEVEL",
+            "short": "LEVL",
             "full": "Level",
             "type": "int",
             "min": 0,
             "max": 127
           },
-          null,
-          null
-        ]
-      ]
-    },
-    {
-      "name": "Toms",
-      "rows": [
-        [
           {
-            "key": "lt_c_tune",
-            "short": "LTPCH",
-            "full": "Low Pitch",
+            "key": "sd_c_rev",
+            "short": "REV",
+            "full": "Rev",
             "type": "int",
             "min": 0,
             "max": 127
           },
           {
-            "key": "lt_c_decay",
-            "short": "LTDCY",
-            "full": "Low Decay",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "mt_c_tune",
-            "short": "MTPCH",
-            "full": "Mid Pitch",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "mt_c_decay",
-            "short": "MTDCY",
-            "full": "Mid Decay",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "ht_c_tune",
-            "short": "HTPCH",
-            "full": "Hi Pitch",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "ht_c_decay",
-            "short": "HTDCY",
-            "full": "Hi Decay",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "lt_c_level",
-            "short": "LTLVL",
-            "full": "Low Level",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "ht_c_level",
-            "short": "HTLVL",
-            "full": "Hi Level",
+            "key": "sd_c_dly",
+            "short": "DLY",
+            "full": "Dly",
             "type": "int",
             "min": 0,
             "max": 127
@@ -221,315 +164,754 @@
       ]
     },
     {
-      "name": "Perc",
+      "name": "Low Tom",
+      "rows": [
+        [
+          {
+            "key": "lt_c_tune",
+            "short": "TUNE",
+            "full": "Tune",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "lt_c_decay",
+            "short": "DECY",
+            "full": "Decay",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "lt_c_attack",
+            "short": "ATCK",
+            "full": "Attack",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "lt_c_drive",
+            "short": "DRIV",
+            "full": "Drive",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "lt_c_dist_type",
+            "short": "DIST",
+            "full": "Distortion",
+            "type": "enum",
+            "options": [
+              "Diode (909)",
+              "Hard Clip",
+              "SAT",
+              "BFZ",
+              "PDIST",
+              "Wavefolder",
+              "Bitcrush"
+            ]
+          },
+          {
+            "key": "lt_c_level",
+            "short": "LEVL",
+            "full": "Level",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "lt_c_rev",
+            "short": "REV",
+            "full": "Rev",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "lt_c_dly",
+            "short": "DLY",
+            "full": "Dly",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          }
+        ]
+      ]
+    },
+    {
+      "name": "Med Tom",
+      "rows": [
+        [
+          {
+            "key": "mt_c_tune",
+            "short": "TUNE",
+            "full": "Tune",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "mt_c_decay",
+            "short": "DECY",
+            "full": "Decay",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "mt_c_attack",
+            "short": "ATCK",
+            "full": "Attack",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "mt_c_drive",
+            "short": "DRIV",
+            "full": "Drive",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "mt_c_dist_type",
+            "short": "DIST",
+            "full": "Distortion",
+            "type": "enum",
+            "options": [
+              "Diode (909)",
+              "Hard Clip",
+              "SAT",
+              "BFZ",
+              "PDIST",
+              "Wavefolder",
+              "Bitcrush"
+            ]
+          },
+          {
+            "key": "mt_c_level",
+            "short": "LEVL",
+            "full": "Level",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "mt_c_rev",
+            "short": "REV",
+            "full": "Rev",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "mt_c_dly",
+            "short": "DLY",
+            "full": "Dly",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          }
+        ]
+      ]
+    },
+    {
+      "name": "Hi Tom",
+      "rows": [
+        [
+          {
+            "key": "ht_c_tune",
+            "short": "TUNE",
+            "full": "Tune",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "ht_c_decay",
+            "short": "DECY",
+            "full": "Decay",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "ht_c_attack",
+            "short": "ATCK",
+            "full": "Attack",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "ht_c_drive",
+            "short": "DRIV",
+            "full": "Drive",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "ht_c_dist_type",
+            "short": "DIST",
+            "full": "Distortion",
+            "type": "enum",
+            "options": [
+              "Diode (909)",
+              "Hard Clip",
+              "SAT",
+              "BFZ",
+              "PDIST",
+              "Wavefolder",
+              "Bitcrush"
+            ]
+          },
+          {
+            "key": "ht_c_level",
+            "short": "LEVL",
+            "full": "Level",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "ht_c_rev",
+            "short": "REV",
+            "full": "Rev",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "ht_c_dly",
+            "short": "DLY",
+            "full": "Dly",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          }
+        ]
+      ]
+    },
+    {
+      "name": "Rim Shot",
       "rows": [
         [
           {
             "key": "rs_tune",
-            "short": "RMTUN",
-            "full": "Rim Tune",
+            "short": "TUNE",
+            "full": "Tune",
             "type": "int",
             "min": 0,
             "max": 127
           },
           {
             "key": "rs_saturation",
-            "short": "RMDRV",
-            "full": "Rim Drive",
+            "short": "DRIV",
+            "full": "Drive",
             "type": "int",
             "min": 0,
             "max": 127
           },
           {
             "key": "rs_dist_type",
-            "short": "RMDST",
-            "full": "Rim Dist",
+            "short": "DIST",
+            "full": "Distortion",
             "type": "enum",
             "options": [
-              "Diode",
-              "Clip",
+              "Diode (909)",
+              "Hard Clip",
               "SAT",
               "BFZ",
               "PDIST",
-              "Fold",
-              "Crush"
+              "Wavefolder",
+              "Bitcrush"
             ]
           },
           {
             "key": "rs_volume",
-            "short": "RMLVL",
-            "full": "Rim Level",
+            "short": "LEVL",
+            "full": "Level",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "rs_rev",
+            "short": "REV",
+            "full": "Rev",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "rs_dly",
+            "short": "DLY",
+            "full": "Dly",
             "type": "int",
             "min": 0,
             "max": 127
           },
           null,
-          null,
-          null,
           null
-        ],
+        ]
+      ]
+    },
+    {
+      "name": "Hand Clap",
+      "rows": [
         [
           {
             "key": "hc_tune",
-            "short": "CPTUN",
-            "full": "Clap Tune",
+            "short": "TUNE",
+            "full": "Tune",
             "type": "int",
             "min": 0,
             "max": 127
           },
           {
             "key": "hc_decay",
-            "short": "CPTAL",
-            "full": "Clap Tail",
+            "short": "TAIL",
+            "full": "Tail",
             "type": "int",
             "min": 0,
             "max": 127
           },
           {
             "key": "hc_drive",
-            "short": "CPDRV",
-            "full": "Clap Drive",
+            "short": "DRIV",
+            "full": "Drive",
             "type": "int",
             "min": 0,
             "max": 127
           },
           {
             "key": "hc_dist_type",
-            "short": "CPDST",
-            "full": "Clap Dist",
+            "short": "DIST",
+            "full": "Distortion",
             "type": "enum",
             "options": [
-              "Diode",
-              "Clip",
+              "Diode (909)",
+              "Hard Clip",
               "SAT",
               "BFZ",
               "PDIST",
-              "Fold",
-              "Crush"
+              "Wavefolder",
+              "Bitcrush"
             ]
           },
           {
             "key": "hc_volume",
-            "short": "CPLVL",
-            "full": "Clap Level",
+            "short": "LEVL",
+            "full": "Level",
             "type": "int",
             "min": 0,
             "max": 127
           },
-          null,
-          null,
+          {
+            "key": "hc_rev",
+            "short": "REV",
+            "full": "Rev",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "hc_dly",
+            "short": "DLY",
+            "full": "Dly",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
           null
         ]
       ]
     },
     {
-      "name": "Hats",
+      "name": "Closed Hat",
       "rows": [
         [
           {
             "key": "chh_decay",
-            "short": "CHDCY",
-            "full": "CH Decay",
+            "short": "DECY",
+            "full": "Decay",
             "type": "int",
             "min": 0,
             "max": 127
           },
           {
             "key": "chh_pitch",
-            "short": "CHTUN",
-            "full": "CH Tune",
+            "short": "TUNE",
+            "full": "Tune",
             "type": "int",
             "min": 0,
             "max": 127
           },
           {
             "key": "chh_drive",
-            "short": "CHDRV",
-            "full": "CH Drive",
+            "short": "DRIV",
+            "full": "Drive",
             "type": "int",
             "min": 0,
             "max": 127
           },
           {
             "key": "chh_dist_type",
-            "short": "CHDST",
-            "full": "CH Dist",
+            "short": "DIST",
+            "full": "Distortion",
             "type": "enum",
             "options": [
-              "Diode",
-              "Clip",
+              "Diode (909)",
+              "Hard Clip",
               "SAT",
               "BFZ",
               "PDIST",
-              "Fold",
-              "Crush"
+              "Wavefolder",
+              "Bitcrush"
             ]
           },
           {
             "key": "chh_volume",
-            "short": "CHLVL",
-            "full": "CH Level",
+            "short": "LEVL",
+            "full": "Level",
             "type": "int",
             "min": 0,
             "max": 127
           },
-          null,
-          null,
+          {
+            "key": "chh_rev",
+            "short": "REV",
+            "full": "Rev",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "chh_dly",
+            "short": "DLY",
+            "full": "Dly",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
           null
-        ],
+        ]
+      ]
+    },
+    {
+      "name": "Open Hat",
+      "rows": [
         [
           {
             "key": "ohh_decay",
-            "short": "OHDCY",
-            "full": "OH Decay",
+            "short": "DECY",
+            "full": "Decay",
             "type": "int",
             "min": 0,
             "max": 127
           },
           {
             "key": "ohh_pitch",
-            "short": "OHTUN",
-            "full": "OH Tune",
+            "short": "TUNE",
+            "full": "Tune",
             "type": "int",
             "min": 0,
             "max": 127
           },
           {
             "key": "ohh_drive",
-            "short": "OHDRV",
-            "full": "OH Drive",
+            "short": "DRIV",
+            "full": "Drive",
             "type": "int",
             "min": 0,
             "max": 127
           },
           {
             "key": "ohh_dist_type",
-            "short": "OHDST",
-            "full": "OH Dist",
+            "short": "DIST",
+            "full": "Distortion",
             "type": "enum",
             "options": [
-              "Diode",
-              "Clip",
+              "Diode (909)",
+              "Hard Clip",
               "SAT",
               "BFZ",
               "PDIST",
-              "Fold",
-              "Crush"
+              "Wavefolder",
+              "Bitcrush"
             ]
           },
           {
             "key": "ohh_volume",
-            "short": "OHLVL",
-            "full": "OH Level",
+            "short": "LEVL",
+            "full": "Level",
             "type": "int",
             "min": 0,
             "max": 127
           },
-          null,
-          null,
+          {
+            "key": "ohh_rev",
+            "short": "REV",
+            "full": "Rev",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "ohh_dly",
+            "short": "DLY",
+            "full": "Dly",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
           null
         ]
       ]
     },
     {
-      "name": "Cymbals",
+      "name": "Ride",
       "rows": [
         [
           {
             "key": "rc_decay",
-            "short": "RDDCY",
-            "full": "RD Decay",
+            "short": "DECY",
+            "full": "Decay",
             "type": "int",
             "min": 0,
             "max": 127
           },
           {
             "key": "rc_pitch",
-            "short": "RDTUN",
-            "full": "RD Tune",
+            "short": "TUNE",
+            "full": "Tune",
             "type": "int",
             "min": 0,
             "max": 127
           },
           {
             "key": "rc_drive",
-            "short": "RDDRV",
-            "full": "RD Drive",
+            "short": "DRIV",
+            "full": "Drive",
             "type": "int",
             "min": 0,
             "max": 127
           },
           {
             "key": "rc_dist_type",
-            "short": "RDDST",
-            "full": "RD Dist",
+            "short": "DIST",
+            "full": "Distortion",
             "type": "enum",
             "options": [
-              "Diode",
-              "Clip",
+              "Diode (909)",
+              "Hard Clip",
               "SAT",
               "BFZ",
               "PDIST",
-              "Fold",
-              "Crush"
+              "Wavefolder",
+              "Bitcrush"
             ]
           },
           {
             "key": "rc_volume",
-            "short": "RDLVL",
-            "full": "RD Level",
+            "short": "LEVL",
+            "full": "Level",
             "type": "int",
             "min": 0,
             "max": 127
           },
-          null,
-          null,
+          {
+            "key": "rc_rev",
+            "short": "REV",
+            "full": "Rev",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "rc_dly",
+            "short": "DLY",
+            "full": "Dly",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
           null
-        ],
+        ]
+      ]
+    },
+    {
+      "name": "Crash",
+      "rows": [
         [
           {
             "key": "cr_decay",
-            "short": "CRDCY",
-            "full": "CR Decay",
+            "short": "DECY",
+            "full": "Decay",
             "type": "int",
             "min": 0,
             "max": 127
           },
           {
             "key": "cr_pitch",
-            "short": "CRTUN",
-            "full": "CR Tune",
+            "short": "TUNE",
+            "full": "Tune",
             "type": "int",
             "min": 0,
             "max": 127
           },
           {
             "key": "cr_drive",
-            "short": "CRDRV",
-            "full": "CR Drive",
+            "short": "DRIV",
+            "full": "Drive",
             "type": "int",
             "min": 0,
             "max": 127
           },
           {
             "key": "cr_dist_type",
-            "short": "CRDST",
-            "full": "CR Dist",
+            "short": "DIST",
+            "full": "Distortion",
             "type": "enum",
             "options": [
-              "Diode",
-              "Clip",
+              "Diode (909)",
+              "Hard Clip",
               "SAT",
               "BFZ",
               "PDIST",
-              "Fold",
-              "Crush"
+              "Wavefolder",
+              "Bitcrush"
             ]
           },
           {
             "key": "cr_volume",
-            "short": "CRLVL",
-            "full": "CR Level",
+            "short": "LEVL",
+            "full": "Level",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "cr_rev",
+            "short": "REV",
+            "full": "Rev",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "cr_dly",
+            "short": "DLY",
+            "full": "Dly",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          null
+        ]
+      ]
+    },
+    {
+      "name": "Reverb",
+      "rows": [
+        [
+          {
+            "key": "rev_decay",
+            "short": "DECY",
+            "full": "Decay",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "rev_tone",
+            "short": "TONE",
+            "full": "Tone",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "rev_hpf",
+            "short": "HPF",
+            "full": "HPF",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "rev_level",
+            "short": "LEVL",
+            "full": "Level",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          null,
+          null,
+          null,
+          null
+        ]
+      ]
+    },
+    {
+      "name": "Delay",
+      "rows": [
+        [
+          {
+            "key": "dly_time",
+            "short": "TIME",
+            "full": "Time",
+            "type": "enum",
+            "options": [
+              "1/32",
+              "1/16T",
+              "1/16",
+              "1/8T",
+              "1/16.",
+              "1/8",
+              "1/4T",
+              "1/8.",
+              "1/4",
+              "1/2T",
+              "1/4.",
+              "1/2",
+              "1/2."
+            ]
+          },
+          {
+            "key": "dly_fdbk",
+            "short": "FDBK",
+            "full": "Fdbk",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "dly_tone",
+            "short": "TONE",
+            "full": "Tone",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "dly_hpf",
+            "short": "HPF",
+            "full": "HPF",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "dly_level",
+            "short": "LEVL",
+            "full": "Level",
             "type": "int",
             "min": 0,
             "max": 127
@@ -541,23 +923,33 @@
       ]
     },
     {
-      "name": "Master",
+      "name": "Main",
       "rows": [
         [
           {
+            "key": "note_map",
+            "short": "NOTE",
+            "full": "Note Map",
+            "type": "enum",
+            "options": [
+              "Drum Rack (36+)",
+              "General MIDI"
+            ]
+          },
+          {
             "key": "master_dist",
-            "short": "MDIST",
+            "short": "MDST",
             "full": "Master Dist",
             "type": "enum",
             "options": [
               "Off",
-              "Diode",
-              "Clip",
+              "Diode (909)",
+              "Hard Clip",
               "SAT",
               "BFZ",
               "PDIST",
-              "Fold",
-              "Crush"
+              "Wavefolder",
+              "Bitcrush"
             ]
           },
           {
@@ -571,7 +963,7 @@
           {
             "key": "master_comp",
             "short": "COMP",
-            "full": "Compressor",
+            "full": "Comp",
             "type": "int",
             "min": 0,
             "max": 127
@@ -600,108 +992,6 @@
             "min": 0,
             "max": 127
           },
-          null,
-          null
-        ]
-      ]
-    },
-    {
-      "name": "FX",
-      "rows": [
-        [
-          {
-            "key": "rev_decay",
-            "short": "RDCY",
-            "full": "Rev Decay",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "rev_tone",
-            "short": "RTON",
-            "full": "Rev Tone",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "rev_hpf",
-            "short": "RHPF",
-            "full": "Rev HPF",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "rev_level",
-            "short": "RLVL",
-            "full": "Rev Level",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          null,
-          null,
-          null,
-          null
-        ],
-        [
-          {
-            "key": "dly_time",
-            "short": "DTIM",
-            "full": "Dly Time",
-            "type": "enum",
-            "options": [
-              "1/32",
-              "1/16T",
-              "1/16",
-              "1/8T",
-              "1/16.",
-              "1/8",
-              "1/4T",
-              "1/8.",
-              "1/4",
-              "1/2T",
-              "1/4.",
-              "1/2",
-              "1/2."
-            ]
-          },
-          {
-            "key": "dly_fdbk",
-            "short": "DFBK",
-            "full": "Dly Fdbk",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "dly_tone",
-            "short": "DTON",
-            "full": "Dly Tone",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "dly_hpf",
-            "short": "DHPF",
-            "full": "Dly HPF",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "dly_level",
-            "short": "DLVL",
-            "full": "Dly Level",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          null,
-          null,
           null
         ]
       ]

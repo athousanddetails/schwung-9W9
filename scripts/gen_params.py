@@ -208,6 +208,58 @@ for lvl in levels.values():
         if "name" in pentry and "key" in pentry:
             pentry["label"] = pentry.pop("name")
 
+# ---- Movy template, generated from the same lists -------------------------
+#
+# This used to be hand-maintained and had drifted badly: 66 controls for a
+# 97-control module. Three toms shared one eight-slot bank, so their Attack,
+# Drive, Distortion and both sends had nowhere to go and simply were not
+# there, and the tom pots still read "Low Pitch" from before the rebuild.
+# One bank per voice page now, in page order, so what Movy shows and what the
+# device shows cannot disagree again.
+MOVY_SHORT = {
+    "Tune":"TUNE", "Attack":"ATCK", "Decay":"DECY", "Level":"LEVL",
+    "Drive":"DRIV", "Distortion":"DIST", "Rev":"REV", "Dly":"DLY",
+    "Snappy":"SNAP", "Tone":"TONE", "Tail":"TAIL", "P. Depth":"PDPT",
+    "Pitch":"PTCH", "HPF":"HPF", "Time":"TIME", "Fdbk":"FDBK",
+    "Comp":"COMP", "Volume":"VOL", "Accent":"ACC", "Velocity":"VEL",
+    "Note Map":"NOTE", "Master Dist":"MDST", "Master Drive":"MDRV",
+}
+def movy_short(label):
+    if label in MOVY_SHORT: return MOVY_SHORT[label]
+    t = "".join(ch for ch in label.upper() if ch.isalnum())
+    return t[:4]
+
+cp_by_key = {e["key"]: e for e in cp}
+
+def movy_cell(key, label):
+    e = cp_by_key[key]
+    c = {"key": key, "short": movy_short(label), "full": label}
+    if e.get("type") == "enum":
+        c["type"] = "enum"; c["options"] = e["options"]
+    else:
+        c["type"] = "int"; c["min"] = 0; c["max"] = 127
+    return c
+
+movy_banks = []
+for lid, lvl in levels.items():
+    entries = [pe for pe in lvl.get("params", []) if pe.get("key") in cp_by_key]
+    if not entries: continue
+    cells = [movy_cell(pe["key"], pe.get("label") or pe.get("name")) for pe in entries]
+    rows = []
+    for i in range(0, len(cells), 8):
+        row = cells[i:i+8]
+        rows.append(row + [None] * (8 - len(row)))
+    movy_banks.append({"name": "Main" if lid == "root" else lvl["name"],
+                       "rows": rows})
+
+movy = {"id": "9w9", "name": "9W9",
+        "drum": {"padCount": 16, "padNoteStart": 36, "rawMidi": False},
+        "banks": movy_banks}
+(pathlib.Path(__file__).resolve().parent.parent / "src/movy_config.json").write_text(
+    json.dumps(movy, indent=2) + "\n")
+_mv = sum(1 for b in movy_banks for r in b["rows"] for c in r if c)
+print(f"movy_config {len(movy_banks)} banks, {_mv} controls")
+
 cpj=json.dumps(cp,separators=(",",":")); uhj=json.dumps({"levels":levels},separators=(",",":"))
 def cstr(s):
     return "\n".join(f'    "{s[k:k+100].replace(chr(92),chr(92)*2).replace(chr(34),chr(92)+chr(34))}"'
