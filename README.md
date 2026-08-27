@@ -62,12 +62,18 @@ Each has an input **HPF** so low end can be kept out of the wet path.
 it up), **Volume**, **Accent**, **Velocity**, and the **Note Map** switch.
 There is no always-on compressor or limiter anywhere else in the signal path.
 
-**Velocity** sets how much incoming note velocity scales the drums, from none
-to full. At **0** velocity is ignored completely and every hit is the same
-level, whatever arrives. At **127** the law is the 909's, extended downwards:
-velocity 100 and up gets the accent gain, and below that the level follows
-velocity — which is where hi-hat ghost notes live. Everything between scales
-the whole response proportionally.
+**Velocity** sets how much incoming note velocity moves the level, and it is
+one straight line — no threshold, no switch. At **0** velocity is ignored
+completely and every hit comes out the same. Turn it up and the range opens:
+about 3.5 dB from softest to hardest at a quarter, 7 dB at half, 15 dB wide
+open. Velocity 127 reaches the **Accent** gain, and velocity 64 lands on unity,
+where an unaccented hit always sat.
+
+(The hardware accents with a per-step switch — one level under its threshold,
+another over it. Modelling that literally left a 6 dB cliff between velocity 99
+and 100 with flat shelves either side, which is not how anything driving this
+from a sequencer expects to behave. **Accent** now simply sets the level a
+full-velocity hit reaches.)
 
 ## Workflow on the Move
 

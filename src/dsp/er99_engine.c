@@ -304,25 +304,22 @@ void er99_engine_free(er99_engine_t *e)
 void er99_engine_trigger(er99_engine_t *e, const er99_trigger_t _which, const int _velocity)
 {
 
-    /* How loud this hit is, from its velocity.
+    /* How loud this hit is, from its velocity. One straight line, no switch.
      *
-     * At full response the law is the 909's, extended downwards: at or above
-     * ER99_ACCENT_VELOCITY the accent bus lifts the voice, and below it the
-     * level follows velocity/ER99_ACCENT_VELOCITY, so a note at 99 sits where
-     * an unaccented note always did (0.99) and the dynamics open up under it.
+     * The 909 accents by a per-step SWITCH: under its threshold every note is
+     * one level, over it every note is another. Modelling that literally gave
+     * a 6 dB cliff between velocity 99 and 100 and two flat shelves either
+     * side of it — which is not what anyone driving this from a sequencer
+     * expects, and it made the Velocity knob impossible to reason about. The
+     * threshold is gone. Level follows velocity all the way up, reaching the
+     * Accent gain at 127; velocity 64 still lands on unity, where an
+     * unaccented hit always sat.
      *
-     * The Velocity knob scales that whole law towards "no response at all",
-     * because that is what the control says it does. The first cut only faded
-     * the sub-accent half and left the accent switch live at every setting —
-     * so at Velocity 0 a hit at 127 (what Move's Full Velocity sends) was
-     * still 6 dB over a hit at 80, which is exactly the thing the knob was
-     * supposed to be able to turn off. Now 0 means every hit is the same
-     * level, whatever velocity arrives, and 127 is the full law. */
-    const float full = _velocity >= ER99_ACCENT_VELOCITY
-                     ? e->master.accent
-                     : (float)(_velocity < 0 ? 0 : _velocity)
-                       * (1.0f / (float)ER99_ACCENT_VELOCITY);
-    const float accent = 1.0f + (full - 1.0f) * e->master.vel_depth;
+     * Velocity sets how much of that line applies. At 0 the response is flat
+     * and velocity is ignored completely; at 127 it is the full range. */
+    const float v = (float)(_velocity < 0 ? 0 : (_velocity > 127 ? 127 : _velocity))
+                  * (1.0f / 127.0f);
+    const float accent = 1.0f + (e->master.accent * v - 1.0f) * e->master.vel_depth;
     const float sr = e->sample_rate;
 
     switch(_which)

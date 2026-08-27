@@ -53,17 +53,19 @@
       "lines": [
         "Main > Velocity sets",
         "how much note",
-        "velocity changes",
-        "the level.",
+        "velocity moves the",
+        "level. One straight",
+        "line, no switch.",
         "",
-        "0: velocity is",
-        "ignored, every hit",
-        "the same level.",
-        "127: full response",
-        "-- accent at 100+,",
-        "and below that the",
-        "level follows the",
-        "velocity."
+        "0: velocity ignored,",
+        "every hit the same.",
+        "Turn it up and the",
+        "range opens: 15 dB",
+        "wide open.",
+        "",
+        "Accent sets what a",
+        "full-velocity hit",
+        "reaches."
       ]
     },
     {

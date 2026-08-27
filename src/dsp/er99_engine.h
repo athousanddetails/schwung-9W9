@@ -112,15 +112,11 @@ typedef struct {
     float drive;
     float dist_mode;
     float volume;
-    float accent;       /* globalParams.globalAccent = 2.0 */
+    float accent;       /* gain at full velocity; 2.0 = the 909's accent bus */
 
-    /* Velocity sensitivity, 0..1. The 909's accent is a per-step SWITCH — one
-     * bus, one level — so this engine did the same: every note under
-     * ER99_ACCENT_VELOCITY sounded identical and every note over it sounded
-     * identical. Move's sequencer sends continuous velocity, and hi-hat
-     * grooves are unplayable without it. At 0 the strict switch is back,
-     * bit-identical; above it, velocities BELOW the accent point scale the
-     * voice continuously. Accented notes are untouched at any depth. */
+    /* Velocity sensitivity, 0..1 — how much incoming velocity moves the level.
+     * 0 ignores velocity entirely and every hit comes out the same; 127 is the
+     * full range, from near silence up to the Accent gain at velocity 127. */
     float vel_depth;
 
     /* One-knob bus glue — OURS, requested as a feature, not 909 circuitry,
@@ -168,8 +164,7 @@ typedef struct {
 void er99_engine_init(er99_engine_t *e, float sample_rate, const char *module_dir);
 void er99_engine_free(er99_engine_t *e);
 
-/* velocity 0..127; >= ER99_ACCENT_VELOCITY applies globalAccent. */
-#define ER99_ACCENT_VELOCITY 100
+/* velocity 0..127; scales the voice, reaching the Accent gain at 127. */
 void er99_engine_trigger(er99_engine_t *e, er99_trigger_t which, int velocity);
 
 /* Render mono into out (engine is mono; the plugin duplicates to stereo). */

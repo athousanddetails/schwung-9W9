@@ -484,17 +484,16 @@ int main(int argc, char**argv){
     api->set_param(inst, "ohh_dist_type", "0");
     api->set_param(inst, "rc_drive", "0");
 
-    /* Velocity. Below the accent point it must scale the voice; at or above it
-     * the accent gain is untouched at any depth, so no existing pattern gets
-     * quieter. Depth 0 restores the old switch: every sub-accent velocity the
-     * same level. */
+    /* Velocity: one straight line, no switch. At full depth the level must
+     * rise monotonically with velocity and must NOT step at 100 — the old
+     * accent threshold left a 6 dB cliff between 99 and 100. At depth 0
+     * velocity must do nothing at all. */
     {
-        long p30=0, p90=0, p110=0, f30=0, f90=0, f110=0;
+        const int vv[6] = { 20, 64, 90, 99, 100, 127 };
+        long full[6], off[6];
         for(int pass=0; pass<2; ++pass){
             api->set_param(inst, "vel_depth", pass ? "0" : "127");
-            const int vv[3] = { 30, 90, 110 };
-            long out3[3] = {0,0,0};
-            for(int i=0;i<3;++i){
+            for(int i=0;i<6;++i){
                 for(int b=0;b<200;++b) api->render_block(inst,out,128);   /* drain */
                 uint8_t hit[3] = { 0x90, 43, (uint8_t)vv[i] };            /* closed hat */
                 api->on_midi(inst, hit, 3, 0);
@@ -503,22 +502,29 @@ int main(int argc, char**argv){
                     api->render_block(inst,out,128);
                     for(int k=0;k<256;++k){ long a=out[k]<0?-out[k]:out[k]; if(a>pk)pk=a; }
                 }
-                out3[i]=pk;
+                if(pass) off[i]=pk; else full[i]=pk;
             }
-            if(pass){ f30=out3[0]; f90=out3[1]; f110=out3[2]; }
-            else    { p30=out3[0]; p90=out3[1]; p110=out3[2]; }
         }
         api->set_param(inst, "vel_depth", "127");
-        char l[128];
-        snprintf(l,sizeof l,"velocity scales below accent (v30 %ld < v90 %ld)",p30,p90);
-        CHECK(p30 > 0 && p30 * 10 < p90 * 7, l);
-        snprintf(l,sizeof l,"accent lifts the hit at full depth (v110 %ld > v90 %ld)",p110,p90);
-        CHECK(p110 > p90 * 13 / 10, l);
-        /* Velocity 0 must mean velocity 0: every velocity the same level,
-         * accented ones included. Move's Full Velocity sends 127, and with the
-         * first cut that still jumped 6 dB over a hand-played hit. */
-        snprintf(l,sizeof l,"Velocity 0 = no response at all (v30 %ld, v90 %ld, v110 %ld)",f30,f90,f110);
-        CHECK(f30 == f90 && f90 == f110 && f30 > 0, l);
+        char l[144];
+
+        int mono = 1;
+        for(int i=1;i<6;++i) if(full[i] <= full[i-1]) mono = 0;
+        snprintf(l,sizeof l,"velocity is monotonic (%ld %ld %ld %ld %ld %ld)",
+                 full[0],full[1],full[2],full[3],full[4],full[5]);
+        CHECK(mono && full[0] > 0, l);
+
+        /* 99 -> 100 must be a step of one unit of velocity, not a shelf: under
+         * 3%% apart. The old switch put them a factor of two apart. */
+        const long a99 = full[3], a100 = full[4];
+        snprintf(l,sizeof l,"no cliff at the old accent point (v99 %ld, v100 %ld)",a99,a100);
+        CHECK(a100 * 100 < a99 * 103 && a100 >= a99, l);
+
+        snprintf(l,sizeof l,"Velocity 0 = no response at all (%ld %ld %ld %ld %ld %ld)",
+                 off[0],off[1],off[2],off[3],off[4],off[5]);
+        int flat = 1;
+        for(int i=1;i<6;++i) if(off[i] != off[0]) flat = 0;
+        CHECK(flat && off[0] > 0, l);
     }
 
     /* FX sends: rim into the delay must produce an echo at 260 ms that is
