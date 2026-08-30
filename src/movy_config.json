@@ -8,6 +8,80 @@
   },
   "banks": [
     {
+      "name": "Main",
+      "rows": [
+        [
+          {
+            "key": "note_map",
+            "short": "NOTE",
+            "full": "Note Map",
+            "type": "enum",
+            "options": [
+              "Drum Rack (36+)",
+              "General MIDI"
+            ]
+          },
+          {
+            "key": "master_dist",
+            "short": "MDST",
+            "full": "Master Dist",
+            "type": "enum",
+            "options": [
+              "Off",
+              "Diode (909)",
+              "Hard Clip",
+              "SAT",
+              "BFZ",
+              "PDIST",
+              "Wavefolder",
+              "Bitcrush"
+            ]
+          },
+          {
+            "key": "master_drive",
+            "short": "MDRV",
+            "full": "Master Drive",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "master_comp",
+            "short": "COMP",
+            "full": "Comp",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "volume",
+            "short": "VOL",
+            "full": "Volume",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "accent",
+            "short": "ACC",
+            "full": "Accent",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "vel_depth",
+            "short": "VEL",
+            "full": "Velocity",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          null
+        ]
+      ]
+    },
+    {
       "name": "Bass Drum",
       "rows": [
         [
@@ -83,7 +157,8 @@
             "max": 127
           }
         ]
-      ]
+      ],
+      "pad": 0
     },
     {
       "name": "Snare",
@@ -161,7 +236,8 @@
             "max": 127
           }
         ]
-      ]
+      ],
+      "pad": 1
     },
     {
       "name": "Low Tom",
@@ -239,7 +315,8 @@
             "max": 127
           }
         ]
-      ]
+      ],
+      "pad": 2
     },
     {
       "name": "Med Tom",
@@ -317,7 +394,8 @@
             "max": 127
           }
         ]
-      ]
+      ],
+      "pad": 3
     },
     {
       "name": "Hi Tom",
@@ -395,7 +473,8 @@
             "max": 127
           }
         ]
-      ]
+      ],
+      "pad": 4
     },
     {
       "name": "Rim Shot",
@@ -459,7 +538,8 @@
           null,
           null
         ]
-      ]
+      ],
+      "pad": 5
     },
     {
       "name": "Hand Clap",
@@ -530,7 +610,8 @@
           },
           null
         ]
-      ]
+      ],
+      "pad": 6
     },
     {
       "name": "Closed Hat",
@@ -601,7 +682,8 @@
           },
           null
         ]
-      ]
+      ],
+      "pad": 7
     },
     {
       "name": "Open Hat",
@@ -672,7 +754,8 @@
           },
           null
         ]
-      ]
+      ],
+      "pad": 8
     },
     {
       "name": "Ride",
@@ -743,7 +826,8 @@
           },
           null
         ]
-      ]
+      ],
+      "pad": 10
     },
     {
       "name": "Crash",
@@ -814,7 +898,8 @@
           },
           null
         ]
-      ]
+      ],
+      "pad": 9
     },
     {
       "name": "Reverb",
@@ -918,80 +1003,6 @@
           },
           null,
           null,
-          null
-        ]
-      ]
-    },
-    {
-      "name": "Main",
-      "rows": [
-        [
-          {
-            "key": "note_map",
-            "short": "NOTE",
-            "full": "Note Map",
-            "type": "enum",
-            "options": [
-              "Drum Rack (36+)",
-              "General MIDI"
-            ]
-          },
-          {
-            "key": "master_dist",
-            "short": "MDST",
-            "full": "Master Dist",
-            "type": "enum",
-            "options": [
-              "Off",
-              "Diode (909)",
-              "Hard Clip",
-              "SAT",
-              "BFZ",
-              "PDIST",
-              "Wavefolder",
-              "Bitcrush"
-            ]
-          },
-          {
-            "key": "master_drive",
-            "short": "MDRV",
-            "full": "Master Drive",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "master_comp",
-            "short": "COMP",
-            "full": "Comp",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "volume",
-            "short": "VOL",
-            "full": "Volume",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "accent",
-            "short": "ACC",
-            "full": "Accent",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "vel_depth",
-            "short": "VEL",
-            "full": "Velocity",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
           null
         ]
       ]

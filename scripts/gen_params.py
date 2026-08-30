@@ -240,6 +240,21 @@ def movy_cell(key, label):
         c["type"] = "int"; c["min"] = 0; c["max"] = 127
     return c
 
+# ---- Pad-follow: a pad selects that drum's bank ---------------------------
+#
+# Stock Schwung switches the page to the drum you hit. Movy's only pad-aware
+# mechanism today is padSpecific — ONE bank whose knobs re-target — which is a
+# different feel and not what this kit wants: the voices do not share a control
+# set, so a single row is full of holes.
+#
+# So each voice bank declares WHICH PAD selects it. Movy 0.30.0 ignores the
+# field (it is opt-in and unknown to it), so this is inert until the pad->bank
+# PR lands upstream; a bank with no `pad` is simply never auto-selected, which
+# is why Main, Reverb and Delay carry none.
+PAD_ORDER = ["bd", "sd", "lt", "mt", "ht", "rim", "clap",
+             "chh", "ohh", "crash", "ride"]     # drum-rack notes 36..46
+PAD_OF_LEVEL = {lid: i for i, lid in enumerate(PAD_ORDER)}
+
 movy_banks = []
 for lid, lvl in levels.items():
     entries = [pe for pe in lvl.get("params", []) if pe.get("key") in cp_by_key]
@@ -249,8 +264,14 @@ for lid, lvl in levels.items():
     for i in range(0, len(cells), 8):
         row = cells[i:i+8]
         rows.append(row + [None] * (8 - len(row)))
-    movy_banks.append({"name": "Main" if lid == "root" else lvl["name"],
-                       "rows": rows})
+    bank = {"name": "Main" if lid == "root" else lvl["name"], "rows": rows}
+    if lid in PAD_OF_LEVEL:
+        bank["pad"] = PAD_OF_LEVEL[lid]
+    movy_banks.append(bank)
+
+
+# Main first: it is the page you want when you open the module, not a voice.
+movy_banks.sort(key=lambda b: 0 if b["name"] == "Main" else 1)
 
 movy = {"id": "9w9", "name": "9W9",
         "drum": {"padCount": 16, "padNoteStart": 36, "rawMidi": False},
