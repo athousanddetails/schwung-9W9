@@ -253,7 +253,12 @@ def movy_cell(key, label):
 # is why Main, Reverb and Delay carry none.
 PAD_ORDER = ["bd", "sd", "lt", "mt", "ht", "rim", "clap",
              "chh", "ohh", "crash", "ride"]     # drum-rack notes 36..46
-PAD_OF_LEVEL = {lid: i for i, lid in enumerate(PAD_ORDER)}
+PAD_OF_LEVEL = {lid: i + 1 for i, lid in enumerate(PAD_ORDER)}   # movy pads are 1-based
+# The three page-only pads, in the same seats the stock editor uses: the 4x4's
+# pad 12 is Main and the last two are the send FX. They sit past the kit's
+# notes (36..46), so pressing one sounds nothing and only turns the page —
+# which is exactly how they behave on the device.
+PAD_OF_LEVEL.update({"root": 12, "fxrev": 15, "fxdly": 16})
 
 movy_banks = []
 for lid, lvl in levels.items():
@@ -274,7 +279,10 @@ for lid, lvl in levels.items():
 movy_banks.sort(key=lambda b: 0 if b["name"] == "Main" else 1)
 
 movy = {"id": "9w9", "name": "9W9",
-        "drum": {"padCount": 16, "padNoteStart": 36, "rawMidi": False},
+        # padFollowLock opts into Shift + jog click freezing pad-follow, so the
+        # knobs stay put while you reach for a pad to hear what you changed.
+        "drum": {"padCount": 16, "padNoteStart": 36, "rawMidi": False,
+                 "padFollowLock": True},
         "banks": movy_banks}
 (pathlib.Path(__file__).resolve().parent.parent / "src/movy_config.json").write_text(
     json.dumps(movy, indent=2) + "\n")

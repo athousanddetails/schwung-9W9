@@ -4,7 +4,8 @@
   "drum": {
     "padCount": 16,
     "padNoteStart": 36,
-    "rawMidi": false
+    "rawMidi": false,
+    "padFollowLock": true
   },
   "banks": [
     {
@@ -79,7 +80,8 @@
           },
           null
         ]
-      ]
+      ],
+      "pad": 12
     },
     {
       "name": "Bass Drum",
@@ -158,7 +160,7 @@
           }
         ]
       ],
-      "pad": 0
+      "pad": 1
     },
     {
       "name": "Snare",
@@ -237,7 +239,7 @@
           }
         ]
       ],
-      "pad": 1
+      "pad": 2
     },
     {
       "name": "Low Tom",
@@ -316,7 +318,7 @@
           }
         ]
       ],
-      "pad": 2
+      "pad": 3
     },
     {
       "name": "Med Tom",
@@ -395,7 +397,7 @@
           }
         ]
       ],
-      "pad": 3
+      "pad": 4
     },
     {
       "name": "Hi Tom",
@@ -474,7 +476,7 @@
           }
         ]
       ],
-      "pad": 4
+      "pad": 5
     },
     {
       "name": "Rim Shot",
@@ -539,7 +541,7 @@
           null
         ]
       ],
-      "pad": 5
+      "pad": 6
     },
     {
       "name": "Hand Clap",
@@ -611,7 +613,7 @@
           null
         ]
       ],
-      "pad": 6
+      "pad": 7
     },
     {
       "name": "Closed Hat",
@@ -683,7 +685,7 @@
           null
         ]
       ],
-      "pad": 7
+      "pad": 8
     },
     {
       "name": "Open Hat",
@@ -755,7 +757,7 @@
           null
         ]
       ],
-      "pad": 8
+      "pad": 9
     },
     {
       "name": "Ride",
@@ -827,7 +829,7 @@
           null
         ]
       ],
-      "pad": 10
+      "pad": 11
     },
     {
       "name": "Crash",
@@ -899,7 +901,7 @@
           null
         ]
       ],
-      "pad": 9
+      "pad": 10
     },
     {
       "name": "Reverb",
@@ -942,7 +944,8 @@
           null,
           null
         ]
-      ]
+      ],
+      "pad": 15
     },
     {
       "name": "Delay",
@@ -1005,7 +1008,8 @@
           null,
           null
         ]
-      ]
+      ],
+      "pad": 16
     }
   ]
 }
