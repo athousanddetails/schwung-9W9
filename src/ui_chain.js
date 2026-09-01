@@ -224,6 +224,37 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
                 },
                 { title: title() }
             );
+            /*
+             * THE SECOND HALF OF THE DRAW, and it is not optional.
+             *
+             * render() paints a page into a rect the CALLER owns; nothing in
+             * param_pages clears the screen, which is what lets a consumer
+             * host a page inside its own chrome. So anything FULL-SCREEN is
+             * handed back to the frame owner — and that is us.
+             *
+             * Today that means the enum peek: turn a multi-option enum and its
+             * option list rises over the grid for ~700 ms. Without this call
+             * the controller still tracks the peek and applyInput still
+             * swallows the Back that dismisses it; it is simply painted
+             * nowhere, so a Back after a turn does nothing visible either.
+             *
+             * 9W9 shipped that way, silently, on every enum on every page:
+             * fourteen of them, worst on Delay Time, where thirteen note
+             * divisions hide behind one 30 px cell — you cannot see 1/8. from
+             * 1/8T without turning past it. Diagnosed and fixed by Charles on
+             * CW-78 (charlesvestal/schwung-78W#1); the same file, the same
+             * omission, here.
+             *
+             * Guarded because renderOverlays landed in a later host than this
+             * file's min_host_version, and an older host simply has no
+             * overlays to draw.
+             */
+            if (typeof controller.renderOverlays === "function") {
+                controller.renderOverlays(
+                    { fillRect: fill_rect, print: print, textWidth: text_width },
+                    { clearScreen: clear_screen }
+                );
+            }
         } else {
             /* Non-grid page kinds do not occur in 9W9's hierarchy; if one ever
              * does, show something honest instead of a stale frame. */
