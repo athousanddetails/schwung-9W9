@@ -279,10 +279,17 @@ for lid, lvl in levels.items():
 movy_banks.sort(key=lambda b: 0 if b["name"] == "Main" else 1)
 
 movy = {"id": "9w9", "name": "9W9",
-        # padFollowLock opts into Shift + jog click freezing pad-follow, so the
-        # knobs stay put while you reach for a pad to hear what you changed.
-        "drum": {"padCount": 16, "padNoteStart": 36, "rawMidi": False,
-                 "padFollowLock": True},
+        # padCount is the pad GRID movy addresses, not the voice count: pads past
+        # it resolve to nothing (drumPadOfPhys returns -1), so the three
+        # page-only pads below need the full 16 even though only 11 sound.
+        #
+        # No padFollowLock. A pad-follow lock was proposed alongside bank.pad
+        # and dropped in review (schwung-movy PR #16): Shift + jog click is one
+        # of the few gestures still free on that page and is spoken for, and a
+        # lock answering to three modules would make the same gesture mean
+        # different things on adjacent ones. The field is ignored now; do not
+        # reintroduce it.
+        "drum": {"padCount": 16, "padNoteStart": 36, "rawMidi": False},
         "banks": movy_banks}
 (pathlib.Path(__file__).resolve().parent.parent / "src/movy_config.json").write_text(
     json.dumps(movy, indent=2) + "\n")
