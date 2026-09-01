@@ -293,14 +293,40 @@ movy_banks.sort(key=lambda b: 0 if b["name"] == "Main" else 1)
 #  - Two banks claiming one pad means the second is unreachable, since
 #    findIndex takes the first.
 # Ported from 6W6's generator, which grew them first.
+#  - A bank carrying "global" marks its params NON-AUTOMATABLE
+#    (config-pages.ts: automatable = slot.automatable ?? (bank.global ? false
+#    : ...)). It is for params that genuinely are not chain-addressable. Three
+#    of the four modules in this family shipped it on a Master bank full of
+#    ordinary chain_params keys, so their master controls could not be
+#    automated or LFO'd at all — a live bug, not a latent one.
+#  - A cell key that is not a declared param resolves to nothing. The knob
+#    draws, and writes into the void, and nobody finds out until they turn it.
+#
+# Checked over the FINISHED bank list rather than the lists it is built from,
+# so a broken emitter fails too, not just broken input. 8W8's framing, and the
+# right one.
 for _b in movy_banks:
+    assert len(_b["rows"]) == 1, \
+        f"movy bank {_b['name']!r} has {len(_b['rows'])} rows; one bank is one page"
+    for _r in _b["rows"]:
+        assert len(_r) == 8, \
+            f"movy bank {_b['name']!r} has a row of {len(_r)}; a page is eight slots"
     _n = sum(1 for _r in _b["rows"] for _c in _r if _c)
     assert _n <= 8, f"movy bank {_b['name']!r} has {_n} slots; over 8 splits it into two pages"
+    assert "global" not in _b, \
+        f"movy bank {_b['name']!r} sets global; its params become non-automatable"
+    for _r in _b["rows"]:
+        for _c in _r:
+            if _c is not None:
+                assert _c["key"] in cp_by_key, \
+                    f"movy bank {_b['name']!r} points at {_c['key']!r}, which no param declares"
 
 _pads = [_b["pad"] for _b in movy_banks if "pad" in _b]
 assert len(_pads) == len(set(_pads)), f"two movy banks claim the same pad: {sorted(_pads)}"
-for _p in _pads:
-    assert 1 <= _p <= 16, f"movy pad {_p} is outside 1..padCount; it would resolve to nothing"
+for _b in movy_banks:
+    _p = _b.get("pad")
+    assert _p is None or 1 <= _p <= 16, \
+        f"bank {_b['name']!r} claims pad {_p}, outside 1..16 — movy pads are 1-BASED"
 
 movy = {"id": "9w9", "name": "9W9",
         # padCount is the pad GRID movy addresses, not the voice count: pads past
