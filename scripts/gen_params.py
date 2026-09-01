@@ -278,6 +278,30 @@ for lid, lvl in levels.items():
 # Main first: it is the page you want when you open the module, not a voice.
 movy_banks.sort(key=lambda b: 0 if b["name"] == "Main" else 1)
 
+# Assertions, not comments — every one of these has already been shipped wrong
+# by somebody in this family of modules, and none of them raises an error at
+# runtime. Movy just quietly does the wrong thing.
+#
+#  - A bank over 8 slots silently becomes TWO pages. The page names then
+#    desync from the banks, and pad-follow mis-targets, because
+#    findIndex(b => b.pad === pad) assumes one bank is one page. Movy's own
+#    9w9 fixture violates this today (a 16-slot "Kick" bank showing 8 pages
+#    for 7 banks, one of them labelled "Page 7").
+#  - A pad past padCount resolves to nothing: drumPadOfPhys returns -1 and the
+#    page is silently jog-only. CW-78 shipped padCount 14 with pages on pads
+#    15 and 16 and neither worked.
+#  - Two banks claiming one pad means the second is unreachable, since
+#    findIndex takes the first.
+# Ported from 6W6's generator, which grew them first.
+for _b in movy_banks:
+    _n = sum(1 for _r in _b["rows"] for _c in _r if _c)
+    assert _n <= 8, f"movy bank {_b['name']!r} has {_n} slots; over 8 splits it into two pages"
+
+_pads = [_b["pad"] for _b in movy_banks if "pad" in _b]
+assert len(_pads) == len(set(_pads)), f"two movy banks claim the same pad: {sorted(_pads)}"
+for _p in _pads:
+    assert 1 <= _p <= 16, f"movy pad {_p} is outside 1..padCount; it would resolve to nothing"
+
 movy = {"id": "9w9", "name": "9W9",
         # padCount is the pad GRID movy addresses, not the voice count: pads past
         # it resolve to nothing (drumPadOfPhys returns -1), so the three
