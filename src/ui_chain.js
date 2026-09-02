@@ -433,6 +433,15 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
         onPresetsChanged: function () {
             if (controller && typeof controller.refreshTrailing === "function")
                 controller.refreshTrailing();
+        },
+        /* After Load, Delete, Swap or Help the host reloads us and says which
+         * page we left from ("My Presets" or "Module") and whether to land
+         * inside its menu. Our controller keeps the request armed until its
+         * pages arrive, so a contract still settling is fine. Without this,
+         * every return landed on Main. */
+        restorePage: function (name, opts) {
+            if (controller && typeof controller.restorePage === "function")
+                controller.restorePage(name, opts || {});
         }
     };
 })();
