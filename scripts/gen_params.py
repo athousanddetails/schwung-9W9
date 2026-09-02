@@ -240,25 +240,32 @@ def movy_cell(key, label):
         c["type"] = "int"; c["min"] = 0; c["max"] = 127
     return c
 
-# ---- Pad-follow: a pad selects that drum's bank ---------------------------
+# ---- The voice slot: one page per voice, the pad choosing among them ------
 #
-# Stock Schwung switches the page to the drum you hit. Movy's only pad-aware
-# mechanism today is padSpecific — ONE bank whose knobs re-target — which is a
-# different feel and not what this kit wants: the voices do not share a control
-# set, so a single row is full of holes.
+# Movy takes exactly one shape for this, and it is the same shape padSpecific
+# has always had — a pad-following page FIRST, ordinary pages behind it:
 #
-# So each voice bank declares WHICH PAD selects it. Movy 0.30.0 ignores the
-# field (it is opt-in and unknown to it), so this is inert until the pad->bank
-# PR lands upstream; a bank with no `pad` is simply never auto-selected, which
-# is why Main, Reverb and Delay carry none.
+#     banks: [ voice, voice, ..., Main, Reverb, Delay ]
+#              ^-- each declares `pad`   ^-- none of them do
+#
+# The voice pages share ONE seat in the jog rotation, so this kit reads
+# <voice> -> Main -> Reverb -> Delay: four pages, not fourteen. The pad picks
+# which voice that first seat holds, and only while a voice page is the one
+# open — pressing a pad on Reverb re-points the voice page without dragging you
+# off Reverb, exactly as it does on forge and weird-dreams.
+#
+# The voice run is the LEADING run of banks declaring a pad, so ordering is
+# load-bearing and a `pad` on anything behind it is ignored.
+#
+# NO PAGE-ONLY PADS. An earlier revision put Main on pad 12 and the sends on 15
+# and 16 — spare seats in the 4x4 that sound nothing and just turn the page.
+# That reads as a free shortcut and is the opposite: having a pad is what makes
+# a bank a voice, so those three pads made Main/Reverb/Delay read as voices and
+# took them out of the rotation entirely. Pages without a voice get their own
+# seat in the page list instead; pads 12..16 are simply dead.
 PAD_ORDER = ["bd", "sd", "lt", "mt", "ht", "rim", "clap",
              "chh", "ohh", "crash", "ride"]     # drum-rack notes 36..46
 PAD_OF_LEVEL = {lid: i + 1 for i, lid in enumerate(PAD_ORDER)}   # movy pads are 1-based
-# The three page-only pads, in the same seats the stock editor uses: the 4x4's
-# pad 12 is Main and the last two are the send FX. They sit past the kit's
-# notes (36..46), so pressing one sounds nothing and only turns the page —
-# which is exactly how they behave on the device.
-PAD_OF_LEVEL.update({"root": 12, "fxrev": 15, "fxdly": 16})
 
 movy_banks = []
 for lid, lvl in levels.items():
@@ -275,8 +282,16 @@ for lid, lvl in levels.items():
     movy_banks.append(bank)
 
 
-# Main first: it is the page you want when you open the module, not a voice.
-movy_banks.sort(key=lambda b: 0 if b["name"] == "Main" else 1)
+# Voices first, in pad order, then the pages that have no voice behind them in
+# the order the hierarchy declares them (Main, Reverb, Delay). The leading run
+# IS the declaration, so this sort is not cosmetic: a voice bank behind Main
+# would stop being a voice, and Main ahead of nothing would leave the module
+# opening on a page the pad cannot reach. Stable, so the tail keeps its order.
+# Behind them, Main comes LAST. Reading the chain left to right — voices, their
+# sends, then the bus everything lands on — is the order the rest of the Schwung
+# fleet uses, and the one a chain view implies. Our own editor still opens on it.
+movy_banks.sort(key=lambda b: (0, b["pad"]) if "pad" in b
+                              else (1, 1 if b["name"] == "Main" else 0))
 
 # Assertions, not comments — every one of these has already been shipped wrong
 # by somebody in this family of modules, and none of them raises an error at
@@ -323,15 +338,29 @@ for _b in movy_banks:
 
 _pads = [_b["pad"] for _b in movy_banks if "pad" in _b]
 assert len(_pads) == len(set(_pads)), f"two movy banks claim the same pad: {sorted(_pads)}"
-for _b in movy_banks:
+# The voice run has to LEAD, with nothing claiming a pad behind it: movy reads
+# the leading run as the voices and ignores a pad on anything after it.
+_VOICES = len(PAD_ORDER)
+for _i, _b in enumerate(movy_banks):
     _p = _b.get("pad")
-    assert _p is None or 1 <= _p <= 16, \
-        f"bank {_b['name']!r} claims pad {_p}, outside 1..16 — movy pads are 1-BASED"
+    if _i < _VOICES:
+        assert _p is not None, \
+            f"bank {_i} {_b['name']!r} is inside the voice run but declares no pad"
+        assert 1 <= _p <= _VOICES, \
+            f"bank {_b['name']!r} claims pad {_p}, outside 1..{_VOICES} — pads are 1-BASED"
+    else:
+        assert _p is None, \
+            f"bank {_b['name']!r} sits behind the voice run and claims pad {_p}; " \
+            "movy ignores that and the page becomes jog-only"
+assert sorted(_pads) == list(range(1, _VOICES + 1)), \
+    f"the voice run must claim pads 1..{_VOICES} exactly, got {sorted(_pads)}"
 
 movy = {"id": "9w9", "name": "9W9",
-        # padCount is the pad GRID movy addresses, not the voice count: pads past
-        # it resolve to nothing (drumPadOfPhys returns -1), so the three
-        # page-only pads below need the full 16 even though only 11 sound.
+        # padCount is the kit: 11 voices, 11 pads. It used to be 16 to keep the
+        # page-only pads addressable (a pad past padCount resolves to nothing —
+        # drumPadOfPhys returns -1). With those gone the grid should say what
+        # the machine has, so the last five seats of the 4x4 are dead rather
+        # than live-but-silent.
         #
         # No padFollowLock. A pad-follow lock was proposed alongside bank.pad
         # and dropped in review (schwung-movy PR #16): Shift + jog click is one
@@ -339,7 +368,7 @@ movy = {"id": "9w9", "name": "9W9",
         # lock answering to three modules would make the same gesture mean
         # different things on adjacent ones. The field is ignored now; do not
         # reintroduce it.
-        "drum": {"padCount": 16, "padNoteStart": 36, "rawMidi": False},
+        "drum": {"padCount": len(PAD_ORDER), "padNoteStart": 36, "rawMidi": False},
         "banks": movy_banks}
 (pathlib.Path(__file__).resolve().parent.parent / "src/movy_config.json").write_text(
     json.dumps(movy, indent=2) + "\n")

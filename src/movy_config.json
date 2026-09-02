@@ -2,86 +2,11 @@
   "id": "9w9",
   "name": "9W9",
   "drum": {
-    "padCount": 16,
+    "padCount": 11,
     "padNoteStart": 36,
     "rawMidi": false
   },
   "banks": [
-    {
-      "name": "Main",
-      "rows": [
-        [
-          {
-            "key": "note_map",
-            "short": "NOTE",
-            "full": "Note Map",
-            "type": "enum",
-            "options": [
-              "Drum Rack (36+)",
-              "General MIDI"
-            ]
-          },
-          {
-            "key": "master_dist",
-            "short": "MDST",
-            "full": "Master Dist",
-            "type": "enum",
-            "options": [
-              "Off",
-              "Diode (909)",
-              "Hard Clip",
-              "SAT",
-              "BFZ",
-              "PDIST",
-              "Wavefolder",
-              "Bitcrush"
-            ]
-          },
-          {
-            "key": "master_drive",
-            "short": "MDRV",
-            "full": "Master Drive",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "master_comp",
-            "short": "COMP",
-            "full": "Comp",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "volume",
-            "short": "VOL",
-            "full": "Volume",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "accent",
-            "short": "ACC",
-            "full": "Accent",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "vel_depth",
-            "short": "VEL",
-            "full": "Velocity",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          null
-        ]
-      ],
-      "pad": 12
-    },
     {
       "name": "Bass Drum",
       "rows": [
@@ -759,78 +684,6 @@
       "pad": 9
     },
     {
-      "name": "Ride",
-      "rows": [
-        [
-          {
-            "key": "rc_decay",
-            "short": "DECY",
-            "full": "Decay",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "rc_pitch",
-            "short": "TUNE",
-            "full": "Tune",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "rc_drive",
-            "short": "DRIV",
-            "full": "Drive",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "rc_dist_type",
-            "short": "DIST",
-            "full": "Distortion",
-            "type": "enum",
-            "options": [
-              "Diode (909)",
-              "Hard Clip",
-              "SAT",
-              "BFZ",
-              "PDIST",
-              "Wavefolder",
-              "Bitcrush"
-            ]
-          },
-          {
-            "key": "rc_volume",
-            "short": "LEVL",
-            "full": "Level",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "rc_rev",
-            "short": "REV",
-            "full": "Rev",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          {
-            "key": "rc_dly",
-            "short": "DLY",
-            "full": "Dly",
-            "type": "int",
-            "min": 0,
-            "max": 127
-          },
-          null
-        ]
-      ],
-      "pad": 11
-    },
-    {
       "name": "Crash",
       "rows": [
         [
@@ -903,6 +756,78 @@
       "pad": 10
     },
     {
+      "name": "Ride",
+      "rows": [
+        [
+          {
+            "key": "rc_decay",
+            "short": "DECY",
+            "full": "Decay",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "rc_pitch",
+            "short": "TUNE",
+            "full": "Tune",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "rc_drive",
+            "short": "DRIV",
+            "full": "Drive",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "rc_dist_type",
+            "short": "DIST",
+            "full": "Distortion",
+            "type": "enum",
+            "options": [
+              "Diode (909)",
+              "Hard Clip",
+              "SAT",
+              "BFZ",
+              "PDIST",
+              "Wavefolder",
+              "Bitcrush"
+            ]
+          },
+          {
+            "key": "rc_volume",
+            "short": "LEVL",
+            "full": "Level",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "rc_rev",
+            "short": "REV",
+            "full": "Rev",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "rc_dly",
+            "short": "DLY",
+            "full": "Dly",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          null
+        ]
+      ],
+      "pad": 11
+    },
+    {
       "name": "Reverb",
       "rows": [
         [
@@ -943,8 +868,7 @@
           null,
           null
         ]
-      ],
-      "pad": 15
+      ]
     },
     {
       "name": "Delay",
@@ -1007,8 +931,81 @@
           null,
           null
         ]
-      ],
-      "pad": 16
+      ]
+    },
+    {
+      "name": "Main",
+      "rows": [
+        [
+          {
+            "key": "note_map",
+            "short": "NOTE",
+            "full": "Note Map",
+            "type": "enum",
+            "options": [
+              "Drum Rack (36+)",
+              "General MIDI"
+            ]
+          },
+          {
+            "key": "master_dist",
+            "short": "MDST",
+            "full": "Master Dist",
+            "type": "enum",
+            "options": [
+              "Off",
+              "Diode (909)",
+              "Hard Clip",
+              "SAT",
+              "BFZ",
+              "PDIST",
+              "Wavefolder",
+              "Bitcrush"
+            ]
+          },
+          {
+            "key": "master_drive",
+            "short": "MDRV",
+            "full": "Master Drive",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "master_comp",
+            "short": "COMP",
+            "full": "Comp",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "volume",
+            "short": "VOL",
+            "full": "Volume",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "accent",
+            "short": "ACC",
+            "full": "Accent",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          {
+            "key": "vel_depth",
+            "short": "VEL",
+            "full": "Velocity",
+            "type": "int",
+            "min": 0,
+            "max": 127
+          },
+          null
+        ]
+      ]
     }
   ]
 }
