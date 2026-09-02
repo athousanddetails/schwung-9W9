@@ -324,6 +324,112 @@ It resolves the labels with the real code and prints what each page will draw.
 
 ---
 
+## 6b. The host's trailing pages — My Presets and Module — on a module-owned grid
+
+Every sound generator on the stock hierarchy editor (Tablor, for one) gets two
+pages appended by the host: **My Presets** (Preset / Save / Save As / Delete)
+and **Module** (Help / Add to List / Swap / Remove). A module that ships its
+own `ui_chain.js` — all four drum machines — got neither, because it builds its
+own controller and the host only ever handed those pages to its own.
+
+Fixed host-side in **charlesvestal/schwung PR #396**. Until that ships, the
+pages exist only on a patched host; wire your side anyway — every call below is
+guarded, so on a stock host nothing changes and nothing appears.
+
+**Hardware-verified on 9W9** through the whole flow: pages appear, Save As
+raises the keyboard over the grid, Back steps out of the menu, Load/Delete/Swap/
+Help come back to the module. Every item below exists because the first cut got
+it wrong on the device.
+
+### What the host gives you
+
+Two bindings, installed beside `host_swap_module` with slot and component
+already applied, plus two optional hooks it calls on your `chain_ui`:
+
+| | |
+|---|---|
+| `shadow_component_trailing_menus()` | `[{name, entries}]` — feed to the controller as `io.trailingMenus` |
+| `shadow_component_run_action(action)` | perform a row's action; `true` if a screen opened over you |
+| `chain_ui.onPresetsChanged()` | called after a Save/Load while your grid is on screen |
+| `chain_ui.restorePage(name, {enter})` | called after the host reloads you following Load/Delete/Swap/Help |
+
+### The six things your `ui_chain.js` needs
+
+1. **Ask for the pages** in `createController`:
+   ```js
+   trailingMenus: () => (typeof shadow_component_trailing_menus === "function"
+       ? (shadow_component_trailing_menus() || []) : []),
+   ```
+2. **Draw them.** They arrive as `PAGE_MENU`, which the library draws itself.
+   If your render guard admits only `PAGE_KNOBS` you will print your
+   unsupported-page fallback over a page the library was about to draw.
+   Import `PAGE_MENU` and admit it.
+3. **Dispatch a row's action — from the ENTRY, not the intent.** A row
+   activation comes back from `applyInput` as `{ action: "menu", entry }`.
+   `"menu"` is the intent's *kind*; the key you want is `entry.action`.
+   Handing the host the word "menu" runs nothing, silently — that was bug one.
+   ```js
+   if (todo && todo.action === "menu") {
+       var act = todo.entry && todo.entry.action;
+       if (act && typeof shadow_component_run_action === "function")
+           shadow_component_run_action(act);
+       return;
+   }
+   ```
+4. **Climb the Back ladder.** The host consumes Back and calls your
+   `handleBack()` first, so you have to climb the same rungs
+   `page_input.mjs`'s `case "back"` does, in its order — or Back from inside
+   My Presets leaves the module and skips the page bar. That was bug two.
+   ```js
+   if (controller.dismissHint && controller.dismissHint()) return true;
+   if (controller.dismissPeek && controller.dismissPeek()) return true;
+   if (controller.pickerOpen) { controller.closePicker(); return true; }
+   if (controller.exitMenu && controller.exitMenu()) return true;   // out of the menu, not the module
+   return false;                                                    // host exits the editor
+   ```
+5. **Refresh after a save**, or the Preset row goes on reading `(none)`:
+   ```js
+   onPresetsChanged: function () {
+       if (controller && controller.refreshTrailing) controller.refreshTrailing();
+   },
+   ```
+6. **Land where you left from** after the host reloads you:
+   ```js
+   restorePage: function (name, opts) {
+       if (controller && controller.restorePage) controller.restorePage(name, opts || {});
+   },
+   ```
+   The controller keeps the request armed until its pages arrive, so a
+   contract still settling after the reload is fine.
+
+### The gesture that had to move
+
+Any lock or action you hung on a **plain jog click** now collides: on the last
+two pages a plain click is how a row is activated, and on Main it opens the
+section list. 9W9's Main-page lock moved to **Shift + jog click**. If your
+device editor uses a plain click for anything of its own, it has to move too —
+that gesture belongs to the platform now.
+
+### What was wrong in the host, so nobody rediscovers it
+
+Two defects in the first cut, both found only on hardware:
+
+- `runComponentActionFromGrid` decided "did this action open a screen?" with
+  `view !== VIEWS.PARAM_PAGES`, which is only right when the caller *was* the
+  host's param pages. From a module grid every action looked like a hand-off,
+  armed a return to a grid the module cannot host, and the device spun on
+  `synth:ui_hierarchy` reads. Now compared against the view at entry.
+- The return paths re-entered through `enterParamPages` regardless of who
+  asked. They now record the origin and come back through
+  `enterComponentEditFallback` for a module — the door the host opens a module
+  UI with — then call `restorePage` so you land where you left from.
+
+Generalisable rule, and the reason both were missed: **a host function that
+reads `view` to decide what it did is coupled to whoever called it.** Any host
+path a module-owned grid can now reach needs checking for that assumption.
+
+---
+
 ## 6. Deployment gotchas
 
 - Never `scp` over a live `dsp.so` — the shim has it `dlopen`ed, and
