@@ -382,14 +382,18 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
              * intent just closes the picker. */
             if (controller.pickerOpen) controller.closePicker();
         }
-        /* A menu row's action — Save, Save As, Delete, Swap Module, Help.
-         * Performed by the SHADOW UI, not here: they reach the user preset
-         * store, the preset browser, the component picker and the help
-         * screen, none of which a module can address. A true return means a
-         * screen opened over us, so stop touching the page. */
-        if (todo && todo.action && todo.action !== "exit" &&
-            typeof shadow_component_run_action === "function") {
-            if (shadow_component_run_action(todo.action)) return;
+        /* A menu row was activated. The controller reports it as
+         * { action: "menu", entry } — the ENTRY carries the action key
+         * (up_save_as, swap_module …); "menu" is only the intent's kind. The
+         * first cut handed the host the word "menu" and, reasonably, nothing
+         * happened. Performed by the SHADOW UI, not here: those keys reach the
+         * user preset store, the preset browser, the component picker and the
+         * help screen, none of which a module can address. */
+        if (todo && todo.action === "menu") {
+            var act = todo.entry && todo.entry.action;
+            if (act && typeof shadow_component_run_action === "function")
+                shadow_component_run_action(act);
+            return;
         }
         /* 'open' (opaque param editors) cannot occur: every 9W9 param is an
          * int or an enum. Ignored if a future param ever produces one. */
@@ -397,10 +401,23 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
 
     function onMidiMessageExternal(data) { }
 
+    /* The host consumes the Back button and asks us first, so the ladder the
+     * stock grid climbs one rung at a time has to be climbed here: an open
+     * picker closes; a peek comes down; an ENTERED menu steps out to its door,
+     * leaving the jog turning pages again; only then does Back leave the
+     * module. Without the menu rung, Back from inside My Presets went straight
+     * to the chain editor — the whole page bar skipped. */
     function handleBack() {
-        if (controller && controller.pickerOpen) {
+        if (!controller) { setPadBlock(false); return false; }
+        if (controller.pickerOpen) {
             controller.closePicker();
             return true;                       /* consumed: close the list */
+        }
+        if (typeof controller.dismissPeek === "function" && controller.dismissPeek())
+            return true;                       /* the peek is a layer */
+        if (typeof controller.menuEntered === "function" && controller.menuEntered()) {
+            controller.exitMenu();
+            return true;                       /* out of the menu, not the module */
         }
         setPadBlock(false);
         return false;                          /* host exits the editor */
