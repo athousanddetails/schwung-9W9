@@ -36,16 +36,19 @@
         "Knobs 1-8 edit the",
         "visible page.",
         "Jog: change page.",
+        "Jog click: section",
+        "list (and Save etc",
+        "on the last pages).",
         "All pots are 0-127.",
         "",
-        "Jog click on Main:",
-        " locks the page.",
-        " Pads still play,",
-        " page stays put.",
-        " ([L] in the bar)",
-        " Shift+Pad still",
-        " selects. Click",
-        " again to unlock."
+        "SHIFT + jog click",
+        "on Main: locks the",
+        "page. Pads still",
+        "play, page stays.",
+        "([L] in the bar)",
+        "Shift+Pad still",
+        "selects. Again to",
+        "unlock."
       ]
     },
     {
