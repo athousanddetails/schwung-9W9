@@ -409,16 +409,13 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
      * to the chain editor — the whole page bar skipped. */
     function handleBack() {
         if (!controller) { setPadBlock(false); return false; }
-        if (controller.pickerOpen) {
-            controller.closePicker();
-            return true;                       /* consumed: close the list */
-        }
-        if (typeof controller.dismissPeek === "function" && controller.dismissPeek())
-            return true;                       /* the peek is a layer */
-        if (typeof controller.menuEntered === "function" && controller.menuEntered()) {
-            controller.exitMenu();
-            return true;                       /* out of the menu, not the module */
-        }
+        /* Same rungs, same order, as page_input.mjs's own `case "back"` —
+         * hint, peek, picker, menu — so Back means the same thing here as on
+         * every stock grid. exitMenu() answers whether it had a menu to leave. */
+        if (controller.dismissHint && controller.dismissHint()) return true;
+        if (controller.dismissPeek && controller.dismissPeek()) return true;  /* a layer */
+        if (controller.pickerOpen) { controller.closePicker(); return true; }
+        if (controller.exitMenu && controller.exitMenu()) return true;    /* out of the menu, not the module */
         setPadBlock(false);
         return false;                          /* host exits the editor */
     }
