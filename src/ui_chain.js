@@ -26,7 +26,7 @@
 
 import { createController } from '/data/UserData/schwung/shared/param_pages/page_controller.mjs';
 import { decodeInput, applyInput } from '/data/UserData/schwung/shared/param_pages/page_input.mjs';
-import { PAGE_KNOBS } from '/data/UserData/schwung/shared/param_pages/page_plan.mjs';
+import { PAGE_KNOBS, PAGE_MENU } from '/data/UserData/schwung/shared/param_pages/page_plan.mjs';
 import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_page_movy.mjs';
 
 (function () {
@@ -213,7 +213,21 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
          * binding does (a full page render is ~1.6 ms, measured upstream). */
         clear_screen();
         var page = controller.page;
-        if (controller.pickerOpen || (page && page.kind === PAGE_KNOBS)) {
+        /* PAGE_MENU as well as the grid. A menu page is a list of actions with
+         * no params behind it, and the LIBRARY draws it (renderPicker with
+         * header:false) — its own note says "a tool embedding the grid should
+         * get menus without owning a screen", and we are such a tool. Excluding
+         * it here would print the unsupported-page fallback over a page the
+         * library was about to draw correctly.
+         *
+         * Nothing in 9W9's hierarchy declares one yet, so this changes nothing
+         * today. It is what the host's own trailing "My Presets" and "Module"
+         * pages arrive as, and those are handed to a controller through
+         * io.trailingMenus — a hook the host does not currently expose to a
+         * module-owned chain UI (see the note on ctlGetParam). This side is
+         * ready for the day it does. */
+        if (controller.pickerOpen ||
+            (page && (page.kind === PAGE_KNOBS || page.kind === PAGE_MENU))) {
             controller.render(
                 {
                     fillRect: fill_rect, print: print, textWidth: text_width,
@@ -346,7 +360,14 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
             if (controller.pickerOpen) controller.closePicker();
         }
         /* 'open' (opaque param editors) cannot occur: every 9W9 param is an
-         * int or an enum. Ignored if a future param ever produces one. */
+         * int or an enum. Ignored if a future param ever produces one.
+         *
+         * A menu row's 'action' is likewise absent today: 9W9 declares no menu
+         * of its own, and the host's trailing pages never reach us. If they
+         * ever do, their actions (up_load, up_save, swap_module …) are
+         * performed by the shadow UI, not here — a module cannot reach the user
+         * preset store or the module browser, which is exactly why the hook
+         * needs to come from the host rather than be reimplemented per module. */
     }
 
     function onMidiMessageExternal(data) { }
