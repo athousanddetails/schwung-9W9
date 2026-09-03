@@ -20,6 +20,33 @@ you *what* to copy, *what will bite you*, and *what to prove before committing*.
 
 ---
 
+## Status — 6W6, as of v1.4.1
+
+Filled in by the 6W6 session after the port. Two entries diverge from what this
+document told it to do; both were Gus's call and are marked.
+
+| § | 6W6 | note |
+|---|---|---|
+| 1 distortion | **done** | 7 types, verbatim. Plus a dry-at-zero crossfade this doc does not describe — see §7.1 |
+| 2 Main-page lock | **done** | now on Shift + jog click, as §6b requires; plain click is Schwung's |
+| 3 send FX | **done, UI included** | Gus later asked for the pages, pads and panel. **The kick got sends too** — his explicit reversal of the kick-stays-dry rule below |
+| 4 velocity | **done** | went further: Accent **deleted**, its gain kept as a constant. See §7.2 |
+| 5 voice-qualified names | **done** | the seam works exactly as described |
+| 6b trailing pages | **done** | verified on the deployed `ui_chain.js`: `trailingMenus`, `PAGE_MENU`, `exitMenu`, `restorePage`, `onPresetsChanged`, `shadow_component_run_action` |
+| 6b.1 `ui_hierarchy` as `""` | **done** | verified by running 9W9's loadtest against the deployed `dsp.so`: serves empty |
+
+**§7 is new**, and is the part worth reading before you touch 8W8: six traps
+the 6W6 port hit that nothing above predicted. Two of them shipped broken.
+
+> **Rows updated 2026-09-03 by the 9W9 session.** The three §6b/§6b.1/lock rows
+> read NOT DONE when this table was written; all three have since shipped and
+> were verified on the device for **6W6, 8W8 and CW-78 alike** — the wiring by
+> grepping each deployed `ui_chain.js`, the `ui_hierarchy` answer by running
+> 9W9's loadtest against each deployed `dsp.so`. Swap into any of the four
+> drum machines now lands on its first page.
+
+---
+
 ## 0. Ground rules
 
 **The existing kit must not change.** 6W6 and 8W8 were fitted against hardware
@@ -189,6 +216,10 @@ those work on the wet signal too.
 **Every voice except the kick gets sends.** The kick stays dry — Gus's explicit
 call in 9W9. Flag it for these kits rather than assuming.
 
+> **Reversed for 6W6.** Asked directly, Gus wanted reverb and delay on *all*
+> instruments including the kick. So flag it, do not copy it: the rule is "ask",
+> not "the kick is dry". 6W6 ships `bd_rev`/`bd_dly` like every other voice.
+
 Copy `er99_verb_t` / `er99_dly_t` and their ticks from `src/dsp/er99_engine.h`
 and `er99_engine.c`:
 
@@ -283,6 +314,27 @@ Four properties, each worth a loadtest check, because each was a separate bug:
    `vel_depth = 0` is **bit-identical** to the pre-velocity release for any
    velocity at or above the old threshold — worth asserting.
 4. **Monotonic, with no step** at the old threshold.
+
+**6W6 went one step further, and it is compatible with rule 3.** It deleted the
+Accent pot outright and kept the *number* as a constant:
+
+```c
+#define SD606_FULL_VELOCITY_GAIN 1.9921260f   /* the old Accent default */
+const float accent = SD606_FULL_VELOCITY_GAIN
+                   * (1.0f - e->potv[e->p_vel_depth]
+                             * (1.0f - (float)vi * (1.0f/127.0f)));
+```
+
+Rule 3 says "anchor at Accent, not at 1.0", and the trap it warns about is
+anchoring at 1.0 — not keeping the pot. Freezing Accent at its default and
+anchoring there satisfies it: a full-velocity hit lands exactly where an
+accented hit always did, so nothing gets quieter. What it costs is the ability
+to move that ceiling, which on a machine whose accent is a fixed bus level is
+arguably correct. What it *buys* is that velocity becomes the only loudness
+control, with no second one fighting it.
+
+Deleting the pot is the expensive half, and not for the reason you would guess
+— see §7.2.
 
 Check where the gain is applied. In 9W9 every circuit voice uses it as a
 post-distortion output gain, so it changes level only. If a voice applies it
@@ -469,4 +521,169 @@ opens instantly; the gate rule is only the backstop for modules that do not.
 - The Move's DHCP address changes on reboot. Re-resolve with `ping move.local`
   and update the `movedevice` entry in `~/.ssh/config`.
 - Run the on-device loadtest after deploying, and add checks for what you
-  added — it dlopens the real `.so` exactly as the chain host does.
+  added — it dlopens the real `.so` exactly as the chain host does. **That is
+  not proof the device is running it** — see §7.4, which is the single most
+  expensive process trap in this document.
+- Reboot with `schwung-heal --reboot`, never a plain `reboot`, and verify
+  `/proc/uptime` reset (§7.4).
+
+---
+
+## 7. What the 6W6 port actually hit
+
+Six traps, none of them predicted above. Two shipped broken and were found by a
+user rather than a test. Written from the 6W6 port; 8W8 is the same shape of
+codebase and should assume all six apply.
+
+### 7.1 Drive at zero must be *transparent*, not merely quiet
+
+§1 moves the drive range so unity sits near pot 8. That leaves pots 1..7 as
+settings that still shape the signal, so "Drive off" is not off — a user turning
+Drive down gets a quieter distortion, not a clean voice. 6W6 added an explicit
+dry path plus a crossfade over the bottom of the knob:
+
+```c
+const int dpot = e->pot[s.drive];
+if(dpot <= 0) shaped = raw;                    /* exactly dry, not approximately */
+else {
+    shaped = sd606_shape_st(raw, e->potv[s.drive], e->env[s.dist], r.crush_st);
+    if(dpot < SD606_DRIVE_WET_POT)             /* 8 */
+        shaped = raw + ((float)dpot / (float)SD606_DRIVE_WET_POT) * (shaped - raw);
+}
+```
+
+Prove it with a null test, not by ear: at pot 0 the output must be
+**bit-identical** to the pre-distortion build.
+
+The same rule applies at the master stage, and there it is also why a knob
+sweep can look dead: 6W6 gates on `if(mdist > 0 && mpot > 0)` and `master_dist`
+defaults to Off, so `master_drive` does nothing until a type is chosen. Correct,
+and it will read as a broken knob to anyone testing it cold — see §7.6.
+
+### 7.2 The positional state blob cannot survive a deletion
+
+This is the big one, and §1 only half-warns about it. §1 says changing a pot's
+*range* breaks saved patches. Deleting a pot is worse: the blob stores raw pot
+positions **by table index**, so removing one shifts every entry after it and an
+old patch loads as a different kit — different tuning, different decays, silently.
+
+6W6 deleted three pots across two releases (`bd_drift`, `sd_decay`, then
+`accent`). What works:
+
+- **Never insert. Only append.** A new pot goes on the END of the registration
+  order, whatever the page order is. 6W6's `gen_params.py` registers in historic
+  order and lets pages list keys in whatever order reads well.
+- **Migrate by NAME, not by index.** Keep the historic key tables embedded in
+  the engine — `kV1PotKeys[40]`, `kV2PotKeys[64]` — and for any blob older than
+  the current version, scatter values by looking each old key up in the current
+  table. A key that no longer exists simply has nowhere to land.
+- **A short blob is not an error.** Deserialize must apply the entries it has
+  and leave the rest at their creation defaults, so a patch saved before a pot
+  was appended still loads. Do NOT reset the whole table first — that would make
+  a short blob clobber everything it does not mention.
+- Assert both directions in the loadtest, building a real old blob rather than
+  relabelling a current one. Relabelling only proves the code agrees with itself.
+
+The payoff: when `sd_decay` came *back* by user request two releases later, it
+was appended at index 63, and v1/v2 patches — which still carry an `sd_decay` —
+restored it by name automatically.
+
+### 7.3 Your binding must call `controller.tick()`
+
+**The most expensive bug of the whole port, and it is one line.**
+
+`ui_chain.js` owns the grid's heartbeat. `controller.tick()` is what advances
+the library's VALUE CURSOR — it reads one param per tick around the page
+(a bulk refresh was measured at ~186 ms/cycle, hence one at a time). Drop the
+call and `state.values` stays `{}` forever.
+
+Nothing throws. The page still draws. So it does not present as a crash, it
+presents as a **data** regression:
+
+- every enum box renders **completely EMPTY** — `render_page_movy.mjs`'s last
+  resort is `String(shown ?? "")`, and `shown` is `undefined`
+- every knob silently reads 0
+
+6W6 lost the line while deleting unrelated code from `tick()`. The hunt then
+burned a session on the DSP, the deployed files, the slot number,
+`param_meta.mjs`'s `label`-vs-`name` merge and the shared library — all
+innocent. Put it back where 8W8 has it, immediately after `setReveal`.
+
+Diagnosis shortcut worth more than the fix: run the binding offline against the
+real `param_pages` library with `shadow_get_param` logged. **If the only reads
+are `ui_pages` / `chain_params` / `mutes` and never a param key, the cursor is
+not running.** `test/ui_chain.test.mjs` now asserts every Main-page cell — and
+every enum cell specifically — holds a non-empty value, and that guard is
+verified to fail when the line is removed.
+
+This matters directly for §6b: you are about to make six edits to `tick()` and
+`handleBack()`. It is exactly the file and exactly the kind of edit that lost it.
+
+### 7.4 A new `dsp.so` on disk is not the running one, and the slot is not 0
+
+§6 says run the loadtest after deploying. That is not sufficient, and the way it
+fails is nasty: the on-device loadtest `dlopen`s the file **itself**, so it
+passes against the new build while the chain host keeps the old inode mapped.
+**Green tests, stale code.** `kill shadow_ui` does not help — different process.
+
+Force a real module reload, and find the slot **by module id**:
+`scripts/reload_slot.py <host> -1 <module-id>` scans the slots and asks the one
+actually running the module to re-`dlopen`. 6W6's `deploy.sh` hardcoded slot 0;
+the moment another module occupied it, every reload for a whole session silently
+did nothing.
+
+Two more, both learned the hard way:
+
+- **A plain `reboot` over ssh fails silently on the Move.** It returns cleanly
+  and the box keeps running. Use `/data/UserData/schwung/bin/schwung-heal
+  --reboot`, then verify `/proc/uptime` actually reset. Three "reboots" in a row
+  did nothing before this was noticed.
+- `reload_slot.py` only forces an already-loaded slot to re-load. It cannot load
+  a module into an **empty** slot — that is a pick on the device.
+
+### 7.5 `viz: false` on any `*_attack` that is a click level
+
+The device grid's `viz.mjs` auto-pairs an adjacent `*_attack` and `*_decay` with
+a matching stem into an AD envelope graphic, and hoists it to the front of the
+page. On a 606 or an 808, Attack is a **click level**, not an envelope time — so
+the graphic draws an envelope that does not exist and implies a time control
+that is really an amount.
+
+Declare `"viz": false` beside `key`/`name`/`type` in chain_params for those
+params. 6W6 does; with it the Kick page resolves to a fader on `bd_level` and no
+envelope. Check the engine before copying: if a voice's attack really is a time
+constant, the graphic is honest and you want it.
+
+Verify with the real resolver rather than by eye — and note it takes an
+**object**: `resolveViz({ keys, metaIndex })`. Called positionally it returns
+`{groups:[],invalid:[]}`, which is indistinguishable from "clean".
+
+### 7.6 Nothing in these suites asserts a control has an EFFECT
+
+Ranges, names, defaults, key resolution, storage order, both state migrations —
+all of it passes with a knob wired to nothing. 8W8 shipped exactly that: a pot
+that resolved its slot and reached no voice, dead at 0/64/127, with a green
+suite.
+
+`tools/knob_check.cpp` (6W6, ported from the CW-78 session's) renders each
+control at both ends of its range and hashes the audio; equal hashes mean the
+control changed nothing. 75 controls, all alive.
+
+The hash is the easy half — **the context is the work, and getting it wrong
+manufactures failures.** 6W6's first run reported two dead and both were the
+harness. CW-78's first run reported 27 dead and 25 were false. Each control has
+to be measured where it is *supposed* to work, and that context is a design
+claim worth writing next to it:
+
+- a distortion **type** does nothing while Drive is 0 — and Drive may default to 0
+- 6W6's `master_drive` does nothing while `master_dist` is Off — the type gates
+  the drive, the inverse of the above
+- a send does nothing while the bus it feeds is silent
+- `vel_depth` does nothing at velocity 127, by design
+- **`hh_choke` needs a context that is not a parameter but TIME**: strike OH,
+  let it ring 100 ms, *then* strike CH. Both in the same sample and the choke
+  has nothing to cut, and reads as dead
+
+Mutation-test the probe or it proves nothing: stub a voice so a pot still
+resolves and still stores but never reaches it. `knob_check` must report DEAD
+while `loadtest.c` reports ALL PASS on the same build. That gap is the point.
