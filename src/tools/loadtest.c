@@ -398,11 +398,30 @@ int main(int argc, char**argv){
      * transport, and demand audio with NO manual triggers at all. ---- */
     {
         api->set_param(inst, "seq_voice", "0");
-        uint8_t step1[3]={0x90,16,100}, step9[3]={0x90,24,100};
+        /* A step toggles on the RELEASE of a tap, not on the press — a held
+         * step is the parameter-lock gesture and must leave the trig alone. */
+        uint8_t step1[3]={0x90,16,100}, step1u[3]={0x80,16,0};
+        uint8_t step9[3]={0x90,24,100}, step9u[3]={0x90,24,0};   /* vel-0 spelling */
         api->on_midi(inst, step1, 3, 0);
-        api->on_midi(inst, step9, 3, 0);
         n = api->get_param(inst, "seq_bd", buf, sizeof(buf));
-        CHECK(n>0 && atoi(buf)==(1|(1<<8)), "step toggles set seq_bd mask 257");
+        CHECK(n>0 && atoi(buf)==0, "a step PRESS alone does not toggle");
+        api->on_midi(inst, step1u, 3, 0);
+        api->on_midi(inst, step9, 3, 0);
+        api->on_midi(inst, step9u, 3, 0);
+        n = api->get_param(inst, "seq_bd", buf, sizeof(buf));
+        CHECK(n>0 && atoi(buf)==(1|(1<<8)), "step TAPS (either release spelling) set seq_bd mask 257");
+
+        /* Hold step 2 past the tap window (0.52 s of blocks), then release:
+         * that is a lock gesture, and the mask must not change. */
+        {
+            uint8_t hp[3]={0x90,17,100}, hu[3]={0x80,17,0};
+            static int16_t hold_out[128*2];
+            api->on_midi(inst, hp, 3, 0);
+            for(int b=0;b<180;++b) api->render_block(inst, hold_out, 128);
+            api->on_midi(inst, hu, 3, 0);
+            api->get_param(inst, "seq_bd", buf, sizeof(buf));
+            CHECK(atoi(buf)==(1|(1<<8)), "a step HELD past the tap window does not toggle (parameter-lock gesture)");
+        }
 
         uint8_t ext[3]={0x90,17,100};
         api->on_midi(inst, ext, 3, 2);

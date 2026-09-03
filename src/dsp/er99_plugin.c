@@ -39,6 +39,11 @@ typedef struct {
     uint16_t      seq[ER99_NUM_TRIGGERS];
     int           seq_voice;
     int           seq_last_step;
+    /* When each step button went down, as samples_rendered + 1 (0 = not
+     * held). A TAP toggles the step on release; a HOLD does not — a held step
+     * is Schwung's parameter-lock gesture, and toggling under it would flip a
+     * trig every time a lock was placed. */
+    uint64_t      step_down_at[16];
 
     /* Silent-select support: while samples_rendered < mute_until, incoming
      * note triggers are swallowed. The editor sets this just before
@@ -173,6 +178,12 @@ static void destroy_instance(void *_instance)
     free(inst);
 }
 
+/* Longest press that still counts as a TAP on a step button. Anything longer
+ * is a hold — Schwung's parameter-lock gesture — and must not toggle. 300 ms
+ * is comfortably above a deliberate tap and well under the time it takes to
+ * reach for an encoder. */
+#define ER99_STEP_TAP_MAX_S 0.30f
+
 static void on_midi(void *_instance, const uint8_t *_msg, const int _len, const int _source)
 {
     er99_instance_t *inst = (er99_instance_t*)_instance;
@@ -182,20 +193,45 @@ static void on_midi(void *_instance, const uint8_t *_msg, const int _len, const 
     const uint8_t note   = _msg[1];
     const uint8_t vel    = _msg[2];
 
-    /* Drums are one-shots: note-off is ignored, note-on with velocity 0 too. */
-    if(status != 0x90 || vel == 0) return;
-
-    /* Step buttons (notes 16-31): toggle the selected voice's step. These only
-     * arrive while the 9W9 patch's capture rules are active (slot focused), so
-     * outside our editor the steps stay Move's. Internal surface only —
-     * external gear sending 16-31 must not rewrite patterns. */
-    if(note >= 16 && note <= 31 && _source == 0)
+    /* Step buttons (notes 16-31): a TAP toggles the selected voice's step, on
+     * release. These only arrive while the 9W9 patch's capture rules are
+     * active (slot focused), so outside our editor the steps stay Move's.
+     * Internal surface only — external gear sending 16-31 must not rewrite
+     * patterns.
+     *
+     * ON RELEASE, NOT PRESS, because a HELD step means something else: hold a
+     * step and turn a knob and Schwung writes a parameter lock for that step
+     * (host/lock_common.h). Toggling on press would flip the trig under every
+     * lock the user placed. So the press only records when it happened, and
+     * the release toggles if the hold was shorter than a tap. Sits ahead of
+     * the one-shot filter below because that filter drops note-offs, and the
+     * release IS the event here. Either spelling of a release counts — Move
+     * sends both note-off and note-on with velocity 0. */
+    if(note >= 16 && note <= 31 && _source == 0 && (status == 0x90 || status == 0x80))
     {
-        const int v = inst->seq_voice;
-        if(v >= 0 && v < ER99_NUM_TRIGGERS)
-            inst->seq[v] ^= (uint16_t)(1u << (note - 16));
+        const int i = note - 16;
+        if(status == 0x90 && vel > 0)
+        {
+            inst->step_down_at[i] = inst->samples_rendered + 1u;
+            return;
+        }
+        if(inst->step_down_at[i])
+        {
+            const uint64_t held = inst->samples_rendered - (inst->step_down_at[i] - 1u);
+            inst->step_down_at[i] = 0;
+            const float sr = inst->engine.sample_rate > 0.0f ? inst->engine.sample_rate : 44100.0f;
+            if(held < (uint64_t)(ER99_STEP_TAP_MAX_S * sr))
+            {
+                const int v = inst->seq_voice;
+                if(v >= 0 && v < ER99_NUM_TRIGGERS)
+                    inst->seq[v] ^= (uint16_t)(1u << i);
+            }
+        }
         return;
     }
+
+    /* Drums are one-shots: note-off is ignored, note-on with velocity 0 too. */
+    if(status != 0x90 || vel == 0) return;
 
     const int t = note_to_trigger(note);
     if(t < 0) return;

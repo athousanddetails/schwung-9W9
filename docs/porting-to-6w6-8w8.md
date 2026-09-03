@@ -507,6 +507,21 @@ instead of restoring the old grid, and the gate falls back after three failed
 reads on a named, not-loading module. With the `""` answer above your module
 opens instantly; the gate rule is only the backstop for modules that do not.
 
+### 6b.2 Step buttons: toggle on a TAP's release, never on the press
+
+Schwung's parameter locks use a HELD step as the modifier: hold step 9, turn a
+knob, and the value belongs to step 9 (Schwung `host/lock_common.h`). The
+captured step note still reaches your `on_midi` — the shim adds a listener, it
+does not divert — so a sequencer that toggles on the press flips a trig under
+every lock the user places.
+
+9W9 records the press and toggles on the release only if the hold was shorter
+than a tap (`ER99_STEP_TAP_MAX_S`, 300 ms). Both release spellings count: Move
+sends note-off and note-on with velocity 0. The one-shot filter that drops
+note-offs has to come AFTER the step branch, or the release never arrives.
+`loadtest.c` asserts all three: press alone does nothing, tap toggles, hold
+does not.
+
 ## 6. Deployment gotchas
 
 - Never `scp` over a live `dsp.so` — the shim has it `dlopen`ed, and
