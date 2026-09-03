@@ -68,7 +68,9 @@ int main(int argc, char**argv){
     }
 
     int m = api->get_param(inst, "ui_hierarchy", buf, sizeof(buf));
-    CHECK(m < 0, "ui_hierarchy absent (ui_chain.js fallback engages)");
+    CHECK(m == 0 && buf[0] == 0,
+          "ui_hierarchy served EMPTY (declares no hierarchy): the host load gate "
+          "falls back to ui_chain.js at once instead of holding on a failed read");
     m = api->get_param(inst, "ui_pages", buf, sizeof(buf));
     CHECK(m > 100 && strstr(buf, "\"levels\"") != NULL,
           "ui_pages serves the hierarchy for the param_pages binding");

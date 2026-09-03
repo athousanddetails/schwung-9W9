@@ -430,6 +430,32 @@ path a module-owned grid can now reach needs checking for that assumption.
 
 ---
 
+### 6b.1 Swap Module into your module: answer `ui_hierarchy` with "" (not an error)
+
+Reported from hardware on 9W9: stock grid → Module → Swap → pick 9W9 → click
+sat on the host's "Loading..." card until the user pressed Back. The host's
+component load gate (`shared/component_load_gate.mjs`) reads `<prefix>:ui_hierarchy`
+with THREE answers: JSON = declared, `""` = served and empty (fall back to
+`ui_chain.js` at once), null/error = the read did not complete (hold and ask
+again). Our plugins returned `-1` for the key, which is the third answer, so the
+gate waited forever.
+
+Do this in your `get_param`:
+
+```c
+if(!strcmp(_key, "ui_hierarchy")) { if(_len < 1) return -1; _buf[0] = 0; return 0; }
+```
+
+and flip the loadtest assertion from `m < 0` to `m == 0 && buf[0] == 0`.
+The normal entry path is unchanged: `getComponentHierarchy` treats `""` as
+"no hierarchy" and loads `ui_chain.js` exactly as before.
+
+The host side (PR #396) also got two fixes you need for the flow to work at all:
+a completed swap now re-enters the NEW module through `openComponentEditor`
+instead of restoring the old grid, and the gate falls back after three failed
+reads on a named, not-loading module. With the `""` answer above your module
+opens instantly; the gate rule is only the backstop for modules that do not.
+
 ## 6. Deployment gotchas
 
 - Never `scp` over a live `dsp.so` — the shim has it `dlopen`ed, and

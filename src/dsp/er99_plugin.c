@@ -302,13 +302,22 @@ static int get_param(void *_instance, const char *_key, char *_buf, const int _l
         memcpy(_buf, er99_chain_params_json, ER99_CHAIN_PARAMS_LEN + 1);
         return ER99_CHAIN_PARAMS_LEN;
     }
-    /* ui_hierarchy is deliberately NOT served. The Shadow UI's
+    /* ui_hierarchy is deliberately served EMPTY, not refused. The Shadow UI's
      * enterComponentEdit uses the hierarchy editor whenever a module offers
      * one, and only falls back to loading the module's own ui_chain.js when it
-     * doesn't (shadow_ui.js ~7584). 9W9 ships ui_chain.js — the RD-9-style
-     * pad-select editor — so the hierarchy must stay absent. */
+     * doesn't. 9W9 ships ui_chain.js — the RD-9-style pad-select editor — so
+     * the hierarchy must stay absent... but "absent" has a spelling. The host's
+     * component load gate (component_load_gate.mjs) reads this key with THREE
+     * answers: JSON = declared, "" = served and empty (fall back at once),
+     * error/null = the read did not complete (hold and ask again). Returning
+     * -1 here was the third answer, and a Swap Module into 9W9 sat on
+     * "Loading..." until the user backed out. Reported from hardware. */
     if(!strcmp(_key, "ui_hierarchy"))
-        return -1;
+    {
+        if(_len < 1) return -1;
+        _buf[0] = 0;
+        return 0;
+    }
 
     /* The same hierarchy IS published — under a key the host doesn't probe —
      * for ui_chain.js to feed the shared param_pages controller (host 0.12.1+).
