@@ -90,14 +90,12 @@ to how it played before velocity existed.)
   them, so the master knobs stay under your hands while you jam. Shift+Pad
   still selects, and another jog click unlocks.
 - **Knobs 1–8** edit the visible page, drawn with Schwung's stock
-  Movy-style knob grid (host 0.12.1+): **jog** cycles pages, **Shift+Jog**
+  knob grid (host 0.12.1+): **jog** cycles pages, **Shift+Jog**
   jumps sections, **jog click** opens the section list, **Shift** reveals
   values / fine mode, **Mute+knob** resets a pot.
 - **Sequencing:** use Move's own sequencer — a drum track with a kit, muted
   (HiJack), track MIDI OUT on the slot's channel. Each drum is its own lane.
   Note map: drum rack (36–46, default) or General MIDI, switchable.
-- Works with [Movy](https://github.com/DimaDake/schwung-movy) — a
-  `movy_config.json` ships with the module.
 
 ## Remote panel
 
@@ -137,9 +135,6 @@ send FX end to end.
   ER-99's Web Audio graph. That engine has since been replaced voice by voice
   with circuit models and removed, but the **hi-hat, ride and crash samples
   ship directly from ER-99** and 9W9 would not exist without it.
-- **[Movy](https://github.com/DimaDake/schwung-movy)** by DimaDake (MIT) —
-  the on-device knob-dial look is drawn after Movy's renderer, and the Movy
-  integration template follows its documented format.
 - **[Schwung](https://github.com/charlesvestal/schwung)** by Charles Vestal
   and contributors — the framework that makes any of this possible.
 - Voice behaviour worked out from the **TR-909 service notes** (schematics and
@@ -155,7 +150,7 @@ and on-hardware verification throughout.
 ## Contributing
 
 **Contributions are open to anyone, any time — just submit a PR.** Voice
-tweaks, new distortion flavours, UI improvements, Movy templates, docs, bug
+tweaks, new distortion flavours, UI improvements, docs, bug
 reports: all welcome. Please note in your PR which AI tools you used, if any
 (same policy as Schwung upstream).
 

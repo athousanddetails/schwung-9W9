@@ -126,8 +126,7 @@ from 9W9's.
 ### Also update
 
 `scripts/gen_params.py` (the `DIST` list and `DRIVE()` range — it is the single
-source of truth, regenerate `*_params.h`, never hand-edit), `src/web_ui.html`,
-`src/movy_config.json`.
+source of truth, regenerate `*_params.h`, never hand-edit), `src/web_ui.html`.
 
 ---
 
@@ -181,7 +180,7 @@ changes, shows `[L]`, honours Shift+Pad, and unlocks. 6W6 already has
 ## 3. Send FX — DSP only, UI deferred
 
 **Build the engine, not the pages.** Do not add these to the page hierarchy,
-the pad map, the web panel or the Movy config yet.
+the pad map or the web panel yet.
 
 Two send buses, summed per sample from each voice through a per-voice send
 amount, returned into the mix **before** the master distortion and Comp so

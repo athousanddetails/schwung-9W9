@@ -27,7 +27,6 @@ ssh "$HOST" "mkdir -p $DEST/samples"
 scp -q "$BUILD" "$HOST:$DEST/dsp.so.new"
 scp -q "$SRC/src/module.json" "$HOST:$DEST/module.json.new"
 scp -q "$SRC/src/ui_chain.js" "$HOST:$DEST/ui_chain.js.new"
-scp -q "$SRC/src/movy_config.json" "$HOST:$DEST/movy_config.json"
 # The remote panel and the on-device help are served straight off these files.
 # They were missing here for months: every deploy shipped new DSP with the
 # panel from whenever the module was last installed from a tarball, so the

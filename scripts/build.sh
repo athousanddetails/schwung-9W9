@@ -35,7 +35,6 @@ if [ "${NATIVE:-0}" != "1" ]; then
     cp src/ui_chain.js            dist/9w9/
     cp src/web_ui.html            dist/9w9/
     cp src/help.json              dist/9w9/
-    cp src/movy_config.json       dist/9w9/
     cp src/samples/*.wav          dist/9w9/samples/
     (cd dist && tar -czf 9w9-module.tar.gz 9w9/)
     echo "Tarball: dist/9w9-module.tar.gz"

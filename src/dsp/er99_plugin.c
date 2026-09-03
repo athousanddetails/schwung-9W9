@@ -31,8 +31,8 @@ typedef struct {
 
     /* ---- Per-voice step sequencer ----
      * 11 lanes x 16 steps, clocked from host get_beat_position() so it phase-
-     * locks to whatever transport is running (Move's sequencer or Movy's
-     * clock) and stays drift-free. Step input arrives as notes 16-31 through
+     * locks to whatever transport is running (Move's sequencer) and stays
+     * drift-free. Step input arrives as notes 16-31 through
      * the patch's capture rules ("groups":["steps"]) — the Schwung-supported
      * path, no core patching. Toggles apply to seq_voice, which the chain UI
      * sets when a pad selects an instrument. */

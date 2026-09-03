@@ -50,7 +50,7 @@ int main(int argc, char**argv){
     /* Every voice's Drive and Distortion must be DECLARED, not merely
      * implemented: an undeclared key still answers set_param (the web panel
      * writes it by name) but has no knob on the device, no automation target
-     * and no entry for Movy. The sampled voices drifted that way once. */
+     * and no entry in any tool reading the list. The sampled voices drifted that way once. */
     {
         static const char *must_declare[] = {
             "ohh_drive", "ohh_dist_type", "rc_drive", "rc_dist_type",
