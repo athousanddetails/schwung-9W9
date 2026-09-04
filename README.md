@@ -123,8 +123,7 @@ Requires Docker (cross-compiles for the Move's ARM64, pinned to glibc 2.35):
 
 `scripts/build.sh er99_loadtest` builds an on-device test that dlopens the real
 `dsp.so` exactly as Schwung's chain host does and verifies parameters, state
-round-trip, sequencer audio, mutes, the hat choke, channel balance and the
-send FX end to end.
+round-trip, mutes, the hat choke, channel balance and the send FX end to end.
 
 ## Credits and provenance
 
