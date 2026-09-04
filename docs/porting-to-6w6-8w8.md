@@ -702,3 +702,141 @@ claim worth writing next to it:
 Mutation-test the probe or it proves nothing: stub a voice so a pot still
 resolves and still stores but never reaches it. `knob_check` must report DEAD
 while `loadtest.c` reports ALL PASS on the same build. That gap is the point.
+
+---
+
+## 8. Schwung's voices contract (`pad_layout` + per-voice `note`)
+
+**Shipped in 9W9 2.6.0**, from Charles's PR
+[athousanddetails/schwung-9W9#3](https://github.com/athousanddetails/schwung-9W9/pull/3).
+Schwung 0.13 lets a module say whether its surface is a **drum rack** or a
+keyboard, and which MIDI note each voice plays, so the host lays out pads and
+follows the voice you are editing without keeping a per-module table. Every one
+of these kits is exactly the shape it was designed around, so all of them want it.
+
+It is **additive**: nothing about the existing UI changes, and on a host older
+than 0.13 the declaration is simply ignored. It rides `ui_pages` — the key your
+`ui_chain.js` already feeds to the shared controller — so your custom editor is
+untouched.
+
+### What to declare
+
+In the hierarchy your generator emits:
+
+- `pad_layout: "drums"` at the top level
+- `note: <midi>` on **each voice level**, and on no others
+- `focus_param: "ui_focus_level"` if your plugin publishes that key (all of
+  these do). Nothing new is written for it — the existing
+  `"<count>:<level-id>"` form is what the host wants, and the count is what
+  makes re-hitting the pad you are already on navigate again
+- `role` is a free-form hint; no host behaviour depends on it
+
+**A level that makes no sound is not a voice.** Reverb, Delay, Main, master
+pages: no `note`. Declaring one there puts a pad on something that cannot play.
+
+### Two hierarchies, if your note map is switchable
+
+All four kits let the user pick drum-rack or General MIDI at runtime. One static
+hierarchy would therefore be wrong half the time, and a host laying out pads
+from it would place every voice wrongly with nothing to indicate why. Emit
+**both** and pick in `get_param`:
+
+```c
+if(!strcmp(_key, "ui_pages"))
+{
+    const int gm = (g_note_map != 0);
+    const char *const j = gm ? er99_ui_hierarchy_gm_json : er99_ui_hierarchy_json;
+    const int n = gm ? ER99_UI_HIERARCHY_GM_LEN : ER99_UI_HIERARCHY_LEN;
+    if(_len <= n) return -1;
+    memcpy(_buf, j, (size_t)n + 1);
+    return n;
+}
+```
+
+A pointer choice, nothing built on the audio thread. Cost is one extra copy of
+the JSON in flash.
+
+### The trap: key the note map by LEVEL ID, never by position
+
+Three orders exist in these plugins and no two agree — nav order, the
+`*_trigger_t` enum, and the note numbers. In 9W9 the two hats and the two
+cymbals are transposed between them:
+
+```
+nav order        bd sd lt mt ht rim clap chh ohh ride  crash
+er99_trigger_t   BD SD LT MT HT RS  HC   OHH CHH RC    CR
+drum-rack notes  36 37 38 39 40 41  42   43  44  46    45
+```
+
+A positional map mislabels exactly those four. Check your own three orders
+before you write the table; they will not match either.
+
+### The same trap, already costing you a bug: `level_of[]`
+
+9W9's `ui_focus_level` answered with `"hat","hat","cym","cym"` — level ids the
+generator does not emit, because the hierarchy has `chh`, `ohh`, `ride` and
+`crash` as four separate pages. A host resolving that answer against the
+declared levels found nothing, so **four of eleven voices silently never
+followed the pad**. Nobody noticed for months; there is no error for it.
+
+**Check yours now, whether or not you do the rest of this section.** Every id
+in `level_of[]` must be a level your generator actually emits, in *trigger*
+order.
+
+### Prove it before you ship
+
+Parse the blobs straight out of your generated header and assert the contract,
+rather than trusting that it looks right. This is what 9W9's check does, and it
+caught nothing only because the two problems above had already been fixed:
+
+- `pad_layout == "drums"` in **each** map
+- exactly one `note` per voice, and the right count of voices
+- FX / master / root levels carry **no** `note`
+- no duplicate notes within a map
+- drum-rack notes match your own map, transpositions included
+- GM notes are real GM (36 kick, 38 snare, 42 closed hat, 46 open hat,
+  49 crash, 51 ride)
+- every `level_of[]` id resolves against a declared level
+
+`scripts/` in 9W9 has no separate tool for this — it was a throwaway Python
+script reading `src/dsp/*_params.h`; write the equivalent for your kit, it is
+about thirty lines.
+
+### What you cannot verify yet
+
+The Move currently runs a Schwung host older than 0.13 — no
+`shared/param_pages/voices.mjs`, nothing reads `pad_layout`. So the declaration
+is **inert on hardware today**: you can prove it builds, parses and is correct,
+but not that pads lay out or that voice-follow works. Do not claim hardware
+verification of the contract itself until 0.13 is on a device.
+
+---
+
+## 9. No internal sequencer, on any of these kits
+
+**Gus's call, and it is not negotiable:** these are sound modules. They make
+sound when something sends them a note and do nothing on their own. Use Move's
+own sequencer — a drum track with a kit, muted (HiJack), track MIDI OUT set to
+the slot's channel, each drum its own lane.
+
+9W9 shipped an 11-lane step sequencer for months (removed in 2.5.0). It was
+clocked off the host transport and ran underneath everything with the kick
+selected by default, so **a pad could sound a drum the user never played** —
+the reported symptom was a kick firing when the snare pad was hit.
+
+Remove, if you still have any of it:
+
+- the per-voice pattern state and its `seq_*` get/set params
+- the step capture on notes 16-31, with its tap-versus-hold parameter-lock
+  handling
+- the pattern keys written into the **state blob** (a preset that still carries
+  them loads fine afterwards; unknown keys are ignored)
+- the transport-clocked trigger loop in `render`/`process`
+- `"groups": ["steps"]` from **both** `src/module.json` **and**
+  `src/patches/<KIT>.json` — the patch file is the one that gets forgotten, and
+  as of this writing `patches/8W8.json` still has it
+- the sequencer block in your loadtest — but keep the fake transport, the
+  pad-follow focus freeze reads `get_beat_position` / `get_clock_status`
+
+Keep the README and on-device help text that points at Move's sequencer. That
+guidance was always right.
