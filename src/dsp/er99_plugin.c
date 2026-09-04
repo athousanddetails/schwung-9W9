@@ -29,22 +29,6 @@ typedef struct {
     int           focus_voice;
     unsigned      focus_count;
 
-    /* ---- Per-voice step sequencer ----
-     * 11 lanes x 16 steps, clocked from host get_beat_position() so it phase-
-     * locks to whatever transport is running (Move's sequencer) and stays
-     * drift-free. Step input arrives as notes 16-31 through
-     * the patch's capture rules ("groups":["steps"]) — the Schwung-supported
-     * path, no core patching. Toggles apply to seq_voice, which the chain UI
-     * sets when a pad selects an instrument. */
-    uint16_t      seq[ER99_NUM_TRIGGERS];
-    int           seq_voice;
-    int           seq_last_step;
-    /* When each step button went down, as samples_rendered + 1 (0 = not
-     * held). A TAP toggles the step on release; a HOLD does not — a held step
-     * is Schwung's parameter-lock gesture, and toggling under it would flip a
-     * trig every time a lock was placed. */
-    uint64_t      step_down_at[16];
-
     /* Silent-select support: while samples_rendered < mute_until, incoming
      * note triggers are swallowed. The editor sets this just before
      * re-injecting a Shift+Pad press into Move, so Move updates its pad
@@ -162,8 +146,6 @@ static void *create_instance(const char *_module_dir, const char *_json_defaults
                    ? (float)g_host->sample_rate : 44100.0f;
 
     er99_engine_init(&inst->engine, sr, _module_dir);
-    inst->seq_voice = 0;
-    inst->seq_last_step = -1;
 
     if(g_host && g_host->log)
         g_host->log("er99: engine ready");
@@ -178,12 +160,6 @@ static void destroy_instance(void *_instance)
     free(inst);
 }
 
-/* Longest press that still counts as a TAP on a step button. Anything longer
- * is a hold — Schwung's parameter-lock gesture — and must not toggle. 300 ms
- * is comfortably above a deliberate tap and well under the time it takes to
- * reach for an encoder. */
-#define ER99_STEP_TAP_MAX_S 0.30f
-
 static void on_midi(void *_instance, const uint8_t *_msg, const int _len, const int _source)
 {
     er99_instance_t *inst = (er99_instance_t*)_instance;
@@ -192,43 +168,6 @@ static void on_midi(void *_instance, const uint8_t *_msg, const int _len, const 
     const uint8_t status = _msg[0] & 0xF0u;
     const uint8_t note   = _msg[1];
     const uint8_t vel    = _msg[2];
-
-    /* Step buttons (notes 16-31): a TAP toggles the selected voice's step, on
-     * release. These only arrive while the 9W9 patch's capture rules are
-     * active (slot focused), so outside our editor the steps stay Move's.
-     * Internal surface only — external gear sending 16-31 must not rewrite
-     * patterns.
-     *
-     * ON RELEASE, NOT PRESS, because a HELD step means something else: hold a
-     * step and turn a knob and Schwung writes a parameter lock for that step
-     * (host/lock_common.h). Toggling on press would flip the trig under every
-     * lock the user placed. So the press only records when it happened, and
-     * the release toggles if the hold was shorter than a tap. Sits ahead of
-     * the one-shot filter below because that filter drops note-offs, and the
-     * release IS the event here. Either spelling of a release counts — Move
-     * sends both note-off and note-on with velocity 0. */
-    if(note >= 16 && note <= 31 && _source == 0 && (status == 0x90 || status == 0x80))
-    {
-        const int i = note - 16;
-        if(status == 0x90 && vel > 0)
-        {
-            inst->step_down_at[i] = inst->samples_rendered + 1u;
-            return;
-        }
-        if(inst->step_down_at[i])
-        {
-            const uint64_t held = inst->samples_rendered - (inst->step_down_at[i] - 1u);
-            inst->step_down_at[i] = 0;
-            const float sr = inst->engine.sample_rate > 0.0f ? inst->engine.sample_rate : 44100.0f;
-            if(held < (uint64_t)(ER99_STEP_TAP_MAX_S * sr))
-            {
-                const int v = inst->seq_voice;
-                if(v >= 0 && v < ER99_NUM_TRIGGERS)
-                    inst->seq[v] ^= (uint16_t)(1u << i);
-            }
-        }
-        return;
-    }
 
     /* Drums are one-shots: note-off is ignored, note-on with velocity 0 too. */
     if(status != 0x90 || vel == 0) return;
@@ -284,41 +223,14 @@ static void set_param(void *_instance, const char *_key, const char *_val)
         inst->lane_mutes = (uint16_t)(atoi(_val) & 0x7FF);
         return;
     }
-    if(!strcmp(_key, "seq_voice"))
-    {
-        int v = atoi(_val);
-        if(v >= 0 && v < ER99_NUM_TRIGGERS) inst->seq_voice = v;
-        return;
-    }
-    if(!strncmp(_key, "seq_", 4))
-    {
-        for(int v = 0; v < ER99_NUM_TRIGGERS; ++v)
-            if(!strcmp(_key + 4, er99_trigger_names[v]))
-            { inst->seq[v] = (uint16_t)(atoi(_val) & 0xFFFF); return; }
-    }
     /* Slot autosave / User Presets restore through this key. */
     if(!strcmp(_key, "state"))
     {
         er99_engine_set_state(&inst->engine, _val);
-        /* Plugin-level keys (seq lanes) piggyback on the same blob. */
+        /* Plugin-level keys piggyback on the same blob. */
         {
             const char *mq = strstr(_val, "mutes=");
             if(mq) set_param(_instance, "mutes", mq + 6);
-        }
-        const char *q = _val;
-        while((q = strstr(q, "seq_")) != NULL)
-        {
-            char kbuf[24];
-            const char *eq = strchr(q, '=');
-            const char *semi = strchr(q, ';');
-            if(!eq || (semi && semi < eq)) { q += 4; continue; }
-            const size_t kl = (size_t)(eq - q);
-            if(kl < sizeof(kbuf))
-            {
-                memcpy(kbuf, q, kl); kbuf[kl] = '\0';
-                set_param(_instance, kbuf, eq + 1);
-            }
-            q = eq + 1;
         }
         return;
     }
@@ -391,23 +303,10 @@ static int get_param(void *_instance, const char *_key, char *_buf, const int _l
     }
     if(!strcmp(_key, "mutes"))
         return snprintf(_buf, (size_t)_len, "%u", (unsigned)inst->lane_mutes);
-    if(!strcmp(_key, "seq_voice"))
-        return snprintf(_buf, (size_t)_len, "%d", inst->seq_voice);
-    if(!strcmp(_key, "seq_pos"))
-        return snprintf(_buf, (size_t)_len, "%d", inst->seq_last_step);
-    if(!strncmp(_key, "seq_", 4))
-    {
-        for(int v = 0; v < ER99_NUM_TRIGGERS; ++v)
-            if(!strcmp(_key + 4, er99_trigger_names[v]))
-                return snprintf(_buf, (size_t)_len, "%u", (unsigned)inst->seq[v]);
-    }
     if(!strcmp(_key, "state"))
     {
         int n = er99_engine_get_state(&inst->engine, _buf, _len);
         if(n < 0) return n;
-        for(int v = 0; v < ER99_NUM_TRIGGERS && n < _len - 1; ++v)
-            n += snprintf(_buf + n, (size_t)(_len - n), "seq_%s=%u;",
-                          er99_trigger_names[v], (unsigned)inst->seq[v]);
         if(n < _len - 1)
             n += snprintf(_buf + n, (size_t)(_len - n), "mutes=%u;",
                           (unsigned)inst->lane_mutes);
@@ -447,28 +346,6 @@ static void render_block(void *_instance, int16_t *_out_lr, const int _frames)
         {
             inst->last_bpm = bpm;
             er99_engine_set_raw(&inst->engine, "dly_bpm", bpm);
-        }
-    }
-
-    /* Advance the step sequencer. get_beat_position() < 0 or absent means no
-     * transport — the sequencer idles and re-arms. 16th notes over one bar. */
-    if(g_host && g_host->get_beat_position)
-    {
-        const double bp = g_host->get_beat_position();
-        if(bp >= 0.0)
-        {
-            const int step = (int)floor(bp * 4.0) % 16;
-            if(step != inst->seq_last_step)
-            {
-                inst->seq_last_step = step;
-                for(int v = 0; v < ER99_NUM_TRIGGERS; ++v)
-                    if(inst->seq[v] & (1u << step))
-                        er99_engine_trigger(&inst->engine, (er99_trigger_t)v, 100);
-            }
-        }
-        else
-        {
-            inst->seq_last_step = -1;
         }
     }
 

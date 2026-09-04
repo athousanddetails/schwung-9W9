@@ -10,7 +10,8 @@
 
 static void hlog(const char*m){ printf("   [host] %s\n", m); }
 
-/* Fake transport for the sequencer test: advances one beat per ~11 blocks. */
+/* Fake transport: drives get_beat_position / get_clock_status, which the
+ * pad-follow focus freeze reads. */
 static double g_beats = -1.0;
 static double fake_beat_position(void){ return g_beats; }
 static int fake_clock_status(void){ return g_beats >= 0.0 ? 2 : 1; }
@@ -392,61 +393,6 @@ int main(int argc, char**argv){
             for(int k=0;k<256;++k){ long a=out[k]<0?-out[k]:out[k]; if(a>peak)peak=a; } }
         char lbl[64]; snprintf(lbl,sizeof(lbl),"note %d produces audio (peak %ld)",notes[i],peak);
         CHECK(peak>200, lbl);
-    }
-
-    /* ---- Step sequencer: program a kick on steps 1+9, run the fake
-     * transport, and demand audio with NO manual triggers at all. ---- */
-    {
-        api->set_param(inst, "seq_voice", "0");
-        /* A step toggles on the RELEASE of a tap, not on the press — a held
-         * step is the parameter-lock gesture and must leave the trig alone. */
-        uint8_t step1[3]={0x90,16,100}, step1u[3]={0x80,16,0};
-        uint8_t step9[3]={0x90,24,100}, step9u[3]={0x90,24,0};   /* vel-0 spelling */
-        api->on_midi(inst, step1, 3, 0);
-        n = api->get_param(inst, "seq_bd", buf, sizeof(buf));
-        CHECK(n>0 && atoi(buf)==0, "a step PRESS alone does not toggle");
-        api->on_midi(inst, step1u, 3, 0);
-        api->on_midi(inst, step9, 3, 0);
-        api->on_midi(inst, step9u, 3, 0);
-        n = api->get_param(inst, "seq_bd", buf, sizeof(buf));
-        CHECK(n>0 && atoi(buf)==(1|(1<<8)), "step TAPS (either release spelling) set seq_bd mask 257");
-
-        /* Hold step 2 past the tap window (0.52 s of blocks), then release:
-         * that is a lock gesture, and the mask must not change. */
-        {
-            uint8_t hp[3]={0x90,17,100}, hu[3]={0x80,17,0};
-            static int16_t hold_out[128*2];
-            api->on_midi(inst, hp, 3, 0);
-            for(int b=0;b<180;++b) api->render_block(inst, hold_out, 128);
-            api->on_midi(inst, hu, 3, 0);
-            api->get_param(inst, "seq_bd", buf, sizeof(buf));
-            CHECK(atoi(buf)==(1|(1<<8)), "a step HELD past the tap window does not toggle (parameter-lock gesture)");
-        }
-
-        uint8_t ext[3]={0x90,17,100};
-        api->on_midi(inst, ext, 3, 2);
-        api->get_param(inst, "seq_bd", buf, sizeof(buf));
-        CHECK(atoi(buf)==(1|(1<<8)), "external note 16-31 ignored by sequencer");
-
-        static int16_t so[128*2];
-        long energy=0;
-        g_beats = 0.0;
-        for(int b=0;b<690;++b){
-            api->render_block(inst, so, 128);
-            for(int k3=0;k3<256;++k3){ long a=so[k3]<0?-so[k3]:so[k3]; energy+=a; }
-            g_beats += 128.0/44100.0*2.0;
-        }
-        g_beats = -1.0;
-        char lbl3[96]; snprintf(lbl3,sizeof(lbl3),"sequencer alone produces audio (energy %ld)",energy);
-        CHECK(energy > 500000, lbl3);
-
-        n = api->get_param(inst, "state", buf, sizeof(buf));
-        CHECK(n>0 && strstr(buf,"seq_bd=257")!=NULL, "state blob contains seq_bd=257");
-        api->set_param(inst, "seq_bd", "0");
-        api->set_param(inst, "state", buf);
-        api->get_param(inst, "seq_bd", buf, sizeof(buf));
-        CHECK(atoi(buf)==257, "state restore brings the pattern back");
-        api->set_param(inst, "seq_bd", "0");
     }
 
     /* Silent-select gate: with mute_ms set, a note must NOT sound; after the
