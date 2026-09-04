@@ -4,6 +4,38 @@ parameter surface. module.json stays tiny (8 KB loader cap); chain_params and
 ui_hierarchy are served from the DSP via get_param()."""
 import json, pathlib, sys
 
+# Which MIDI note plays each voice, for Schwung's pad_layout / voices contract.
+# A host reads these to lay out a pad grid and to say which voice is focused;
+# see docs/MODULES.md, "Declaring your performance surface".
+#
+# KEYED BY LEVEL ID, never by position. Three orders exist in this codebase and
+# no two of them agree:
+#
+#   nav order (below)   bd sd lt mt ht rim clap chh ohh ride  crash
+#   er99_trigger_t      BD SD LT MT HT RS  HC   OHH CHH RC    CR
+#   drum-rack notes     36 37 38 39 40 41  42   43  44  46    45
+#
+# So chh/ohh and ride/crash are transposed between the enum and the nav list,
+# and a map built on position would silently mislabel four voices — the two
+# hats and the two cymbals, which is exactly the kind of thing that ships.
+#
+# Mirrors drumrack_to_trigger() and the GM switch in src/dsp/er99_plugin.c.
+# Those stay the authority: if they change, change these with them.
+NOTE_MAPS = {
+    "drumrack": {"bd": 36, "sd": 37, "lt": 38, "mt": 39, "ht": 40,
+                 "rim": 41, "clap": 42, "chh": 43, "ohh": 44,
+                 "crash": 45, "ride": 46},
+    "gm":       {"bd": 36, "sd": 38, "lt": 41, "mt": 47, "ht": 50,
+                 "rim": 37, "clap": 39, "chh": 42, "ohh": 46,
+                 "crash": 49, "ride": 51},
+}
+
+# Free-form hints. No host behaviour depends on them; a consumer that does not
+# recognise a value ignores it.
+ROLES = {"bd": "kick", "sd": "snare", "lt": "tom", "mt": "tom", "ht": "tom",
+         "rim": "rim", "clap": "clap", "chh": "hat", "ohh": "hat",
+         "ride": "cymbal", "crash": "cymbal"}
+
 # Tight, musical, per-voice ranges. A knob should sweep its USEFUL range end to
 # end — not 2 seconds of decay nobody wants on a kick.
 V = {
@@ -208,7 +240,44 @@ for lvl in levels.values():
         if "name" in pentry and "key" in pentry:
             pentry["label"] = pentry.pop("name")
 
-cpj=json.dumps(cp,separators=(",",":")); uhj=json.dumps({"levels":levels},separators=(",",":"))
+cpj=json.dumps(cp,separators=(",",":"))
+
+def hierarchy_for(map_name):
+    """The contract, with the note map the engine is currently using.
+
+    TWO of these are emitted because g_note_map is switchable at RUNTIME
+    (drum rack by default, General MIDI on request). One static hierarchy
+    would be wrong half the time, and a host laying out pads from it would
+    put every voice in the wrong place with nothing to indicate why.
+    get_param picks between them; that is exactly why the declaration lives
+    in ui_hierarchy and not in module.json, which cannot change its mind.
+
+    Only VOICES get a note. fxrev and fxdly are pages that sound nothing,
+    and a page without a note is how the contract says so.
+    """
+    notes = NOTE_MAPS[map_name]
+    out = {}
+    for lid, lvl in levels.items():
+        e = dict(lvl)
+        if lid in notes:
+            e["note"] = notes[lid]
+            if lid in ROLES:
+                e["role"] = ROLES[lid]
+        out[lid] = e
+    # focus_param names the key this plugin ALREADY publishes: ui_focus_level,
+    # "<hit-count>:<level-id>". Nothing new is written for it. The count is
+    # what makes re-hitting the pad you are already on navigate again, and
+    # this module has had it since before the contract existed -- the host
+    # accepts the counted form for that reason.
+    #
+    # NOT seq_voice: that is an INDEX, and three orders in this codebase
+    # disagree (see NOTE_MAPS), so an index-based focus would light the wrong
+    # hat and the wrong cymbal. A name is order-independent.
+    return {"pad_layout": "drums", "focus_param": "ui_focus_level",
+            "levels": out}
+
+uhj  = json.dumps(hierarchy_for("drumrack"), separators=(",",":"))
+uhjg = json.dumps(hierarchy_for("gm"),       separators=(",",":"))
 def cstr(s):
     return "\n".join(f'    "{s[k:k+100].replace(chr(92),chr(92)*2).replace(chr(34),chr(92)+chr(34))}"'
                      for k in range(0,len(s),100))
@@ -224,8 +293,14 @@ static const char er99_chain_params_json[] =
 #define ER99_UI_HIERARCHY_LEN {len(uhj)}
 static const char er99_ui_hierarchy_json[] =
 {cstr(uhj)};
+/* The same contract with the General MIDI note map, for g_note_map == 1.
+ * The map is switchable at runtime, so one static hierarchy would be wrong
+ * half the time; get_param picks. */
+#define ER99_UI_HIERARCHY_GM_LEN {len(uhjg)}
+static const char er99_ui_hierarchy_gm_json[] =
+{cstr(uhjg)};
 #endif
 """)
 # module.json's version is owned by the release process (bump by hand, tag
 # must match); this generator must never touch it.
-print(f"chain_params {len(cpj)}B  ui_hierarchy {len(uhj)}B  levels={len(levels)}  params={len(cp)}")
+print(f"chain_params {len(cpj)}B  ui_hierarchy {len(uhj)}B  gm {len(uhjg)}B  levels={len(levels)}  params={len(cp)}")

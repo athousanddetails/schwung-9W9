@@ -272,9 +272,19 @@ static int get_param(void *_instance, const char *_key, char *_buf, const int _l
      * Its injected getParam rewrites "ui_hierarchy" requests to "ui_pages". */
     if(!strcmp(_key, "ui_pages"))
     {
-        if(_len <= ER99_UI_HIERARCHY_LEN) return -1;
-        memcpy(_buf, er99_ui_hierarchy_json, ER99_UI_HIERARCHY_LEN + 1);
-        return ER99_UI_HIERARCHY_LEN;
+        /* Whichever note map the engine is currently using. The declaration
+         * carries a `note` per voice for Schwung's pad_layout / voices
+         * contract, and g_note_map is switchable at RUNTIME — so one static
+         * answer would be wrong half the time, and a host laying out pads from
+         * it would put every voice in the wrong place with nothing to say why.
+         * Two strings, one pointer choice, nothing built on the audio thread. */
+        const int gm = (g_note_map != 0);
+        const char *const j = gm ? er99_ui_hierarchy_gm_json
+                                 : er99_ui_hierarchy_json;
+        const int n = gm ? ER99_UI_HIERARCHY_GM_LEN : ER99_UI_HIERARCHY_LEN;
+        if(_len <= n) return -1;
+        memcpy(_buf, j, (size_t)n + 1);
+        return n;
     }
 
     /*
@@ -285,8 +295,17 @@ static int get_param(void *_instance, const char *_key, char *_buf, const int _l
      */
     if(!strcmp(_key, "ui_focus_level"))
     {
+        /* THE LEVEL IDS THE HIERARCHY ACTUALLY DECLARES, in trigger order
+         * (BD SD LT MT HT RS HC OHH CHH RC CR — note OHH before CHH and RC
+         * before CR, which is not the order the nav list uses).
+         *
+         * These were "hat","hat","cym","cym", naming two levels that
+         * gen_params.py does not emit: the hierarchy has chh, ohh, ride and
+         * crash as four separate pages. A host resolving a focus answer
+         * against the declared levels found nothing for any of the four, so
+         * the two hats and the two cymbals silently never followed. */
         static const char *const level_of[ER99_NUM_TRIGGERS] = {
-            "bd","sd","lt","mt","ht","rim","clap","hat","hat","cym","cym"
+            "bd","sd","lt","mt","ht","rim","clap","ohh","chh","ride","crash"
         };
         const int v = inst->focus_voice;
         if(inst->focus_count == 0 || v < 0 || v >= ER99_NUM_TRIGGERS) return -1;
