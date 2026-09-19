@@ -46,6 +46,12 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
     var PAD2LANE = { 68: 0, 69: 1, 70: 2, 71: 3, 76: 4, 77: 5, 78: 6,
                      79: 8, 84: 7, 85: 10, 86: 9 };
 
+    /* DSP trigger order. Speech must name the drum rather than make a blind
+     * user infer it from a pad or a bit number. */
+    var LANE_NAMES = ["Bass Drum", "Snare", "Low Tom", "Mid Tom", "Hi Tom",
+                      "Rim Shot", "Hand Clap", "Open Hat", "Closed Hat",
+                      "Ride", "Crash"];
+
     /* level key -> lane whose mute the title indicator shows (-1 = none) */
     var LEVEL2LANE = { bd: 0, sd: 1, lt: 2, mt: 3, ht: 4, rim: 5, clap: 6,
                        ohh: 7, chh: 8, ride: 9, crash: 10, root: -1,
@@ -116,6 +122,20 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
         if (has("host_announce_screenreader")) host_announce_screenreader(text);
     }
 
+    function screenReaderEnabled() {
+        return has("tts_get_enabled") && !!tts_get_enabled();
+    }
+
+    /* LAYOUT_LIST landed after 9W9's original 0.12.1 minimum. Use its stable
+     * wire value rather than importing a named export that would make the
+     * entire UI fail to load on an older host. knobRows is the feature probe:
+     * when absent, keep the old grid and its touch announcements. */
+    function updateAccessibleLayout() {
+        if (!controller) return;
+        var listSupported = typeof controller.knobRows === "function";
+        controller.setLayout(screenReaderEnabled() && listSupported ? "list" : LAYOUT_MOVY);
+    }
+
     function refreshMutes() {
         var m = parseInt(ctlGetParam("synth:mutes"), 10);
         mutesMask = isNaN(m) ? 0 : m;
@@ -124,6 +144,8 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
     function toggleLaneMute(lane) {
         mutesMask = (mutesMask ^ (1 << lane)) & 0x7FF;
         ctlSetParam("synth:mutes", String(mutesMask));
+        announce((LANE_NAMES[lane] || "Drum") +
+                 ((mutesMask & (1 << lane)) ? " muted" : " unmuted"));
     }
 
     /* Jump the grid to the first page of a hierarchy level. */
@@ -178,9 +200,13 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
                     : [];
             }
         });
+        /* Say the module first; load() announces the actionable page after it.
+         * The old order ended with "9W9" and replaced the useful page name in
+         * a debounced screen-reader queue. */
+        announce("9W9");
+        updateAccessibleLayout();
         controller.load({ slot: mySlot, component: "synth", prefix: "synth" });
-        controller.setLayout(LAYOUT_MOVY);
-        if (!globalThis[HINT_FLAG]) {
+        if (!screenReaderEnabled() && !globalThis[HINT_FLAG]) {
             globalThis[HINT_FLAG] = true;
             controller.showHint([
                 "Pad: play + select",
@@ -192,7 +218,6 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
             ], "9W9");
             hintUntil = Date.now() + HINT_MS;
         }
-        announce("9W9");
     }
 
     /* Title-bar text. The stock grid prints the page's own name on the right
@@ -220,6 +245,8 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
         if (!active || !controller) return;
 
         if (hintUntil && Date.now() >= hintUntil) dismissHint();
+        /* Accessibility can be toggled globally while this editor is alive. */
+        updateAccessibleLayout();
         controller.setReveal(shiftHeld());
         controller.tick();
 
@@ -373,6 +400,7 @@ import { LAYOUT_MOVY } from '/data/UserData/schwung/shared/param_pages/render_pa
         if (intent.type === "click" && shiftHeld() &&
             !controller.pickerOpen && onMainPage()) {
             globalThis.__9w9_main_lock = !globalThis.__9w9_main_lock;
+            announce(globalThis.__9w9_main_lock ? "Main page locked" : "Main page unlocked");
             return;
         }
         var todo = applyInput(controller, intent, { nowMs: Date.now(), reveal: false });

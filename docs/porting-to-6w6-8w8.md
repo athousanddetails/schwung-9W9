@@ -840,3 +840,48 @@ Remove, if you still have any of it:
 
 Keep the README and on-device help text that points at Move's sequencer. That
 guidance was always right.
+
+---
+
+## 10. Screen-reader support for a custom `ui_chain.js`
+
+**Shipped first in 9W9 after 2.6.0.** The shared parameter controller already
+builds the speech for pages, controls, enum options and values, but a module
+with its own `ui_chain.js` chooses its own layout. The drum modules pinned
+`LAYOUT_MOVY`, so Screen Reader spoke knob touches while leaving no selected
+row for a blind user to navigate with the jog wheel.
+
+Port these parts from 9W9's `src/ui_chain.js`:
+
+- `screenReaderEnabled()` reads the host's `tts_get_enabled()` binding.
+- `updateAccessibleLayout()` chooses the controller's stable `"list"` layout
+  when TTS is enabled and `controller.knobRows` exists; otherwise it chooses
+  `LAYOUT_MOVY`. `knobRows` is the feature probe for older hosts.
+- Call that helper before `controller.load()` and once per active tick, so a
+  global Screen Reader change takes effect without reloading the module.
+- Do not import `LAYOUT_LIST` by name. These modules still accept older hosts;
+  a missing named export prevents the entire JS module from loading, while the
+  string plus feature probe degrades safely to the existing grid.
+- Suppress the first-use visual hint while TTS is enabled. It covers the list
+  and adds no usable speech.
+- Announce the module name *before* `controller.load()`. `load()` announces the
+  actionable page; putting the generic module name last can replace that page
+  in the TTS debounce queue.
+- Announce module-owned state changes the shared controller cannot see: name
+  the voice and say `muted`/`unmuted` for Mute+Pad, and say `Main page locked`
+  or `Main page unlocked` for the lock gesture.
+
+Keep the voice-name table in DSP lane order, then check it against the pad-to-
+lane table. The hats and cymbals are transposed between several orders in 9W9,
+and speaking the wrong instrument is worse than staying silent.
+
+The minimum headless proof is the 9W9
+`tests/test_screen_reader_ui.mjs` pattern: TTS selects the list, the visual
+hint stays absent, the useful page announcement follows the module name,
+mute/lock state is spoken, turning TTS off restores Movy, and a controller
+without `knobRows` also stays on Movy. Run Schwung's
+`tests/host/test_param_pages_announce.sh` and
+`tests/host/test_param_pages_input.sh` against the host source as the shared-
+controller half of the proof. Hardware verification still matters: enable
+Screen Reader, enter every kind of page, navigate/edit with jog and Back, then
+check each Mute+Pad voice name and the Main lock announcements.

@@ -97,6 +97,19 @@ to how it played before velocity existed.)
   (HiJack), track MIDI OUT on the slot's channel. Each drum is its own lane.
   Note map: drum rack (36–46, default) or General MIDI, switchable.
 
+## Accessibility
+
+9W9 follows Schwung's Screen Reader setting. On hosts with the accessible
+parameter-list controller (Schwung 1.0+), enabling Screen Reader replaces the
+eight-cell knob grid with a jog-navigated list: click to enter a page, jog to
+choose a control, click to edit it, and jog to change its value. Page, control,
+enum and value announcements come from Schwung's shared parameter controller.
+9W9 also announces its own Mute+Pad changes and Main-page lock state.
+
+On Schwung 0.12.1 through 0.13.x, 9W9 keeps the knob grid and announces knob
+touches and value changes; update Schwung to 1.0 or newer for the navigable
+screen-reader list.
+
 ## Remote panel
 
 A full 909-style editor in the browser — every drum section with draggable
