@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Build the ER-99 module for Ableton Move (aarch64), or natively with NATIVE=1.
+# Build the 9W9 module for Ableton Move (aarch64), or natively with NATIVE=1.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
-IMAGE_NAME="schwung-er99-builder"
+IMAGE_NAME="schwung-9w9-builder"
 TARGET="${1:-all}"
 
 if [ ! -f /.dockerenv ]; then
-    echo "=== ER-99 build (Docker, ubuntu:22.04 / glibc 2.35) ==="
+    echo "=== 9W9 build (Docker, ubuntu:22.04 / glibc 2.35) ==="
     docker image inspect "$IMAGE_NAME" >/dev/null 2>&1 || \
         docker build -t "$IMAGE_NAME" -f "$SCRIPT_DIR/Dockerfile" "$REPO_ROOT"
     docker run --rm -v "$REPO_ROOT:/build" -u "$(id -u):$(id -g)" -w /build \
@@ -41,4 +41,4 @@ if [ "${NATIVE:-0}" != "1" ]; then
 fi
 
 echo; echo "=== Artifacts ==="
-find "$BUILD_DIR" -maxdepth 1 -type f \( -name "*.so" -o -name "er99_render" \) -exec sh -c 'printf "%s\n  " "$1"; file -b "$1"' _ {} \;
+find "$BUILD_DIR" -maxdepth 1 -type f \( -name "*.so" -o -name "9w9_render" \) -exec sh -c 'printf "%s\n  " "$1"; file -b "$1"' _ {} \;

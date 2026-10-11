@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "plugin_api_v1.h"
+#include "9w9_engine.h"   /* W9_STATE_TAG_OLD */
 
 static void hlog(const char*m){ printf("   [host] %s\n", m); }
 
@@ -378,9 +379,14 @@ int main(int argc, char**argv){
      * changed ranges and pinned fields, and restoring one resurrects the old
      * sound from any slot autosave, set state or patch it hides in. */
     api->set_param(inst, "bd_c_tune", "50");
-    api->set_param(inst, "state", "er99v2;bd_c_tune=90;sd_c_osc2_mix=0.7;");
+    api->set_param(inst, "state", "9w9v2;bd_c_tune=90;sd_c_osc2_mix=0.7;");
     api->get_param(inst, "bd_c_tune", buf, sizeof(buf));
     CHECK(atof(buf)==50.0, "v2 state blob is rejected whole (defaults survive)");
+
+    /* Blobs saved before the tag rename must still restore. */
+    api->set_param(inst, "state", W9_STATE_TAG_OLD "bd_c_tune=90;");
+    api->get_param(inst, "bd_c_tune", buf, sizeof(buf));
+    CHECK(atof(buf)==90.0, "pre-rename v3 state blob still restores");
 
     /* audio: every drum-rack note must make sound */
     static int16_t out[128*2];

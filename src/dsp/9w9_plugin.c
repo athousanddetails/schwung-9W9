@@ -1,5 +1,5 @@
 /*
- * er99_plugin.c — Schwung plugin_api_v2 wrapper for the ER-99 engine.
+ * 9w9_plugin.c — Schwung plugin_api_v2 wrapper for the 9W9 engine.
  *
  * Runs in-process inside the shim's SPI callback (SCHED_FIFO 90). render_block
  * therefore does no allocation, no file I/O and takes no locks — all of that
@@ -13,14 +13,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "er99_engine.h"
-#include "er99_params.h"
+#include "9w9_engine.h"
+#include "9w9_params.h"
 #include "plugin_api_v1.h"   /* defines both v1 and v2 */
 
 static const host_api_v1_t *g_host = NULL;
 
 typedef struct {
-    er99_engine_t engine;
+    w9_engine_t engine;
     float last_bpm;
     char          module_dir[512];
     /* Pad-follow state. Deliberately NOT updated while the transport runs —
@@ -39,7 +39,7 @@ typedef struct {
 
     /* Per-lane performance mutes (Mute+Pad in the editor). Bit n = lane n. */
     uint16_t      lane_mutes;
-} er99_instance_t;
+} w9_instance_t;
 
 /* ---- MIDI note map -------------------------------------------------- */
 /*
@@ -61,14 +61,14 @@ static int pad_to_trigger(const uint8_t _note)
     switch(_note)
     {
     /* row 0 */
-    case 68: return ER99_BD;   case 69: return ER99_SD;
-    case 70: return ER99_LT;   case 71: return ER99_MT;
+    case 68: return W9_BD;   case 69: return W9_SD;
+    case 70: return W9_LT;   case 71: return W9_MT;
     /* row 1 */
-    case 76: return ER99_HT;   case 77: return ER99_RS;
-    case 78: return ER99_HC;   case 79: return ER99_CHH;
+    case 76: return W9_HT;   case 77: return W9_RS;
+    case 78: return W9_HC;   case 79: return W9_CHH;
     /* row 2 */
-    case 84: return ER99_OHH;  case 85: return ER99_CR;
-    case 86: return ER99_RC;
+    case 84: return W9_OHH;  case 85: return W9_CR;
+    case 86: return W9_RC;
     default: return -1;
     }
 }
@@ -91,12 +91,12 @@ static int drumrack_to_trigger(const uint8_t _note)
 {
     switch(_note)
     {
-    case 36: return ER99_BD;   case 37: return ER99_SD;
-    case 38: return ER99_LT;   case 39: return ER99_MT;
-    case 40: return ER99_HT;   case 41: return ER99_RS;
-    case 42: return ER99_HC;   case 43: return ER99_CHH;
-    case 44: return ER99_OHH;  case 45: return ER99_CR;
-    case 46: return ER99_RC;
+    case 36: return W9_BD;   case 37: return W9_SD;
+    case 38: return W9_LT;   case 39: return W9_MT;
+    case 40: return W9_HT;   case 41: return W9_RS;
+    case 42: return W9_HC;   case 43: return W9_CHH;
+    case 44: return W9_OHH;  case 45: return W9_CR;
+    case 46: return W9_RC;
     default: return -1;
     }
 }
@@ -115,17 +115,17 @@ static int note_to_trigger(const uint8_t _note)
     switch(_note)
     {
     /* GM drum map */
-    case 36: return ER99_BD;   case 35: return ER99_BD;
-    case 38: return ER99_SD;   case 40: return ER99_SD;
-    case 41: return ER99_LT;   case 45: return ER99_LT;
-    case 47: return ER99_MT;   case 48: return ER99_MT;
-    case 50: return ER99_HT;   case 43: return ER99_HT;
-    case 37: return ER99_RS;
-    case 39: return ER99_HC;
-    case 42: return ER99_CHH;
-    case 46: return ER99_OHH;
-    case 51: return ER99_RC;
-    case 49: return ER99_CR;
+    case 36: return W9_BD;   case 35: return W9_BD;
+    case 38: return W9_SD;   case 40: return W9_SD;
+    case 41: return W9_LT;   case 45: return W9_LT;
+    case 47: return W9_MT;   case 48: return W9_MT;
+    case 50: return W9_HT;   case 43: return W9_HT;
+    case 37: return W9_RS;
+    case 39: return W9_HC;
+    case 42: return W9_CHH;
+    case 46: return W9_OHH;
+    case 51: return W9_RC;
+    case 49: return W9_CR;
     default: break;
     }
     return -1;
@@ -136,7 +136,7 @@ static int note_to_trigger(const uint8_t _note)
 static void *create_instance(const char *_module_dir, const char *_json_defaults)
 {
     (void)_json_defaults;
-    er99_instance_t *inst = (er99_instance_t*)calloc(1, sizeof(er99_instance_t));
+    w9_instance_t *inst = (w9_instance_t*)calloc(1, sizeof(w9_instance_t));
     if(!inst) return NULL;
 
     if(_module_dir)
@@ -145,24 +145,24 @@ static void *create_instance(const char *_module_dir, const char *_json_defaults
     const float sr = g_host && g_host->sample_rate > 0
                    ? (float)g_host->sample_rate : 44100.0f;
 
-    er99_engine_init(&inst->engine, sr, _module_dir);
+    w9_engine_init(&inst->engine, sr, _module_dir);
 
     if(g_host && g_host->log)
-        g_host->log("er99: engine ready");
+        g_host->log("9w9: engine ready");
     return inst;
 }
 
 static void destroy_instance(void *_instance)
 {
-    er99_instance_t *inst = (er99_instance_t*)_instance;
+    w9_instance_t *inst = (w9_instance_t*)_instance;
     if(!inst) return;
-    er99_engine_free(&inst->engine);
+    w9_engine_free(&inst->engine);
     free(inst);
 }
 
 static void on_midi(void *_instance, const uint8_t *_msg, const int _len, const int _source)
 {
-    er99_instance_t *inst = (er99_instance_t*)_instance;
+    w9_instance_t *inst = (w9_instance_t*)_instance;
     if(!inst || _len < 3) return;
 
     const uint8_t status = _msg[0] & 0xF0u;
@@ -185,7 +185,7 @@ static void on_midi(void *_instance, const uint8_t *_msg, const int _len, const 
         if(inst->mute_one) { inst->mute_one = 0; return; }
     }
 
-    er99_engine_trigger(&inst->engine, (er99_trigger_t)t, (int)vel);
+    w9_engine_trigger(&inst->engine, (w9_trigger_t)t, (int)vel);
 
     /* Only a hand-played hit moves the editor. While Move's sequencer is
      * running, notes arrive constantly and following them makes the UI
@@ -201,7 +201,7 @@ static void on_midi(void *_instance, const uint8_t *_msg, const int _len, const 
 
 static void set_param(void *_instance, const char *_key, const char *_val)
 {
-    er99_instance_t *inst = (er99_instance_t*)_instance;
+    w9_instance_t *inst = (w9_instance_t*)_instance;
     if(!inst || !_key || !_val) return;
 
     if(!strcmp(_key, "note_map"))
@@ -226,7 +226,7 @@ static void set_param(void *_instance, const char *_key, const char *_val)
     /* Slot autosave / User Presets restore through this key. */
     if(!strcmp(_key, "state"))
     {
-        er99_engine_set_state(&inst->engine, _val);
+        w9_engine_set_state(&inst->engine, _val);
         /* Plugin-level keys piggyback on the same blob. */
         {
             const char *mq = strstr(_val, "mutes=");
@@ -234,21 +234,21 @@ static void set_param(void *_instance, const char *_key, const char *_val)
         }
         return;
     }
-    er99_engine_set_param(&inst->engine, _key, (float)atof(_val));
+    w9_engine_set_param(&inst->engine, _key, (float)atof(_val));
 }
 
 static int get_param(void *_instance, const char *_key, char *_buf, const int _len)
 {
-    er99_instance_t *inst = (er99_instance_t*)_instance;
+    w9_instance_t *inst = (w9_instance_t*)_instance;
     if(!inst || !_key || !_buf || _len <= 0) return -1;
 
     /* Served dynamically: module.json is capped at 8 KB by the loader and our
      * parameter surface is much larger than that. */
     if(!strcmp(_key, "chain_params"))
     {
-        if(_len <= ER99_CHAIN_PARAMS_LEN) return -1;   /* refuse to truncate */
-        memcpy(_buf, er99_chain_params_json, ER99_CHAIN_PARAMS_LEN + 1);
-        return ER99_CHAIN_PARAMS_LEN;
+        if(_len <= W9_CHAIN_PARAMS_LEN) return -1;   /* refuse to truncate */
+        memcpy(_buf, w9_chain_params_json, W9_CHAIN_PARAMS_LEN + 1);
+        return W9_CHAIN_PARAMS_LEN;
     }
     /* ui_hierarchy is deliberately served EMPTY, not refused. The Shadow UI's
      * enterComponentEdit uses the hierarchy editor whenever a module offers
@@ -279,9 +279,9 @@ static int get_param(void *_instance, const char *_key, char *_buf, const int _l
          * it would put every voice in the wrong place with nothing to say why.
          * Two strings, one pointer choice, nothing built on the audio thread. */
         const int gm = (g_note_map != 0);
-        const char *const j = gm ? er99_ui_hierarchy_gm_json
-                                 : er99_ui_hierarchy_json;
-        const int n = gm ? ER99_UI_HIERARCHY_GM_LEN : ER99_UI_HIERARCHY_LEN;
+        const char *const j = gm ? w9_ui_hierarchy_gm_json
+                                 : w9_ui_hierarchy_json;
+        const int n = gm ? W9_UI_HIERARCHY_GM_LEN : W9_UI_HIERARCHY_LEN;
         if(_len <= n) return -1;
         memcpy(_buf, j, (size_t)n + 1);
         return n;
@@ -304,11 +304,11 @@ static int get_param(void *_instance, const char *_key, char *_buf, const int _l
          * crash as four separate pages. A host resolving a focus answer
          * against the declared levels found nothing for any of the four, so
          * the two hats and the two cymbals silently never followed. */
-        static const char *const level_of[ER99_NUM_TRIGGERS] = {
+        static const char *const level_of[W9_NUM_TRIGGERS] = {
             "bd","sd","lt","mt","ht","rim","clap","ohh","chh","ride","crash"
         };
         const int v = inst->focus_voice;
-        if(inst->focus_count == 0 || v < 0 || v >= ER99_NUM_TRIGGERS) return -1;
+        if(inst->focus_count == 0 || v < 0 || v >= W9_NUM_TRIGGERS) return -1;
         return snprintf(_buf, (size_t)_len, "%u:%s",
                         inst->focus_count, level_of[v]);
     }
@@ -324,7 +324,7 @@ static int get_param(void *_instance, const char *_key, char *_buf, const int _l
         return snprintf(_buf, (size_t)_len, "%u", (unsigned)inst->lane_mutes);
     if(!strcmp(_key, "state"))
     {
-        int n = er99_engine_get_state(&inst->engine, _buf, _len);
+        int n = w9_engine_get_state(&inst->engine, _buf, _len);
         if(n < 0) return n;
         if(n < _len - 1)
             n += snprintf(_buf + n, (size_t)(_len - n), "mutes=%u;",
@@ -336,7 +336,7 @@ static int get_param(void *_instance, const char *_key, char *_buf, const int _l
         return snprintf(_buf, (size_t)_len, "%d", g_note_map);
 
     float v = 0.0f;
-    if(er99_engine_get_param(&inst->engine, _key, &v))
+    if(w9_engine_get_param(&inst->engine, _key, &v))
         return snprintf(_buf, (size_t)_len, "%.4f", v);
 
     return -1;
@@ -350,7 +350,7 @@ static int get_error(void *_instance, char *_buf, const int _len)
 
 static void render_block(void *_instance, int16_t *_out_lr, const int _frames)
 {
-    er99_instance_t *inst = (er99_instance_t*)_instance;
+    w9_instance_t *inst = (w9_instance_t*)_instance;
     if(!inst) { memset(_out_lr, 0, (size_t)_frames * 2 * sizeof(int16_t)); return; }
 
     inst->samples_rendered += (uint64_t)_frames;
@@ -364,7 +364,7 @@ static void render_block(void *_instance, int16_t *_out_lr, const int _frames)
         if(bpm > 20.0f && bpm != inst->last_bpm)
         {
             inst->last_bpm = bpm;
-            er99_engine_set_raw(&inst->engine, "dly_bpm", bpm);
+            w9_engine_set_raw(&inst->engine, "dly_bpm", bpm);
         }
     }
 
@@ -377,7 +377,7 @@ static void render_block(void *_instance, int16_t *_out_lr, const int _frames)
         int chunk = _frames - done;
         if(chunk > (int)(sizeof(mono)/sizeof(mono[0]))) chunk = (int)(sizeof(mono)/sizeof(mono[0]));
 
-        er99_engine_render(&inst->engine, mono, chunk);
+        w9_engine_render(&inst->engine, mono, chunk);
 
         for(int i=0; i<chunk; ++i)
         {

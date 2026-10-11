@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Install the ER-99 module on the Move SAFELY.
+# Install the 9W9 module on the Move SAFELY.
 #
 # Critical: never scp directly over a live dsp.so. The shim dlopen()s it into
 # MoveOriginal, so overwriting the file mutates the mmap'd code pages of a
@@ -19,7 +19,7 @@ SRC="$(cd "$(dirname "$0")/.." && pwd)"
 DEST="/data/UserData/schwung/modules/sound_generators/9w9"
 BUILD="$SRC/build/dsp.so"
 
-[ -f "$BUILD" ] || { echo "no build/dsp.so — run ./scripts/build.sh er99 first" >&2; exit 1; }
+[ -f "$BUILD" ] || { echo "no build/dsp.so — run ./scripts/build.sh 9w9 first" >&2; exit 1; }
 
 echo "==> $HOST:$DEST"
 ssh "$HOST" "mkdir -p $DEST/samples"
@@ -40,7 +40,7 @@ ssh "$HOST" "cd $DEST && mv -f dsp.so.new dsp.so && mv -f module.json.new module
 
 if [ -f "$SRC/src/patches/9W9.json" ]; then
     scp -q "$SRC/src/patches/9W9.json" "$HOST:/data/UserData/schwung/patches/9W9.json.new"
-    ssh "$HOST" "cd /data/UserData/schwung/patches && mv -f 9W9.json.new 9W9.json && rm -f ER-99.json"
+    ssh "$HOST" "cd /data/UserData/schwung/patches && mv -f 9W9.json.new 9W9.json"
 fi
 
 echo "==> done. Reload the slot (or restart the Shadow UI) to pick up new code."

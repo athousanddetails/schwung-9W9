@@ -1,5 +1,5 @@
 /*
- * er99_tom909.h — the TR-909's tom voice, from the voicing-board schematic.
+ * 9w9_tom909.h — the TR-909's tom voice, from the voicing-board schematic.
  *
  * The 909's toms are not one oscillator with a body. Each tom is THREE
  * oscillators, a noise path, and separate envelopes — that structure is why a
@@ -41,16 +41,16 @@
  *
  * GPL-3.0.
  */
-#ifndef ER99_TOM909_H
-#define ER99_TOM909_H
+#ifndef W9_TOM909_H
+#define W9_TOM909_H
 
 #include "webaudio.h"
-#include "er99_circuit.h"
+#include "9w9_circuit.h"
 
 /* VCO2 : VCO1 : VCO3 from the timing capacitors above. */
-#define ER99_TOM_R1  1.00f
-#define ER99_TOM_R2  1.50f
-#define ER99_TOM_R3  2.75f
+#define W9_TOM_R1  1.00f
+#define W9_TOM_R2  1.50f
+#define W9_TOM_R3  2.75f
 
 typedef struct {
     wa_osc_t    osc[3];
@@ -64,9 +64,9 @@ typedef struct {
     float       crush_st[2];
     double      mute_countdown;
     float       sample_rate;
-} er99_tom_t;
+} w9_tom_t;
 
-static inline void er99_tom909_init(er99_tom_t *t, const float _sr)
+static inline void w9_tom909_init(w9_tom_t *t, const float _sr)
 {
     t->sample_rate = _sr;
     for(int i = 0; i < 3; ++i)
@@ -93,13 +93,13 @@ static inline void er99_tom909_init(er99_tom_t *t, const float _sr)
  * same Tune / Decay / Attack / Drive / Dist / Level the UI already has and no
  * new parameter has to exist for it.
  */
-static inline void er99_tom909_trigger(er99_tom_t *t, const er99_bt_t *p,
+static inline void w9_tom909_trigger(w9_tom_t *t, const w9_bt_t *p,
                                        const float _accent)
 {
     const float sr = t->sample_rate;
     const float ms = 0.001f * sr;
 
-    /* Every hit starts from the same place — see the note in er99_circuit.h. */
+    /* Every hit starts from the same place — see the note in 9w9_circuit.h. */
     for(int i = 0; i < 3; ++i) wa_osc_set_phase(&t->osc[i], 0.25);
     wa_biquad_reset(&t->dc_block);
 
@@ -131,7 +131,7 @@ static inline void er99_tom909_trigger(er99_tom_t *t, const er99_bt_t *p,
     t->mute_countdown = (d1 + 60.0f) * ms;
 }
 
-static inline float er99_tom909_render(er99_tom_t *t, const er99_bt_t *p,
+static inline float w9_tom909_render(w9_tom_t *t, const w9_bt_t *p,
                                        const float _noise)
 {
     if(t->mute_countdown <= 0.0) return 0.0f;
@@ -142,20 +142,20 @@ static inline float er99_tom909_render(er99_tom_t *t, const er99_bt_t *p,
     /* Three oscillators at the board's ratios, each rounded by its own diode
      * pair and gated by its own envelope. */
     float o = 0.0f;
-    o += er99_diode_round(wa_osc_triangle(&t->osc[0], f * ER99_TOM_R1), 2.0f)
+    o += w9_diode_round(wa_osc_triangle(&t->osc[0], f * W9_TOM_R1), 2.0f)
        * wa_param_tick(&t->env[0]);
-    o += er99_diode_round(wa_osc_triangle(&t->osc[1], f * ER99_TOM_R2), 2.0f)
+    o += w9_diode_round(wa_osc_triangle(&t->osc[1], f * W9_TOM_R2), 2.0f)
        * wa_param_tick(&t->env[1]);
-    o += er99_diode_round(wa_osc_triangle(&t->osc[2], f * ER99_TOM_R3), 2.0f)
+    o += w9_diode_round(wa_osc_triangle(&t->osc[2], f * W9_TOM_R3), 2.0f)
        * wa_param_tick(&t->env[2]);
     o *= 0.55f;                       /* three partials summed, keep headroom */
 
     const float stick = wa_biquad_tick(&t->noise_bp, _noise)
                       * wa_param_tick(&t->noise_env) * t->noise_level * 1.5f;
 
-    float y = er99_shape_st(o + stick, p->drive, p->dist_type, t->crush_st);
+    float y = w9_shape_st(o + stick, p->drive, p->dist_type, t->crush_st);
     y = wa_biquad_tick(&t->dc_block, y);
     return y * t->out_gain;
 }
 
-#endif /* ER99_TOM909_H */
+#endif /* W9_TOM909_H */

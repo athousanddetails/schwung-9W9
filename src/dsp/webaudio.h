@@ -1,21 +1,19 @@
 /*
- * webaudio.h — the handful of Web Audio API nodes er-99 uses, in C.
+ * webaudio.h — a handful of W3C Web Audio API nodes, in C.
  *
- * er-99's DSP is a pure Web Audio node graph (no AudioWorklet), so every
- * behaviour it relies on is defined mathematically by the W3C Web Audio spec.
- * This header implements exactly those definitions, which is what makes the
- * port verifiable against reference renders instead of tuned by ear.
+ * Each node implements the behaviour the W3C Web Audio spec defines
+ * mathematically, so results are verifiable rather than tuned by ear.
  *
  * Spec references:
  *   BiquadFilterNode  https://www.w3.org/TR/webaudio/#filters-characteristics
  *   AudioParam ramps  https://www.w3.org/TR/webaudio/#dom-audioparam-*
  *   WaveShaperNode    https://www.w3.org/TR/webaudio/#WaveShaperNode
  *
- * GPL-3.0 (er-99 is GPL-3.0).
+ * GPL-3.0.
  */
 
-#ifndef ER99_WEBAUDIO_H
-#define ER99_WEBAUDIO_H
+#ifndef W9_WEBAUDIO_H
+#define W9_WEBAUDIO_H
 
 #include <math.h>
 #include <stdint.h>
@@ -25,15 +23,15 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-/* Web Audio clamps exponential ramp endpoints away from zero; er-99 relies on
- * this by ramping to 0.00001 rather than 0. */
+/* Web Audio clamps exponential ramp endpoints away from zero; envelopes rely
+ * on this by ramping to 0.00001 rather than 0. */
 #define WA_MIN_EXP 1.0e-9f
 
 /* ===================================================================== */
 /* AudioParam — the automation timeline                                   */
 /* ===================================================================== */
 /*
- * er-99 uses four automation methods. Rather than model a full event list we
+ * The voices use four automation methods. Rather than model a full event list we
  * keep the single active segment, which is sufficient because every voice
  * re-arms its envelopes on trigger (the one exception, the clap's 5 scheduled
  * taps, is handled by the clap voice itself).
@@ -165,8 +163,8 @@ typedef struct {
  * Coefficients exactly as the Web Audio spec defines them (which is the RBJ
  * cookbook). Note the spec's BANDPASS is the constant-0dB-peak-gain variant,
  * and Q is interpreted in dB for lowpass/highpass but linearly for
- * bandpass/notch/peaking — er-99 leaves Q at default (1) for LP/HP/notch and
- * sets it explicitly only on bandpass, so we take Q linearly throughout.
+ * bandpass/notch/peaking — the voices leave Q at default (1) for LP/HP/notch
+ * and set it explicitly only on bandpass, so we take Q linearly throughout.
  */
 static inline void wa_biquad_set(wa_biquad_t *f, const wa_filter_type_t _type,
                                  const float _freq, const float _q,
@@ -264,7 +262,7 @@ static inline float wa_biquad_tick(wa_biquad_t *f, const float _in)
 /* WaveShaperNode                                                         */
 /* ===================================================================== */
 /*
- * er-99's curve, verbatim from index.ts:
+ * Saturation curve:
  *   curve[i] = (PI + amount) * x / (PI + amount * |x|),  x = i*2/n - 1
  *
  * The node runs at oversample='2x'. We reproduce that: upsample x2 (linear),
@@ -366,7 +364,7 @@ static inline float wa_osc_sawtooth(wa_osc_t *o, const float _freq)
 }
 
 /* ===================================================================== */
-/* White noise — er-99 uses lib/noise.js: Math.random() * 2 - 1           */
+/* White noise, uniform in [-1, 1)                                        */
 /* ===================================================================== */
 
 typedef struct { uint32_t state; } wa_noise_t;
@@ -385,4 +383,4 @@ static inline float wa_noise_tick(wa_noise_t *n)
     return (float)((double)n->state / 2147483648.0) - 1.0f;
 }
 
-#endif /* ER99_WEBAUDIO_H */
+#endif /* W9_WEBAUDIO_H */

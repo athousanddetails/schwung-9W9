@@ -1,4 +1,4 @@
-# Build environment for the Schwung ER-99 module.
+# Build environment for the Schwung 9W9 module.
 # ubuntu:22.04 pinned deliberately: glibc 2.35, matching Ableton Move exactly.
 FROM ubuntu:22.04
 RUN apt-get update && apt-get install -y --no-install-recommends \

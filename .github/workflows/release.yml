@@ -30,7 +30,7 @@ jobs:
       - name: Build with Docker
         run: |
           docker build -t module-builder -f scripts/Dockerfile .
-          docker run --rm -v "$PWD:/build" -w /build module-builder ./scripts/build.sh er99
+          docker run --rm -v "$PWD:/build" -w /build module-builder ./scripts/build.sh 9w9
 
       - name: Create Release
         uses: softprops/action-gh-release@v1

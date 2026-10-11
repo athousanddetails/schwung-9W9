@@ -1,13 +1,5 @@
 /*
- * er99_perc909.h — circuit-informed TR-909 RIM SHOT and HAND CLAP.
- *
- * Replaces er-99's versions, which are not the target any more:
- *
- *  - er-99's rim is a single 220 Hz bandpass (its "parallel" topology only ever
- *    feeds filter 0 — the other two are wired to the output but nothing drives
- *    them), so it comes out dull and one-dimensional.
- *  - er-99's clap approximates the burst with five scheduled gain taps and no
- *    real delay line.
+ * 9w9_perc909.h — circuit-informed TR-909 RIM SHOT and HAND CLAP.
  *
  * The hardware:
  *
@@ -26,11 +18,11 @@
  * GPL-3.0.
  */
 
-#ifndef ER99_PERC909_H
-#define ER99_PERC909_H
+#ifndef W9_PERC909_H
+#define W9_PERC909_H
 
 #include "webaudio.h"
-#include "er99_circuit.h"   /* er99_shape() */
+#include "9w9_circuit.h"   /* w9_shape() */
 
 /* ===================== RIM SHOT ===================== */
 typedef struct {
@@ -50,9 +42,9 @@ typedef struct {
     double      mute_countdown;
     float       sample_rate;
     float       accent_gain_;
-} er99_rim909_t;
+} w9_rim909_t;
 
-static inline void er99_rim909_init(er99_rim909_t *v, const float _sr)
+static inline void w9_rim909_init(w9_rim909_t *v, const float _sr)
 {
     v->sample_rate = _sr;
     wa_biquad_set(&v->bp1, WA_BANDPASS, v->tune  > 0 ? v->tune  : 220.0f,
@@ -70,13 +62,13 @@ static inline void er99_rim909_init(er99_rim909_t *v, const float _sr)
     v->accent_gain_ = 1.0f;
 }
 
-static inline void er99_rim909_retune(er99_rim909_t *v)
+static inline void w9_rim909_retune(w9_rim909_t *v)
 {
     wa_biquad_set(&v->bp1, WA_BANDPASS, v->tune, v->res, 0.0f, v->sample_rate);
     wa_biquad_set(&v->bp2, WA_BANDPASS, v->tune2, v->res * 1.1f, 0.0f, v->sample_rate);
 }
 
-static inline void er99_rim909_trigger(er99_rim909_t *v, const float _accent)
+static inline void w9_rim909_trigger(w9_rim909_t *v, const float _accent)
 {
     const float ms = 0.001f * v->sample_rate;
     wa_set_value(&v->amp, 1.0f);
@@ -86,7 +78,7 @@ static inline void er99_rim909_trigger(er99_rim909_t *v, const float _accent)
     v->mute_countdown = (v->decay + 20.0f) * ms;
 }
 
-static inline float er99_rim909_render(er99_rim909_t *v, const float _noise)
+static inline float w9_rim909_render(w9_rim909_t *v, const float _noise)
 {
     if(v->mute_countdown <= 0.0) return 0.0f;
     v->mute_countdown -= 1.0;
@@ -113,7 +105,7 @@ static inline float er99_rim909_render(er99_rim909_t *v, const float _noise)
      * had been living off that hiss, and lost most of its level when it went. */
     float y = wa_biquad_tick(&v->bp1, exc) * 60.0f
             + wa_biquad_tick(&v->bp2, exc) * 32.0f;
-    y = er99_shape_st(y * a, v->drive, v->dist_type, v->crush_st);
+    y = w9_shape_st(y * a, v->drive, v->dist_type, v->crush_st);
     y = wa_biquad_tick(&v->hp, y);
     return y * v->level * v->accent_gain_;
 }
@@ -138,9 +130,9 @@ typedef struct {
     double      mute_countdown;
     float       sample_rate;
     float       accent_gain_;
-} er99_clap909_t;
+} w9_clap909_t;
 
-static inline void er99_clap909_init(er99_clap909_t *v, const float _sr)
+static inline void w9_clap909_init(w9_clap909_t *v, const float _sr)
 {
     v->sample_rate = _sr;
     wa_biquad_set(&v->bp, WA_BANDPASS, v->tune > 0 ? v->tune : 1000.0f,
@@ -153,12 +145,12 @@ static inline void er99_clap909_init(er99_clap909_t *v, const float _sr)
     v->accent_gain_ = 1.0f;
 }
 
-static inline void er99_clap909_retune(er99_clap909_t *v)
+static inline void w9_clap909_retune(w9_clap909_t *v)
 {
     wa_biquad_set(&v->bp, WA_BANDPASS, v->tune, v->res, 0.0f, v->sample_rate);
 }
 
-static inline void er99_clap909_trigger(er99_clap909_t *v, const float _accent)
+static inline void w9_clap909_trigger(w9_clap909_t *v, const float _accent)
 {
     const float ms = 0.001f * v->sample_rate;
     v->pulse_index = 0;
@@ -172,7 +164,7 @@ static inline void er99_clap909_trigger(er99_clap909_t *v, const float _accent)
     v->mute_countdown = (v->tail_decay + v->spread * 4.0f + 40.0f) * ms;
 }
 
-static inline float er99_clap909_render(er99_clap909_t *v, const float _noise)
+static inline float w9_clap909_render(w9_clap909_t *v, const float _noise)
 {
     if(v->mute_countdown <= 0.0) return 0.0f;
     v->mute_countdown -= 1.0;
@@ -205,9 +197,9 @@ static inline float er99_clap909_render(er99_clap909_t *v, const float _noise)
 
     const float env = wa_param_tick(&v->burst) + wa_param_tick(&v->tail);
     float y = wa_biquad_tick(&v->bp, _noise) * env;
-    y = er99_shape_st(y, v->drive, v->dist_type, v->crush_st);
+    y = w9_shape_st(y, v->drive, v->dist_type, v->crush_st);
     y = wa_biquad_tick(&v->hp, y);
     return y * v->level * v->accent_gain_;
 }
 
-#endif /* ER99_PERC909_H */
+#endif /* W9_PERC909_H */

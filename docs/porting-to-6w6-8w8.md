@@ -4,7 +4,7 @@ Written for the agent working in **schwung-6W6** or **schwung-8W8**. Everything
 below has already been built, measured and approved on hardware in 9W9; your
 job is to move it across without changing how the existing kit sounds.
 
-**Reference implementation:** `/Users/gustavolima/Developer/909-schwung/schwung-er99`
+**Reference implementation:** [athousanddetails/schwung-9W9](https://github.com/athousanddetails/schwung-9W9)
 (`main`, v2.2.0+). Read it directly and copy the maths — this document tells
 you *what* to copy, *what will bite you*, and *what to prove before committing*.
 
@@ -99,7 +99,7 @@ The current 4 types (Diode, Clip, Fold, Crush) become 7, in menu order:
 | 5 | Fold | wavefolder (was #2) |
 | 6 | Crush | quantise **and** decimate (was #3) |
 
-Copy the maths verbatim from `src/dsp/er99_circuit.h`, `er99_shape_st()`. Do
+Copy the maths verbatim from `src/dsp/9w9_circuit.h`, `w9_shape_st()`. Do
 not re-derive it — Gus has approved how these sound and asked explicitly that
 nobody go looking for other references.
 
@@ -220,12 +220,12 @@ call in 9W9. Flag it for these kits rather than assuming.
 > instruments including the kick. So flag it, do not copy it: the rule is "ask",
 > not "the kick is dry". 6W6 ships `bd_rev`/`bd_dly` like every other voice.
 
-Copy `er99_verb_t` / `er99_dly_t` and their ticks from `src/dsp/er99_engine.h`
-and `er99_engine.c`:
+Copy `w9_verb_t` / `w9_dly_t` and their ticks from `src/dsp/9w9_engine.h`
+and `9w9_engine.c`:
 
 - **Reverb:** 4 combs (1116, 1188, 1277, 1356) into 2 allpasses (556, 441),
   loop quantised to 12 bits. Params: Decay, Tone (loop damping), HPF, Level.
-- **Delay:** one line, `ER99_DLY_MAX 88200` (2 s at 44.1 k), slewed read so time
+- **Delay:** one line, `W9_DLY_MAX 88200` (2 s at 44.1 k), slewed read so time
   changes warp the echo instead of clicking, one-pole darkening in the
   feedback, 12-bit writes. Params: Time, Fdbk, Tone, HPF, Level.
 
@@ -516,7 +516,7 @@ does not divert — so a sequencer that toggles on the press flips a trig under
 every lock the user places.
 
 9W9 records the press and toggles on the release only if the hold was shorter
-than a tap (`ER99_STEP_TAP_MAX_S`, 300 ms). Both release spellings count: Move
+than a tap (`W9_STEP_TAP_MAX_S`, 300 ms). Both release spellings count: Move
 sends note-off and note-on with velocity 0. The one-shot filter that drops
 note-offs has to come AFTER the step branch, or the release never arrives.
 `loadtest.c` asserts all three: press alone does nothing, tap toggles, hold
@@ -745,8 +745,8 @@ from it would place every voice wrongly with nothing to indicate why. Emit
 if(!strcmp(_key, "ui_pages"))
 {
     const int gm = (g_note_map != 0);
-    const char *const j = gm ? er99_ui_hierarchy_gm_json : er99_ui_hierarchy_json;
-    const int n = gm ? ER99_UI_HIERARCHY_GM_LEN : ER99_UI_HIERARCHY_LEN;
+    const char *const j = gm ? w9_ui_hierarchy_gm_json : w9_ui_hierarchy_json;
+    const int n = gm ? W9_UI_HIERARCHY_GM_LEN : W9_UI_HIERARCHY_LEN;
     if(_len <= n) return -1;
     memcpy(_buf, j, (size_t)n + 1);
     return n;
@@ -764,7 +764,7 @@ cymbals are transposed between them:
 
 ```
 nav order        bd sd lt mt ht rim clap chh ohh ride  crash
-er99_trigger_t   BD SD LT MT HT RS  HC   OHH CHH RC    CR
+w9_trigger_t   BD SD LT MT HT RS  HC   OHH CHH RC    CR
 drum-rack notes  36 37 38 39 40 41  42   43  44  46    45
 ```
 

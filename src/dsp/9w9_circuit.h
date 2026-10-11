@@ -1,8 +1,8 @@
 /*
- * er99_circuit.h — circuit-informed TR-909 voice models (BD / SD / toms).
+ * 9w9_circuit.h — circuit-informed TR-909 voice models (BD / SD / toms).
  *
- * er-99's oscillator voices are "triangle + VCA envelope", which is why its
- * toms sound thin and its kick lacks attack. The real 909 analog voice is:
+ * A plain "triangle + VCA envelope" voice gives thin toms and a kick with no
+ * attack. The real 909 analog voice is:
  *
  *   - an oscillator producing a TRIANGLE that is rounded toward a SINE by
  *     back-to-back diodes conducting ~0.5-0.6 V either side of ground,
@@ -11,19 +11,19 @@
  *   - an AMPLITUDE envelope (Decay),
  *   - and a separate CLICK path — a short impulse plus lowpass-filtered noise,
  *     summed and given their own fast envelope (the Attack control). This is
- *     the beater contact, and it is what er-99 is missing entirely.
+ *     the beater contact.
  *
  * The snare adds a second tuned oscillator and a noise path with its own
  * envelope and highpass (Snappy).
  *
- * Sources: Network-909 circuit analysis (cited by er-99 itself), Roland
+ * Sources: Network-909 circuit analysis, Roland
  * TR-909 service documentation, and the sound-mod analysis at firstpr.com.au.
  *
  * GPL-3.0.
  */
 
-#ifndef ER99_CIRCUIT_H
-#define ER99_CIRCUIT_H
+#ifndef W9_CIRCUIT_H
+#define W9_CIRCUIT_H
 
 #include "webaudio.h"
 
@@ -93,7 +93,7 @@ typedef struct {
     int         impulse;        /* samples of initial impulse left */
     double      mute_countdown;
     float       sample_rate;
-} er99_bt_t;
+} w9_bt_t;
 
 /*
  * Back-to-back diode rounding. A triangle wave's sharp peaks are what make it
@@ -102,7 +102,7 @@ typedef struct {
  * model of that pair. drive ~2 reproduces the 909's rounded triangle; higher
  * values push it back toward a harder, more aggressive tone.
  */
-static inline float er99_diode_round(const float _x, const float _drive)
+static inline float w9_diode_round(const float _x, const float _drive)
 {
     const float k = _drive > 0.01f ? _drive : 0.01f;
     return tanhf(k * _x) / tanhf(k);
@@ -138,23 +138,23 @@ static inline float er99_diode_round(const float _x, const float _drive)
  * preset is quieter still on the noise leg (0.12 against his hardware's 0.18
  * at 5 ms) — its Snappy was evidently set below noon, so the hardware stays
  * the reference. */
-#define ER99_SNAPPY_MIX 1.95f
+#define W9_SNAPPY_MIX 1.95f
 
 /* Turn-on voltage of the single-transistor VCAs. Fitted, not assumed: at 0.027
  * the snare's shells were cut off entirely by 100 ms where the real drum still
  * has them at -30 dB and audible to 150. Fitted again once the shell decay was
  * measured directly (tau 28 ms, not 36): at 0.005 the tail still gated off
  * before 150 ms where the references are at -39 dB and running to -46 at
- * 200 ms. Overridable so the fitting rig can sweep it (-DER99_VCA_VT=...).
+ * 200 ms. Overridable so the fitting rig can sweep it (-DW9_VCA_VT=...).
  *
  * 0.0002 after fitting the shells against Roland's own TR-909 with Snappy at
  * zero — the cleanest shell reference there is. At 0.001 the tail still cut
  * short of theirs (0.005 against 0.015 at 150 ms, both around -40 dB, so this
  * is tidiness rather than anything audible). */
-#ifndef ER99_VCA_VT
-#define ER99_VCA_VT    0.0002f
+#ifndef W9_VCA_VT
+#define W9_VCA_VT    0.0002f
 #endif
-#define ER99_VCA_NORM  (1.0f / (1.0f - ER99_VCA_VT))
+#define W9_VCA_NORM  (1.0f / (1.0f - W9_VCA_VT))
 
 /*
  * The voice/master distortion stage. Seven characters:
@@ -175,7 +175,7 @@ static inline float er99_diode_round(const float _x, const float _drive)
  * All types are level-normalised below unity drive, so Drive at minimum is
  * transparent for every one of them.
  */
-static inline float er99_shape_st(const float _x, const float _drive,
+static inline float w9_shape_st(const float _x, const float _drive,
                                   const float _type, float *_st)
 {
     const int t = (int)(_type + 0.5f);
@@ -246,32 +246,32 @@ static inline float er99_shape_st(const float _x, const float _drive,
     }
     case 0:
     default:
-        return er99_diode_round(_x, k);
+        return w9_diode_round(_x, k);
     }
 }
 
-static inline float er99_shape(const float _x, const float _drive, const float _type)
+static inline float w9_shape(const float _x, const float _drive, const float _type)
 {
-    return er99_shape_st(_x, _drive, _type, (float*)0);
+    return w9_shape_st(_x, _drive, _type, (float*)0);
 }
 
 /* The measured resting pitch of the stock kick — every Tune position on the
  * reference machine settles here. */
-#define ER99_BD_BASE_HZ 49.0f
+#define W9_BD_BASE_HZ 49.0f
 /* Fitted against all four lettered Tune positions at once (24 windowed pitch
  * readings, total squared error 26 — about 1 Hz per point): the sweep rises
  * 4.6 Hz per ms of its time constant, and HOLDS for ~16 ms before falling —
  * C9's charge time, Fraser's "fixed attack time of the sweep". Without the
  * hold no exponential matches the recordings; the early readings sit far
  * above any curve that starts falling at t=0. */
-#ifndef ER99_BD_DF_PER_MS
-#define ER99_BD_DF_PER_MS 4.6f     /* sweep height per ms of tau */
+#ifndef W9_BD_DF_PER_MS
+#define W9_BD_DF_PER_MS 4.6f     /* sweep height per ms of tau */
 #endif
-#ifndef ER99_BD_PHOLD_MS
-#define ER99_BD_PHOLD_MS  16.0f    /* sweep hold before the fall */
+#ifndef W9_BD_PHOLD_MS
+#define W9_BD_PHOLD_MS  16.0f    /* sweep hold before the fall */
 #endif
 
-static inline void er99_bt_init(er99_bt_t *v, const float _sr)
+static inline void w9_bt_init(w9_bt_t *v, const float _sr)
 {
     v->sample_rate = _sr;
     wa_osc_init(&v->osc,  _sr);
@@ -298,14 +298,14 @@ static inline void er99_bt_init(er99_bt_t *v, const float _sr)
     v->noise_gated = 0;
     v->amp_hold_left = 0;
     v->bd_sweep = 0; v->bd_df = 0.0f; v->bd_mult = 0.0f; v->bd_phold = 0;
-    v->bd_base = ER99_BD_BASE_HZ;
+    v->bd_base = W9_BD_BASE_HZ;
     if(v->pitch_mod <= 0.0f) v->pitch_mod = 1.0f;
     v->out_gain = 0.0f;
     v->impulse = 0;
     v->mute_countdown = 0.0;
 }
 
-static inline void er99_bt_trigger(er99_bt_t *v, const float _accent)
+static inline void w9_bt_trigger(w9_bt_t *v, const float _accent)
 {
     const float sr = v->sample_rate;
     const float ms = 0.001f * sr;
@@ -329,10 +329,10 @@ static inline void er99_bt_trigger(er99_bt_t *v, const float _accent)
         const float m  = v->sweep_depth < 0.0f ? 0.0f
                        : (v->sweep_depth > 1.0f ? 1.0f : v->sweep_depth);
         const float pm = v->pitch_mod > 0.0f ? v->pitch_mod : 1.0f;
-        v->bd_base  = ER99_BD_BASE_HZ * (1.0f + m * (pm - 1.0f));
-        v->bd_df    = ER99_BD_DF_PER_MS * tau * (1.0f + 1.2f * m);
+        v->bd_base  = W9_BD_BASE_HZ * (1.0f + m * (pm - 1.0f));
+        v->bd_df    = W9_BD_DF_PER_MS * tau * (1.0f + 1.2f * m);
         v->bd_mult  = expf(-1.0f / (tau * ms));
-        v->bd_phold = (int)(ER99_BD_PHOLD_MS * ms);
+        v->bd_phold = (int)(W9_BD_PHOLD_MS * ms);
         wa_set_value(&v->pitch, v->bd_base);
     }
     else
@@ -370,7 +370,7 @@ static inline void er99_bt_trigger(er99_bt_t *v, const float _accent)
     v->mute_countdown = (longest + 20.0f) * ms;
 }
 
-static inline float er99_bt_render(er99_bt_t *v, const float _noise)
+static inline float w9_bt_render(w9_bt_t *v, const float _noise)
 {
     if(v->mute_countdown <= 0.0) return 0.0f;
     v->mute_countdown -= 1.0;
@@ -394,7 +394,7 @@ static inline float er99_bt_render(er99_bt_t *v, const float _noise)
      * continuously, which is what the junction does. Zeroing gain outright
      * (what this did first) cuts the shell mid-cycle and clicks. */
     if(v->tune2 > 0.0f && v->osc2_mix > 0.0f)
-        amp = amp > ER99_VCA_VT ? (amp - ER99_VCA_VT) * ER99_VCA_NORM : 0.0f;
+        amp = amp > W9_VCA_VT ? (amp - W9_VCA_VT) * W9_VCA_NORM : 0.0f;
 
     /* Oscillator: triangle, rounded toward sine by the diode pair. The pair
      * is ALWAYS in circuit (Whittle: conduction at ~0.5-0.6 V at the stock
@@ -408,7 +408,7 @@ static inline float er99_bt_render(er99_bt_t *v, const float _noise)
          * and H2/H1 2-4% — the pair conducts slightly asymmetrically, and a
          * perfectly symmetric shaper produces none. The square term's DC goes
          * through the blocker below. */
-        o = er99_diode_round(o, 1.6f);
+        o = w9_diode_round(o, 1.6f);
         o += 0.05f * o * o;
         o = wa_biquad_tick(&v->dc_block, o);
     }
@@ -421,13 +421,13 @@ static inline float er99_bt_render(er99_bt_t *v, const float _noise)
          * grow a ~120 Hz difference tone, a phantom pitch no 909 makes. The
          * user Drive stage after this still distorts the mix on purpose;
          * at low Drive it stays clean. */
-        o = er99_diode_round(o, 2.0f);
+        o = w9_diode_round(o, 2.0f);
         const float ratio = v->tune > 1.0f ? v->tune2 / v->tune : 1.0f;
-        o += er99_diode_round(wa_osc_triangle(&v->osc2, f * ratio), 2.0f)
+        o += w9_diode_round(wa_osc_triangle(&v->osc2, f * ratio), 2.0f)
            * v->osc2_mix;
         o /= (1.0f + v->osc2_mix);
     }
-    float body = er99_shape_st(o, v->drive, v->dist_type, v->crush_st) * amp;
+    float body = w9_shape_st(o, v->drive, v->dist_type, v->crush_st) * amp;
 
     /* Click: impulse + lowpass-filtered noise, own envelope (Attack). */
     float click = 0.0f;
@@ -454,15 +454,15 @@ static inline float er99_bt_render(er99_bt_t *v, const float _noise)
         {
             /* Same junction, same soft cutoff — and once it is shut, stay shut
              * (the envelope only falls further). */
-            env = env > ER99_VCA_VT ? (env - ER99_VCA_VT) * ER99_VCA_NORM : 0.0f;
+            env = env > W9_VCA_VT ? (env - W9_VCA_VT) * W9_VCA_NORM : 0.0f;
             if(env <= 0.0f) v->noise_gated = 1;
         }
         snare = wa_biquad_tick(&v->noise_lpf,
                     wa_biquad_tick(&v->noise_hpf, _noise))
-              * env * v->snappy * ER99_SNAPPY_MIX;
+              * env * v->snappy * W9_SNAPPY_MIX;
     }
 
     return (body + click + snare) * v->out_gain;
 }
 
-#endif /* ER99_CIRCUIT_H */
+#endif /* W9_CIRCUIT_H */

@@ -1,10 +1,10 @@
 /*
- * render.c — offline renderer for the ER-99 C engine.
+ * render.c — offline renderer for the 9W9 engine.
  *
- * Renders either one voice per file (for A/B against the Web Audio reference)
+ * Renders either one voice per file (for A/B against reference renders)
  * or a demo pattern. Runs anywhere; on Move it doubles as a smoke test.
  *
- *   er99_render <module_dir> <out_dir> [voice|all|pattern]
+ *   9w9_render <module_dir> <out_dir> [voice|all|pattern]
  *
  * GPL-3.0.
  */
@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "er99_engine.h"
+#include "9w9_engine.h"
 
 static void wr32(FILE *f, uint32_t v) { fwrite(&v, 4, 1, f); }
 static void wr16(FILE *f, uint16_t v) { fwrite(&v, 2, 1, f); }
@@ -60,7 +60,7 @@ int main(int argc, char **argv)
     {
         const int pframes = sr * 4;
         float *p = (float*)calloc((size_t)pframes, sizeof(float));
-        er99_engine_t e; er99_engine_init(&e, (float)sr, module_dir);
+        w9_engine_t e; w9_engine_init(&e, (float)sr, module_dir);
 
         /* key=value overrides apply here too — a pattern render that ignores
          * them silently is exactly how a bogus A/B test happens. */
@@ -71,7 +71,7 @@ int main(int argc, char **argv)
             char *eq = strchr(kv, '=');
             if(!eq) continue;
             *eq = '\0';
-            if(!er99_engine_set_param(&e, kv, (float)atof(eq + 1)))
+            if(!w9_engine_set_param(&e, kv, (float)atof(eq + 1)))
                 fprintf(stderr, "  (unknown param: %s)\n", kv);
         }
 
@@ -80,28 +80,28 @@ int main(int argc, char **argv)
         for(int s=0; s<16; ++s)
         {
             const int at = s * step;
-            if(s % 4 == 0)            er99_engine_trigger(&e, ER99_BD, 110);
-            if(s % 8 == 4)            er99_engine_trigger(&e, ER99_SD, 110);
-            if(s % 2 == 0)            er99_engine_trigger(&e, ER99_CHH, 80);
-            if(s == 14)               er99_engine_trigger(&e, ER99_OHH, 100);
-            if(s == 7)                er99_engine_trigger(&e, ER99_HC, 100);
-            if(s == 11)               er99_engine_trigger(&e, ER99_RS, 100);
-            er99_engine_render(&e, p + at, step);
+            if(s % 4 == 0)            w9_engine_trigger(&e, W9_BD, 110);
+            if(s % 8 == 4)            w9_engine_trigger(&e, W9_SD, 110);
+            if(s % 2 == 0)            w9_engine_trigger(&e, W9_CHH, 80);
+            if(s == 14)               w9_engine_trigger(&e, W9_OHH, 100);
+            if(s == 7)                w9_engine_trigger(&e, W9_HC, 100);
+            if(s == 11)               w9_engine_trigger(&e, W9_RS, 100);
+            w9_engine_render(&e, p + at, step);
         }
         char path[1024];
-        snprintf(path, sizeof(path), "%s/er99_pattern.wav", out_dir);
+        snprintf(path, sizeof(path), "%s/w9_pattern.wav", out_dir);
         write_wav(path, p, 16 * step, sr);
         printf("wrote %s\n", path);
-        er99_engine_free(&e); free(p); free(buf);
+        w9_engine_free(&e); free(p); free(buf);
         return 0;
     }
 
-    for(int t=0; t<ER99_NUM_TRIGGERS; ++t)
+    for(int t=0; t<W9_NUM_TRIGGERS; ++t)
     {
-        if(strcmp(what, "all") && strcmp(what, er99_trigger_names[t])) continue;
+        if(strcmp(what, "all") && strcmp(what, w9_trigger_names[t])) continue;
 
-        er99_engine_t e;
-        er99_engine_init(&e, (float)sr, module_dir);
+        w9_engine_t e;
+        w9_engine_init(&e, (float)sr, module_dir);
 
         /* Trailing key=value args override engine parameters, so variants can
          * be auditioned without rebuilding. */
@@ -112,24 +112,24 @@ int main(int argc, char **argv)
             char *eq = strchr(kv, '=');
             if(!eq) continue;
             *eq = '\0';
-            if(!er99_engine_set_param(&e, kv, (float)atof(eq + 1)))
+            if(!w9_engine_set_param(&e, kv, (float)atof(eq + 1)))
                 fprintf(stderr, "  (unknown param: %s)\n", kv);
         }
 
         /* isolate the voice: render it alone, no accent */
-        er99_engine_trigger(&e, (er99_trigger_t)t, 80);
+        w9_engine_trigger(&e, (w9_trigger_t)t, 80);
         memset(buf, 0, (size_t)frames * sizeof(float));
-        er99_engine_render(&e, buf, frames);
+        w9_engine_render(&e, buf, frames);
 
         float peak = 0.0f;
         for(int i=0; i<frames; ++i) { const float a = buf[i] < 0 ? -buf[i] : buf[i]; if(a > peak) peak = a; }
 
         char path[1024];
-        snprintf(path, sizeof(path), "%s/c_%s.wav", out_dir, er99_trigger_names[t]);
+        snprintf(path, sizeof(path), "%s/c_%s.wav", out_dir, w9_trigger_names[t]);
         write_wav(path, buf, frames, sr);
-        printf("%-4s peak=%.4f  %s\n", er99_trigger_names[t], peak, path);
+        printf("%-4s peak=%.4f  %s\n", w9_trigger_names[t], peak, path);
 
-        er99_engine_free(&e);
+        w9_engine_free(&e);
     }
 
     free(buf);

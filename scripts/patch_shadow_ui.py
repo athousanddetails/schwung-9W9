@@ -31,7 +31,7 @@ Usage
 import re
 import sys
 
-MARK = "ER99_PAD_FOLLOW"
+MARK = "W9_PAD_FOLLOW"
 
 STATE_ANCHOR = 'let hierEditorChildIndex = -1;    // selected child index for child_prefix levels'
 STATE_PATCH = STATE_ANCHOR + f"""

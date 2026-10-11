@@ -130,31 +130,26 @@ Requires Schwung **0.12.1 or newer**. Via the Schwung Module Store /
 Requires Docker (cross-compiles for the Move's ARM64, pinned to glibc 2.35):
 
 ```bash
-./scripts/build.sh er99          # builds build/dsp.so + dist/9w9-module.tar.gz
+./scripts/build.sh 9w9           # builds build/dsp.so + dist/9w9-module.tar.gz
 ./scripts/deploy.sh <host>       # safe deploy (atomic rename, never over a live .so)
 ```
 
-`scripts/build.sh er99_loadtest` builds an on-device test that dlopens the real
+`scripts/build.sh 9w9_loadtest` builds an on-device test that dlopens the real
 `dsp.so` exactly as Schwung's chain host does and verifies parameters, state
 round-trip, mutes, the hat choke, channel balance and the send FX end to end.
 
-## Credits and provenance
+## Credits
 
-9W9 stands on other people's work and says so:
+Thanks to:
 
-- **[ER-99](https://github.com/matthewcieplak/er-99)** by Matthew Cieplak
-  (GPL-3.0) — the project 9W9 started from. The engine began as a C port of
-  ER-99's Web Audio graph. That engine has since been replaced voice by voice
-  with circuit models and removed, but the **hi-hat, ride and crash samples
-  ship directly from ER-99** and 9W9 would not exist without it.
 - **[Schwung](https://github.com/charlesvestal/schwung)** by Charles Vestal
   and contributors — the framework that makes any of this possible.
-- Voice behaviour worked out from the **TR-909 service notes** (schematics and
-  scope traces), the
-  [Network-909 circuit analysis](http://www.network-909.de/circuit.htm), Colin
-  Fraser's TR-909 bass drum analysis, and the
+- The authors of the **TR-909 service notes** (schematics and scope traces),
+  the [Network-909 circuit analysis](http://www.network-909.de/circuit.htm),
+  Colin Fraser's TR-909 bass drum analysis, and the
   [firstpr.com.au TR-909 sound-mod notes](https://www.firstpr.com.au/rwi/tr-909/TR-909-Sound-Mods.pdf)
-  (Pitch / Tune-Depth / Tune-Decay behaviour).
+  (Pitch / Tune-Depth / Tune-Decay behaviour) — the voices were worked out
+  from their work.
 
 This project was developed with AI assistance (Claude), with human direction
 and on-hardware verification throughout.
@@ -168,8 +163,7 @@ reports: all welcome. Please note in your PR which AI tools you used, if any
 
 ## License
 
-GPL-3.0 — see [LICENSE](LICENSE). ER-99-derived code and samples keep their
-GPL-3.0 licensing.
+GPL-3.0 — see [LICENSE](LICENSE).
 
 ## Disclaimer
 
