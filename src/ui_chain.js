@@ -1,3 +1,4 @@
+/* Copyright (C) 2026 A Thousand Details. GPL-3.0 with additional terms: see NOTICE. */
 /*
  * 9W9 ui_chain.js — a thin binding over Schwung's shared param_pages library
  * (host 0.12.1+), keeping every 9W9 gesture the stock hierarchy editor does

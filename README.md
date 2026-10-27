@@ -163,7 +163,13 @@ reports: all welcome. Please note in your PR which AI tools you used, if any
 
 ## License
 
-GPL-3.0 — see [LICENSE](LICENSE).
+Copyright (C) 2026 A Thousand Details.
+
+GPL-3.0 (see [LICENSE](LICENSE)) with additional terms under section 7 (see
+[NOTICE](NOTICE)). Anything you ship that contains this code — the module, a
+fork, a port, a plugin — must credit **9W9 by A Thousand Details** with a
+link back here, in its documentation and wherever it shows credits, an about
+screen or legal notices. Modified versions must say they were changed.
 
 ## Disclaimer
 

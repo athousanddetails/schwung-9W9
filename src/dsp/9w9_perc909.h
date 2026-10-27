@@ -1,3 +1,4 @@
+/* Copyright (C) 2026 A Thousand Details. GPL-3.0 with additional terms: see NOTICE. */
 /*
  * 9w9_perc909.h — circuit-informed TR-909 RIM SHOT and HAND CLAP.
  *

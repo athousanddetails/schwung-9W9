@@ -1,3 +1,4 @@
+/* Copyright (C) 2026 A Thousand Details. GPL-3.0 with additional terms: see NOTICE. */
 /*
  * 9w9_engine.c — 9W9 drum voices, sample playback, sends and master bus.
  *

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 A Thousand Details. GPL-3.0 with additional terms: see NOTICE.
 # Build environment for the Schwung 9W9 module.
 # ubuntu:22.04 pinned deliberately: glibc 2.35, matching Ableton Move exactly.
 FROM ubuntu:22.04

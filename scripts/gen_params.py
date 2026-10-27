@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 A Thousand Details. GPL-3.0 with additional terms: see NOTICE.
 """Generate 9w9_params.h + module.json. Single source of truth for the
 parameter surface. module.json stays tiny (8 KB loader cap); chain_params and
 ui_hierarchy are served from the DSP via get_param()."""

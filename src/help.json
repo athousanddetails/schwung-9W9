@@ -129,6 +129,19 @@
         "Drag knobs, mute",
         "buttons per drum."
       ]
+    },
+    {
+      "title": "About",
+      "lines": [
+        "9W9 v2.7.2",
+        "(C) 2026",
+        "A Thousand Details",
+        "",
+        "GPL-3.0 + credit",
+        "terms: see NOTICE",
+        "github.com/",
+        "athousanddetails"
+      ]
     }
   ]
 }

@@ -1,3 +1,4 @@
+/* Copyright (C) 2026 A Thousand Details. GPL-3.0 with additional terms: see NOTICE. */
 /*
  * 9w9_tom909.h — the TR-909's tom voice, from the voicing-board schematic.
  *

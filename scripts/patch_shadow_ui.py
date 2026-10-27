@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 A Thousand Details. GPL-3.0 with additional terms: see NOTICE.
 """
 Patch Schwung's shadow_ui.js to add PAD-FOLLOW for chain modules.
 

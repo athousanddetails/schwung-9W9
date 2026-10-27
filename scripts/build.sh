@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Copyright (C) 2026 A Thousand Details. GPL-3.0 with additional terms: see NOTICE.
 # Build the 9W9 module for Ableton Move (aarch64), or natively with NATIVE=1.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

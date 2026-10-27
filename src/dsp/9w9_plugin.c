@@ -1,3 +1,4 @@
+/* Copyright (C) 2026 A Thousand Details. GPL-3.0 with additional terms: see NOTICE. */
 /*
  * 9w9_plugin.c — Schwung plugin_api_v2 wrapper for the 9W9 engine.
  *
