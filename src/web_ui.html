@@ -1,0 +1,279 @@
+<!doctype html>
+<!--
+  9W9 remote panel — served by schwung-manager at /remote-ui when 9W9 is the
+  slot's synth. Talks to the device through the schwungRemote postMessage
+  bridge; every continuous control is a 0-127 pot, mirroring the hardware.
+
+  Panel look inspired by the TR-909 front panel. GPL-3.0.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<title>9W9</title>
+<style>
+  :root {
+    --panel:  #e8e0d0;   /* 909 cream   */
+    --dark:   #1a1a1a;
+    --orange: #f7941d;   /* 909 orange  */
+    --line:   #b8b0a0;
+    --knob:   #2b2b2b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #111; font-family: "Helvetica Neue", Arial, sans-serif;
+         padding: 14px; color: var(--dark); }
+  .machine { max-width: 1180px; margin: 0 auto; background: var(--panel);
+             border: 3px solid #000; border-radius: 8px; padding: 12px 14px; }
+  .titlebar { display: flex; align-items: baseline; justify-content: space-between;
+              border-bottom: 4px solid var(--orange); padding-bottom: 6px;
+              margin-bottom: 10px; }
+  .titlebar h1 { font-size: 26px; letter-spacing: 3px; font-weight: 900; }
+  .titlebar h1 span { color: var(--orange); }
+  .titlebar .sub { font-size: 11px; letter-spacing: 2px; color: #555; }
+  .sections { display: flex; flex-wrap: wrap; gap: 10px; }
+  .section { background: #efe9dc; border: 2px solid #000; border-radius: 5px;
+             padding: 8px 8px 6px; flex: 1 1 200px; min-width: 200px; }
+  .section.master { background: #2b2b2b; color: #eee; }
+  .sec-head { display: flex; justify-content: space-between; align-items: center;
+              background: var(--orange); color: #000; font-weight: 800;
+              font-size: 12px; letter-spacing: 2px; padding: 3px 6px;
+              border: 1px solid #000; margin-bottom: 8px; }
+  .section.master .sec-head { background: #888; }
+  .mute { width: 26px; height: 15px; border: 1px solid #000; background: #ddd;
+          cursor: pointer; font-size: 9px; font-weight: 700; line-height: 13px;
+          text-align: center; user-select: none; }
+  .mute.on { background: #d22; color: #fff; }
+  .knobs { display: flex; flex-wrap: wrap; gap: 6px 4px; }
+  .cell { width: 60px; text-align: center; }
+  .dial { width: 44px; height: 44px; margin: 0 auto; border-radius: 50%;
+          background: radial-gradient(circle at 35% 30%, #4a4a4a, var(--knob) 70%);
+          border: 2px solid #000; position: relative; cursor: ns-resize;
+          touch-action: none; }
+  .dial .ptr { position: absolute; left: 50%; top: 50%; width: 3px; height: 17px;
+               background: #f2f2f2; transform-origin: 50% 0%; border-radius: 2px; }
+  .cell label { display: block; font-size: 9.5px; font-weight: 700;
+                letter-spacing: .5px; margin-top: 3px; text-transform: uppercase; }
+  .cell .val { font-size: 10px; color: #666; }
+  .section.master .cell .val { color: #bbb; }
+  select { width: 58px; height: 44px; border: 2px solid #000; border-radius: 5px;
+           background: #ddd; font-weight: 700; font-size: 10px; text-align: center; }
+  .footer { margin-top: 10px; font-size: 10px; color: #777;
+            display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+<div class="machine">
+  <div class="titlebar">
+    <h1>9W9 <span>RHYTHM COMPOSER</span></h1>
+    <div class="sub">CIRCUIT-MODELLED &middot; SCHWUNG</div>
+  </div>
+  <div class="sections" id="sections"></div>
+  <div class="footer">
+    <div>drag knobs vertically &middot; double-click to reset</div>
+    <div>by athousanddetails &middot; GPL-3.0</div>
+  </div>
+</div>
+
+<script src="/static/schwung-remote-api.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var DIST  = ["Diode", "Clip", "SAT", "BFZ", "PDIST", "Fold", "Crush"];
+  var MDIST = ["Off", "Diode", "Clip", "SAT", "BFZ", "PDIST", "Fold", "Crush"];
+
+  function pot(k, n)      { return { k: k, n: n }; }
+  function en(k, n, opts) { return { k: k, n: n, opts: opts }; }
+
+  /* One row per voice, matching the device pages: only what the machine has.
+     The engine still has a sub layer, tube stage, drift, click tone and second
+     oscillator — they sit at their tuned defaults and are no longer knobs. */
+  /* Hats and cymbals: one page each, same five controls. */
+  function cymbal(id) {
+    return [ pot(id+"_decay","Decay"), pot(id+"_pitch","Tune"),
+             pot(id+"_drive","Drive"), en(id+"_dist_type","Dist",DIST),
+             pot(id+"_volume","Level"),
+             pot(id+"_rev","Rev"), pot(id+"_dly","Dly") ];
+  }
+  function sends(pre) { return [ pot(pre+"_rev","Rev"), pot(pre+"_dly","Dly") ]; }
+
+  function tom(id) {
+    return [ pot(id+"_c_tune","Tune"), pot(id+"_c_decay","Decay"),
+             pot(id+"_c_attack","Attack"), pot(id+"_c_drive","Drive"),
+             en(id+"_c_dist_type","Dist",DIST), pot(id+"_c_level","Level"),
+             pot(id+"_c_rev","Rev"), pot(id+"_c_dly","Dly") ];
+  }
+
+  /* lane = bit in synth:mutes; -1 = no mute button */
+  var SECTIONS = [
+    { name: "BASS DRUM", lane: 0, knobs: [
+        pot("bd_c_tune","Tune"), pot("bd_c_attack","Attack"),
+        pot("bd_c_decay","Decay"), pot("bd_c_sweep_depth","P.Depth"),
+        pot("bd_c_pitch_mod","Pitch"), pot("bd_c_drive","Drive"),
+        en("bd_c_dist_type","Dist",DIST), pot("bd_c_level","Level") ] },
+    { name: "SNARE DRUM", lane: 1, knobs: [
+        pot("sd_c_tune","Tune"), pot("sd_c_noise_decay","Tone"),
+        pot("sd_c_snappy","Snappy"), pot("sd_c_drive","Drive"),
+        en("sd_c_dist_type","Dist",DIST), pot("sd_c_level","Level") ].concat(sends("sd_c")) },
+    { name: "LOW TOM", lane: 2, knobs: tom("lt") },
+    { name: "MID TOM", lane: 3, knobs: tom("mt") },
+    { name: "HI TOM",  lane: 4, knobs: tom("ht") },
+    { name: "RIM SHOT", lane: 5, knobs: [
+        pot("rs_tune","Tune"),
+        pot("rs_saturation","Drive"), en("rs_dist_type","Dist",DIST),
+        pot("rs_volume","Level") ].concat(sends("rs")) },
+    { name: "HAND CLAP", lane: 6, knobs: [
+        pot("hc_tune","Tune"), pot("hc_decay","Tail"),
+        pot("hc_drive","Drive"), en("hc_dist_type","Dist",DIST),
+        pot("hc_volume","Level") ].concat(sends("hc")) },
+    { name: "CLOSED HAT", lane: 8, knobs: cymbal("chh") },
+    { name: "OPEN HAT",   lane: 7, knobs: cymbal("ohh") },
+    { name: "RIDE",       lane: 9, knobs: cymbal("rc") },
+    { name: "CRASH",      lane: 10, knobs: cymbal("cr") },
+    { name: "REVERB", lane: -1, master: true, knobs: [
+        pot("rev_decay","Decay"), pot("rev_tone","Tone"),
+        pot("rev_hpf","HPF"), pot("rev_level","Level") ] },
+    { name: "DELAY", lane: -1, master: true, knobs: [
+        en("dly_time","Time",["1/32","1/16T","1/16","1/8T","1/16.","1/8",
+                              "1/4T","1/8.","1/4","1/2T","1/4.","1/2","1/2."]),
+        pot("dly_fdbk","Fdbk"),
+        pot("dly_tone","Tone"), pot("dly_hpf","HPF"),
+        pot("dly_level","Level") ] },
+    { name: "MASTER", lane: -1, master: true, knobs: [
+        en("master_dist","Dist",MDIST), pot("master_drive","Drive"),
+        pot("master_comp","Comp"),
+        pot("volume","Volume"), pot("accent","Accent"),
+        pot("vel_depth","Vel"),
+        en("note_map","Notes",["DrumRack","GM"]), ] }
+  ];
+
+  var state = {};        /* key -> value */
+  var widgets = {};      /* key -> update fn */
+  var mutesMask = 0;
+  var muteBtns = {};
+
+  function key(k) { return "synth:" + k; }
+
+  function send(k, v) {
+    state[k] = v;
+    schwungRemote.setParam(key(k), String(v));
+  }
+
+  function makeDial(cell, kn) {
+    var dial = document.createElement("div"); dial.className = "dial";
+    var ptr = document.createElement("div"); ptr.className = "ptr";
+    dial.appendChild(ptr);
+    var val = document.createElement("div"); val.className = "val";
+    val.textContent = "0";
+
+    function render(v) {
+      var ang = -135 + (v / 127) * 270;
+      ptr.style.transform = "translate(-50%,0) rotate(" + (ang + 180) + "deg)";
+      val.textContent = v;
+    }
+    widgets[kn.k] = render;
+
+    var dragY = null, dragV = 0;
+    function move(e) {
+      if (dragY === null) return;
+      var y = (e.touches ? e.touches[0].clientY : e.clientY);
+      var v = Math.max(0, Math.min(127, Math.round(dragV + (dragY - y) * 0.7)));
+      if (v !== state[kn.k]) { render(v); send(kn.k, v); }
+      e.preventDefault();
+    }
+    function up() { dragY = null;
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+      window.removeEventListener("touchmove", move);
+      window.removeEventListener("touchend", up); }
+    function down(e) {
+      dragY = (e.touches ? e.touches[0].clientY : e.clientY);
+      dragV = state[kn.k] | 0;
+      window.addEventListener("mousemove", move);
+      window.addEventListener("mouseup", up);
+      window.addEventListener("touchmove", move, { passive: false });
+      window.addEventListener("touchend", up);
+      e.preventDefault();
+    }
+    dial.addEventListener("mousedown", down);
+    dial.addEventListener("touchstart", down, { passive: false });
+    dial.addEventListener("dblclick", function () { render(64); send(kn.k, 64); });
+
+    cell.appendChild(dial); cell.appendChild(val);
+    render(0);
+  }
+
+  function makeEnum(cell, kn) {
+    var sel = document.createElement("select");
+    kn.opts.forEach(function (o, i) {
+      var op = document.createElement("option");
+      op.value = i; op.textContent = o; sel.appendChild(op);
+    });
+    sel.addEventListener("change", function () { send(kn.k, sel.value | 0); });
+    widgets[kn.k] = function (v) { sel.value = Math.min(v, kn.opts.length - 1); };
+    cell.appendChild(sel);
+  }
+
+  var root = document.getElementById("sections");
+  SECTIONS.forEach(function (sec) {
+    var box = document.createElement("div");
+    box.className = "section" + (sec.master ? " master" : "");
+    var head = document.createElement("div"); head.className = "sec-head";
+    var title = document.createElement("span"); title.textContent = sec.name;
+    head.appendChild(title);
+    if (sec.lane >= 0) {
+      var mb = document.createElement("div");
+      mb.className = "mute"; mb.textContent = "MUTE";
+      mb.addEventListener("click", function () {
+        mutesMask = (mutesMask ^ (1 << sec.lane)) & 0x7FF;
+        schwungRemote.setParam(key("mutes"), String(mutesMask));
+        renderMutes();
+      });
+      muteBtns[sec.lane] = mb;
+      head.appendChild(mb);
+    }
+    box.appendChild(head);
+    var grid = document.createElement("div"); grid.className = "knobs";
+    sec.knobs.forEach(function (kn) {
+      var cell = document.createElement("div"); cell.className = "cell";
+      if (kn.opts) makeEnum(cell, kn); else makeDial(cell, kn);
+      var lab = document.createElement("label"); lab.textContent = kn.n;
+      cell.appendChild(lab);
+      grid.appendChild(cell);
+    });
+    box.appendChild(grid);
+    root.appendChild(box);
+  });
+
+  function renderMutes() {
+    Object.keys(muteBtns).forEach(function (lane) {
+      muteBtns[lane].className = "mute" + ((mutesMask >> lane) & 1 ? " on" : "");
+    });
+  }
+
+  function apply(k, raw) {
+    var v = parseInt(raw, 10);
+    if (isNaN(v)) return;
+    if (k === "mutes") { mutesMask = v; renderMutes(); return; }
+    if (widgets[k]) { state[k] = v; widgets[k](v); }
+  }
+
+  schwungRemote.onParamChange(function (params) {
+    Object.keys(params).forEach(function (full) {
+      if (full.indexOf("synth:") === 0) apply(full.substring(6), params[full]);
+    });
+  });
+
+  /* Seed everything once the bridge has state. */
+  function seed() {
+    Object.keys(widgets).concat(["mutes"]).forEach(function (k) {
+      schwungRemote.getParam(key(k)).then(function (v) {
+        if (v !== undefined && v !== null && v !== "") apply(k, v);
+      });
+    });
+  }
+  setTimeout(seed, 400);
+  setTimeout(seed, 1500);
+})();
+</script>
+</body>
+</html>
